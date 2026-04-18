@@ -1,0 +1,26 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=QR Studio
+Name[de]=QR Studio
+Comment=QR-Codes erstellen und anpassen
+Comment[de]=QR-Codes erstellen und anpassen
+Icon=com.example.qr_studio
+Exec=/home/erikb/qr_studio/target/release/qr_studio
+Terminal=false
+Categories=Graphics;Utility;GTK;
+Keywords=QR;QR-Code;Barcode;Generator;
+Keywords[de]=QR;QR-Code;Barcode;Generator;
+StartupNotify=true
+StartupWMClass=com.example.qr_studio
+MimeType=image/png;image/svg+xml;
+Name[de_CH]=QR Studio
+Name[de_CH.UTF-8]=QR Studio
+Comment[de_CH]=QR-Codes erstellen und anpassen
+Comment[de_CH.UTF-8]=QR-Codes erstellen und anpassen
+Keywords[de_CH]=QR;QR-Code;Barcode;Generator;
+Keywords[de_CH.UTF-8]=QR;QR-Code;Barcode;Generator;
+PrefersNonDefaultGPU=false
+Hidden=false
+NoDisplay=false
+

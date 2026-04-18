@@ -1,0 +1,172 @@
+name: Build Linux
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libshumate-1.0-dev \
+            libgdk-pixbuf2.0-dev \
+            librsvg2-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libsqlite3-dev \
+            libprotobuf-c-dev \
+            libsoup-3.0-dev \
+            libjson-glib-dev \
+            libgraphene-1.0-dev \
+            libssl-dev \
+            libxml2-dev \
+            libepoxy-dev \
+            libharfbuzz-dev \
+            libfreetype-dev \
+            libfontconfig1-dev \
+            mksquashfs
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Create AppDir
+        run: |
+          VERSION="${GITHUB_REF_NAME:-0.1.0}"
+          APPDIR="build/QR_Studio.AppDir"
+          BINARY="target/release/qr_studio"
+          LIB_DIR="/usr/lib/x86_64-linux-gnu"
+
+          mkdir -p "${APPDIR}"/usr/{bin,lib,share/{glib-2.0/schemas,icons/hicolor/scalable/apps}}
+          mkdir -p "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+
+          # ── Binary ──
+          cp "${BINARY}" "${APPDIR}/usr/bin/"
+          chmod +x "${APPDIR}/usr/bin/qr_studio"
+          strip --strip-unneeded "${APPDIR}/usr/bin/qr_studio"
+
+          # ── Desktop file (fix Exec for AppImage) ──
+          cp data/com.example.qr_studio.desktop "${APPDIR}/com.example.qr_studio.desktop"
+          sed -i 's|^Exec=.*|Exec=qr_studio|' "${APPDIR}/com.example.qr_studio.desktop"
+
+          # ── Icon ──
+          cp data/com.example.qr_studio.svg "${APPDIR}/com.example.qr_studio.svg"
+          cp data/com.example.qr_studio.svg "${APPDIR}/usr/share/icons/hicolor/scalable/apps/"
+
+          # ── Shared libraries (resolved via ldd) ──
+          DEPS_FILE=$(mktemp /tmp/qr_studio_deps.XXXXXX)
+          ldd "${BINARY}" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+
+          # librsvg — dynamically loaded by gdk-pixbuf
+          if [ -f "${LIB_DIR}/librsvg-2.so.2" ]; then
+            echo "${LIB_DIR}/librsvg-2.so.2" >> "$DEPS_FILE"
+            ldd "${LIB_DIR}/librsvg-2.so.2" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+          fi
+
+          # gdk-pixbuf external loaders (dlopen'd at runtime)
+          LOADERS_SRC="${LIB_DIR}/gdk-pixbuf-2.0/2.10.0/loaders"
+          if [ -d "$LOADERS_SRC" ]; then
+            for loader in "${LOADERS_SRC}"/*.so; do
+              [ -f "$loader" ] || continue
+              echo "$loader" >> "$DEPS_FILE"
+              ldd "$loader" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+            done
+          fi
+
+          # Copy all resolved libs, excluding glibc core
+          sort -u "$DEPS_FILE" \
+            | grep -vE 'ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss' \
+            | while IFS= read -r lib; do
+                  [ -f "$lib" ] && cp -Ln "$lib" "${APPDIR}/usr/lib/" 2>/dev/null || true
+              done
+          rm -f "$DEPS_FILE"
+
+          echo "Bundled $(find "${APPDIR}/usr/lib" -maxdepth 1 -name '*.so*' | wc -l) libraries"
+
+          # ── GSettings schemas ──
+          SCHEMA_DST="${APPDIR}/usr/share/glib-2.0/schemas"
+          for f in /usr/share/glib-2.0/schemas/org.gtk.gtk4.*.gschema.xml \
+                   /usr/share/glib-2.0/schemas/org.gtk.Settings.*.gschema.xml; do
+              [ -f "$f" ] && cp "$f" "$SCHEMA_DST/"
+          done
+          glib-compile-schemas "$SCHEMA_DST" 2>/dev/null || true
+
+          # ── gdk-pixbuf loaders ──
+          LOADERS_DST="${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+          if [ -d "$LOADERS_SRC" ] && ls "${LOADERS_SRC}"/*.so &>/dev/null; then
+            cp -Ln "${LOADERS_SRC}"/*.so "$LOADERS_DST/" 2>/dev/null || true
+            GDK_PIXBUF_MODULEDIR="$LOADERS_DST" gdk-pixbuf-query-loaders 2>/dev/null \
+              > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" || true
+          else
+            : > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+          fi
+
+          # ── AppRun entry point ──
+          cat > "${APPDIR}/AppRun" << 'APPRUN'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+
+          export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+          export GDK_PIXBUF_MODULEDIR="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+          export GDK_PIXBUF_MODULE_FILE="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+          export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
+          export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
+          export GTK_PATH="${HERE}/usr/lib/gtk-4.0${GTK_PATH:+:${GTK_PATH}}"
+
+          exec "${HERE}/usr/bin/qr_studio" "$@"
+          APPRUN
+          chmod +x "${APPDIR}/AppRun"
+
+      - name: Download appimagetool
+        run: |
+          wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" \
+            -O /tmp/appimagetool
+          chmod +x /tmp/appimagetool
+
+      - name: Package AppImage
+        run: |
+          VERSION="${GITHUB_REF_NAME:-0.1.0}"
+          ARCH=x86_64
+          OUTPUT="build/QR_Studio-${VERSION}-${ARCH}.AppImage"
+          mkdir -p build/dist
+          ARCH=x86_64 /tmp/appimagetool build/QR_Studio.AppDir "$OUTPUT"
+          mv "$OUTPUT" build/dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qr-studio-linux-x86_64
+          path: build/dist/*.AppImage
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/dist/*.AppImage

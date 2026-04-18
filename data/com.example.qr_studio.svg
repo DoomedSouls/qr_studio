@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main gradient: blue to violet -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3584e4"/>
+      <stop offset="100%" stop-color="#9141ac"/>
+    </linearGradient>
+    <!-- Inner QR module gradient -->
+    <linearGradient id="qr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8e0f0"/>
+    </linearGradient>
+    <!-- Rounded rect clip -->
+    <clipPath id="rounded-bg">
+      <rect width="128" height="128" rx="28" ry="28"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="128" height="128" rx="28" ry="28" fill="url(#bg-grad)"/>
+
+  <!-- QR code area: centered 84x84 within the 128x128 icon (22px margin) -->
+  <g transform="translate(22,22)">
+
+    <!-- Finder pattern top-left -->
+    <g>
+      <rect x="0" y="0" width="24" height="24" rx="4" fill="url(#qr-grad)"/>
+      <rect x="4" y="4" width="16" height="16" rx="2" fill="#1a1a2e"/>
+      <rect x="8" y="8" width="8" height="8" rx="1" fill="url(#qr-grad)"/>
+    </g>
+
+    <!-- Finder pattern top-right -->
+    <g>
+      <rect x="60" y="0" width="24" height="24" rx="4" fill="url(#qr-grad)"/>
+      <rect x="64" y="4" width="16" height="16" rx="2" fill="#1a1a2e"/>
+      <rect x="68" y="8" width="8" height="8" rx="1" fill="url(#qr-grad)"/>
+    </g>
+
+    <!-- Finder pattern bottom-left -->
+    <g>
+      <rect x="0" y="60" width="24" height="24" rx="4" fill="url(#qr-grad)"/>
+      <rect x="4" y="64" width="16" height="16" rx="2" fill="#1a1a2e"/>
+      <rect x="8" y="68" width="8" height="8" rx="1" fill="url(#qr-grad)"/>
+    </g>
+
+    <!-- Timing patterns (horizontal) -->
+    <rect x="26" y="10" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="34" y="10" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="42" y="10" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="50" y="10" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+
+    <!-- Timing patterns (vertical) -->
+    <rect x="10" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="10" y="34" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="10" y="42" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="10" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+
+    <!-- Data modules — scattered pattern for visual interest -->
+    <!-- Row 1 -->
+    <rect x="26" y="2" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="38" y="2" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+    <rect x="54" y="2" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.8"/>
+
+    <!-- Row 2 -->
+    <rect x="30" y="18" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.75"/>
+    <rect x="46" y="18" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="54" y="18" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.6"/>
+
+    <!-- Row 3 -->
+    <rect x="26" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="34" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+    <rect x="42" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="50" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.95"/>
+    <rect x="58" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.65"/>
+    <rect x="66" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.8"/>
+    <rect x="74" y="26" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+
+    <!-- Row 4 -->
+    <rect x="26" y="34" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+    <rect x="38" y="34" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="46" y="34" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.6"/>
+    <rect x="58" y="34" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="70" y="34" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.75"/>
+
+    <!-- Row 5 -->
+    <rect x="30" y="42" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="42" y="42" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+    <rect x="50" y="42" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.95"/>
+    <rect x="62" y="42" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.8"/>
+    <rect x="74" y="42" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.65"/>
+
+    <!-- Row 6 -->
+    <rect x="26" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="38" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.75"/>
+    <rect x="46" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+    <rect x="54" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.6"/>
+    <rect x="66" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="74" y="50" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+
+    <!-- Row 7 -->
+    <rect x="26" y="62" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.8"/>
+    <rect x="34" y="62" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.95"/>
+    <rect x="42" y="62" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+    <rect x="54" y="62" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.85"/>
+
+    <!-- Row 8 -->
+    <rect x="30" y="70" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.65"/>
+    <rect x="42" y="70" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+    <rect x="50" y="70" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.8"/>
+    <rect x="58" y="70" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.75"/>
+    <rect x="70" y="70" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+
+    <!-- Bottom-right alignment pattern -->
+    <g>
+      <rect x="56" y="56" width="16" height="16" rx="3" fill="url(#qr-grad)" opacity="0.95"/>
+      <rect x="60" y="60" width="8" height="8" rx="2" fill="#1a1a2e" opacity="0.9"/>
+    </g>
+
+    <!-- Extra data dots bottom-right -->
+    <rect x="76" y="60" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.8"/>
+    <rect x="76" y="68" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.7"/>
+    <rect x="76" y="76" width="4" height="4" rx="1" fill="url(#qr-grad)" opacity="0.9"/>
+
+  </g>
+
+  <!-- Subtle shadow/depth overlay at bottom -->
+  <rect width="128" height="128" rx="28" ry="28" fill="url(#bg-grad)" opacity="0" style="pointer-events:none"/>
+</svg>
