@@ -1,0 +1,33 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Build artifacts
+/build/
+*.AppImage
+
+# ThreadBridge
+.threadbridge/
+.tmp/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Compiled / Optimized
+*.o
+*.so
+*.dll
+*.dylib

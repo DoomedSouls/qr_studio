@@ -1,0 +1,21 @@
+[package]
+name = "qr_studio"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gtk4 = { version = "0.11", package = "gtk4" }
+adw = { version = "0.9", package = "libadwaita" }
+qrcode = { version = "0.14", features = ["image"] }
+image = "0.25"
+gdk-pixbuf = "0.20"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+vtracer = "0.6.5"
+dirs = "6"
+rayon = "1"
+printpdf = { version = "0.8", features = ["png", "jpeg"] }
+
+libshumate = "0.8"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+rqrr = "0.9"
