@@ -24,7 +24,7 @@ jobs:
             pkg-config \
             libgtk-4-dev \
             libadwaita-1-dev \
-            libshumate-1.0-dev \
+            libshumate-dev \
             libgdk-pixbuf2.0-dev \
             librsvg2-dev \
             libpango1.0-dev \
@@ -40,7 +40,7 @@ jobs:
             libharfbuzz-dev \
             libfreetype-dev \
             libfontconfig1-dev \
-            mksquashfs
+            squashfs-tools
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
