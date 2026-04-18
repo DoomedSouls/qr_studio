@@ -40,7 +40,8 @@ jobs:
             libharfbuzz-dev \
             libfreetype-dev \
             libfontconfig1-dev \
-            squashfs-tools
+            squashfs-tools \
+            libfuse2t64
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -144,11 +145,13 @@ jobs:
           APPRUN
           chmod +x "${APPDIR}/AppRun"
 
-      - name: Download appimagetool
+      - name: Download and extract appimagetool
         run: |
           wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" \
             -O /tmp/appimagetool
           chmod +x /tmp/appimagetool
+          cd /tmp && ./appimagetool --appimage-extract >/dev/null 2>&1
+          mv /tmp/squashfs-root /tmp/appimagetool-extracted
 
       - name: Package AppImage
         run: |
@@ -156,7 +159,7 @@ jobs:
           ARCH=x86_64
           OUTPUT="build/QR_Studio-${VERSION}-${ARCH}.AppImage"
           mkdir -p build/dist
-          ARCH=x86_64 /tmp/appimagetool build/QR_Studio.AppDir "$OUTPUT"
+          ARCH=x86_64 /tmp/appimagetool-extracted/AppRun build/QR_Studio.AppDir "$OUTPUT"
           mv "$OUTPUT" build/dist/
 
       - name: Upload artifact
