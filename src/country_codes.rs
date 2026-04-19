@@ -1266,19 +1266,41 @@ pub fn country_index_by_code(code: &str) -> u32 {
 
 /// Returns the filesystem path to the flag SVG for the given ISO country code.
 ///
-/// In development mode, the path is resolved relative to the project root
-/// (`flags/{iso_code}.svg`). In production, it falls back to a path relative
-/// to the current executable's directory.
+/// Search order:
+/// 1. `flags/{iso_code}.svg` relative to CWD (works with `cargo run`)
+/// 2. `{exe_dir}/flags/{iso_code}.svg` next to executable (installed mode)
+/// 3. `{exe_dir}/../../flags/{iso_code}.svg` when exe is in `target/release|debug/`
+///    (covers .desktop launches where CWD is not the project root)
 pub fn flag_svg_path(iso_code: &str) -> PathBuf {
+    let filename = format!("{}.svg", iso_code);
+
+    // 1. Relative to CWD (cargo run from project root)
+    let dev_path = PathBuf::from("flags").join(&filename);
+    if dev_path.exists() {
+        return dev_path;
+    }
+
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(|| PathBuf::from("."));
 
-    let dev_path = PathBuf::from(format!("flags/{}.svg", iso_code));
-    if dev_path.exists() {
-        return dev_path;
+    // 2. Next to executable (installed / bundled mode)
+    let exe_path = exe_dir.join("flags").join(&filename);
+    if exe_path.exists() {
+        return exe_path;
     }
 
-    exe_dir.join("flags").join(format!("{}.svg", iso_code))
+    // 3. When running from target/release or target/debug, walk up to project root
+    if exe_dir.ends_with("target/release") || exe_dir.ends_with("target/debug") {
+        if let Some(project_root) = exe_dir.parent().and_then(|p| p.parent()) {
+            let project_path = project_root.join("flags").join(&filename);
+            if project_path.exists() {
+                return project_path;
+            }
+        }
+    }
+
+    // Fallback: next to executable
+    exe_path
 }

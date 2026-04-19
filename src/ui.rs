@@ -486,6 +486,16 @@ pub fn set_dropdown_by_string(dd: &DropDown, target: &str) {
 // COUNTRY CODE DROPDOWN (intl-tel-input style)
 // ============================================================
 
+/// Loads an SVG flag file via gdk-pixbuf (which supports SVG through librsvg)
+/// and returns a `gdk::Texture` suitable for `Image::set_from_paintable()`.
+///
+/// GTK4's `Image::set_from_file()` cannot load SVG directly because it uses
+/// `gdk::Texture::from_file()` which only supports raster formats (PNG, JPEG, TIFF).
+fn load_flag_texture(path: &std::path::Path, size: i32) -> Option<gdk::Texture> {
+    let pixbuf = gtk4::gdk_pixbuf::Pixbuf::from_file_at_scale(path, size, size, true).ok()?;
+    Some(gdk::Texture::for_pixbuf(&pixbuf))
+}
+
 /// Creates a country code dropdown with flag icons, country names, and dial codes.
 ///
 /// The dropdown button shows flag + dial code (compact).
@@ -519,7 +529,9 @@ fn create_country_dropdown() -> DropDown {
                     let iso = obj.string().to_string();
                     if let Some(c) = countries().iter().find(|ci| ci.iso_code == iso) {
                         let p = flag_svg_path(c.iso_code);
-                        img.set_from_file(p.to_str());
+                        if let Some(tex) = load_flag_texture(&p, 36) {
+                            img.set_paintable(Some(&tex));
+                        }
                         lbl.set_text(c.calling_code);
                     }
                 }
@@ -563,7 +575,9 @@ fn create_country_dropdown() -> DropDown {
                     let iso = obj.string().to_string();
                     if let Some(c) = countries().iter().find(|ci| ci.iso_code == iso) {
                         let p = flag_svg_path(c.iso_code);
-                        img.set_from_file(p.to_str());
+                        if let Some(tex) = load_flag_texture(&p, 40) {
+                            img.set_paintable(Some(&tex));
+                        }
                         name_lbl.set_text(c.name_de);
                         code_lbl.set_text(c.calling_code);
                     }
