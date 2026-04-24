@@ -2,12 +2,12 @@
 
 <img width="3802" height="2051" alt="1" src="https://github.com/user-attachments/assets/1a608086-cbc3-4d10-8f15-3feede903edc" />
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational)
+
 # QR Studio
 
 A modern QR code generator built with GTK4 and libadwaita, featuring a Material 3 design layer and a vector-first rendering architecture.
-
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational)
 
 ## Features
 
