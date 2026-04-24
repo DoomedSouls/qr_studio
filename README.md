@@ -1,3 +1,5 @@
+<img width="3802" height="2051" alt="Screenshot_2026-04-24_12-35-59" src="https://github.com/user-attachments/assets/973b3c50-3c4c-4539-9d4a-2a1a263fcc8e" />
+
 # QR Studio
 
 A modern QR code generator built with GTK4 and libadwaita, featuring a Material 3 design layer and a vector-first rendering architecture.
