@@ -1,4 +1,5 @@
 <img width="3802" height="2051" alt="Screenshot_2026-04-24_12-35-59" src="https://github.com/user-attachments/assets/973b3c50-3c4c-4539-9d4a-2a1a263fcc8e" />
+<img width="3802" height="2051" alt="Screenshot_2026-04-24_14-28-06" src="https://github.com/user-attachments/assets/724771d0-680e-4120-9323-63c47a42c954" />
 
 # QR Studio
 
