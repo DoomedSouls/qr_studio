@@ -152,16 +152,16 @@ jobs:
           : > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
 
           # ── AppRun entry point ──
-          cat > "${APPDIR}/AppRun" << 'APPRUN
-          #!/bin/sh
-          HERE="$(dirname "$(readlink -f "$0")")"
+          cat > "${APPDIR}/AppRun" << 'APPRUN'
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
 
-          export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-          export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
-          export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
+export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
 
-          exec "${HERE}/usr/bin/qr_studio" "$@"
-          APPRUN
+exec "${HERE}/usr/bin/qr_studio" "$@"
+APPRUN
           chmod +x "${APPDIR}/AppRun"
 
       - name: Download and extract appimagetool
