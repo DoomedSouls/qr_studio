@@ -101,8 +101,9 @@ jobs:
             done
           fi
 
-          # Exclude glibc core AND GPU/Mesa libraries (must come from host system)
-          EXCLUDE_GPU='libEGL|libGL|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl'
+          # Exclude glibc core AND GPU/Mesa/graphics libraries (must come from host system)
+          # libepoxy: GL function loader — if bundled from Ubuntu, it fails to init EGL on other distros
+          EXCLUDE_GPU='libEGL|libGL|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libepoxy'
 
           sort -u "$DEPS_FILE" \
             | grep -vE 'ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss' \

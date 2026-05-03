@@ -654,31 +654,12 @@ pub fn build_ui(app: &Application) {
     let toast_overlay = ToastOverlay::new();
     toast_overlay.set_child(Some(&main_box));
 
-    // Smooth crossfade when switching languages (reuse existing window)
-    if let Some(old) = old_content {
-        let fade_stack = Stack::new();
-        fade_stack.set_transition_type(StackTransitionType::Crossfade);
-        fade_stack.set_transition_duration(250);
-        fade_stack.add_named(&old, Some("old"));
-        fade_stack.add_named(&toast_overlay, Some("new"));
-        fade_stack.set_visible_child_name("old");
-        window.set_content(Some(&fade_stack));
-        let fs = fade_stack.clone();
-        let win = window.clone();
-        let t = toast_overlay.clone();
-        glib::timeout_add_local(Duration::from_millis(50), move || {
-            fs.set_visible_child_name("new");
-            let win2 = win.clone();
-            let t2 = t.clone();
-            glib::timeout_add_local(Duration::from_millis(300), move || {
-                win2.set_content(Some(&t2));
-                glib::ControlFlow::Break
-            });
-            glib::ControlFlow::Break
-        });
-    } else {
-        window.set_content(Some(&toast_overlay));
-    }
+    // Reuse existing window (language switch) or create fresh
+    // Direct swap — avoids the crossfade re-parenting bug where toast_overlay
+    // remains a child of the fade Stack, causing gtk_widget_snapshot_child
+    // errors on every frame and breaking the QR preview rendering.
+    let _old_content = old_content; // drop old content (auto-unreferenced)
+    window.set_content(Some(&toast_overlay));
 
     // Header bar
     let header = HeaderBar::new();
