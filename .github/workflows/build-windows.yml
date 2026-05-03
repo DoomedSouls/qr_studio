@@ -112,40 +112,33 @@ jobs:
           cp "${MINGW}/bin/gdbus.exe" "${DIST}/" 2>/dev/null || true
 
           # Recursively find all DLL dependencies using ntldd
-          # ntldd resolves DLLs from the MSYS2/mingw64 search path
-          collect_deps() {
-            local bin="$1"
-            # ntldd outputs lines like: "  libfoo.dll => /mingw64/bin/libfoo.dll"
-            ntldd -R "${bin}" 2>/dev/null \
-              | grep -E '=>' \
-              | grep -v 'not found' \
-              | sed -n 's|.*=>\s*\(.*\)|\1|p' \
-              | grep -E '^/mingw64/bin/' \
-              | sort -u
-          }
-
-          # Collect all deps from the exe and build tools
-          ALL_DEPS=$(
-            collect_deps "${DIST}/qr_studio.exe"
-            collect_deps "${DIST}/glib-compile-schemas.exe" 2>/dev/null
-            collect_deps "${DIST}/gdk-pixbuf-query-loaders.exe" 2>/dev/null
-            collect_deps "${DIST}/gdbus.exe" 2>/dev/null
-          | sort -u)
+          # ntldd outputs lines like: "  libfoo.dll => /mingw64/bin/libfoo.dll"
+          {
+            ntldd -R "${DIST}/qr_studio.exe"
+            ntldd -R "${DIST}/glib-compile-schemas.exe"
+            ntldd -R "${DIST}/gdk-pixbuf-query-loaders.exe"
+            ntldd -R "${DIST}/gdbus.exe" 2>/dev/null
+          } 2>/dev/null \
+            | grep -E '=>' \
+            | grep -v 'not found' \
+            | sed -n 's|.*=>[[:space:]]*\(.*\)|\1|p' \
+            | grep -E '^/mingw64/bin/' \
+            | sort -u > /tmp/dll_deps.txt
 
           echo "=== Found DLL dependencies: ==="
-          echo "${ALL_DEPS}"
+          cat /tmp/dll_deps.txt
           echo "================================"
-          echo "Total: $(echo "${ALL_DEPS}" | wc -l) DLLs"
+          echo "Total: $(wc -l < /tmp/dll_deps.txt) DLLs"
 
           # Copy all found DLLs
-          for dll in ${ALL_DEPS}; do
+          while IFS= read -r dll; do
             if [ -f "${dll}" ]; then
               cp "${dll}" "${DIST}/"
               echo "  Copied: $(basename ${dll})"
             else
               echo "  WARNING: not found: ${dll}"
             fi
-          done
+          done < /tmp/dll_deps.txt
 
           # Copy GTK schemas
           mkdir -p "${DIST}/share/glib-2.0/schemas"
