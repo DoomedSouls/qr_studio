@@ -89,11 +89,6 @@ jobs:
           export PATH="/c/Users/${USER}/.cargo/bin:${PATH}"
           cargo build --release --target x86_64-pc-windows-gnu
 
-      - name: Install ntldd for dependency scanning
-        shell: msys2 {0}
-        run: |
-          pacman -S --noconfirm mingw-w64-x86_64-ntldd
-
       - name: Package distribution
         shell: msys2 {0}
         run: |
@@ -111,34 +106,17 @@ jobs:
           cp "${MINGW}/bin/gdk-pixbuf-query-loaders.exe" "${DIST}/"
           cp "${MINGW}/bin/gdbus.exe" "${DIST}/" 2>/dev/null || true
 
-          # Recursively find all DLL dependencies using ntldd
-          # ntldd outputs lines like: "  libfoo.dll => /mingw64/bin/libfoo.dll"
-          {
-            ntldd -R "${DIST}/qr_studio.exe"
-            ntldd -R "${DIST}/glib-compile-schemas.exe"
-            ntldd -R "${DIST}/gdk-pixbuf-query-loaders.exe"
-            ntldd -R "${DIST}/gdbus.exe" 2>/dev/null
-          } 2>/dev/null \
-            | grep -E '=>' \
-            | grep -v 'not found' \
-            | sed -n 's|.*=>[[:space:]]*\(.*\)|\1|p' \
-            | grep -E '^/mingw64/bin/' \
-            | sort -u > /tmp/dll_deps.txt
-
-          echo "=== Found DLL dependencies: ==="
-          cat /tmp/dll_deps.txt
-          echo "================================"
-          echo "Total: $(wc -l < /tmp/dll_deps.txt) DLLs"
-
-          # Copy all found DLLs
-          while IFS= read -r dll; do
-            if [ -f "${dll}" ]; then
-              cp "${dll}" "${DIST}/"
-              echo "  Copied: $(basename ${dll})"
-            else
-              echo "  WARNING: not found: ${dll}"
-            fi
-          done < /tmp/dll_deps.txt
+          # Copy ALL DLLs from mingw64/bin to ensure no dependencies are missed.
+          # This is the most reliable approach — the extra size (~30MB) is acceptable
+          # compared to the alternative of missing DLLs at runtime.
+          echo "=== Copying all DLLs from ${MINGW}/bin ==="
+          cp "${MINGW}/bin/"lib*.dll "${DIST}/" 2>/dev/null || true
+          echo "Copied $(ls "${DIST}/"lib*.dll 2>/dev/null | wc -l) DLLs"
+          # Also copy gcc runtime DLLs (libgcc, libstdc++, libwinpthread, libssp)
+          cp "${MINGW}/bin/"libgcc*.dll "${DIST}/" 2>/dev/null || true
+          cp "${MINGW}/bin/"libstdc*.dll "${DIST}/" 2>/dev/null || true
+          cp "${MINGW}/bin/"libwinpthread*.dll "${DIST}/" 2>/dev/null || true
+          cp "${MINGW}/bin/"libssp*.dll "${DIST}/" 2>/dev/null || true
 
           # Copy GTK schemas
           mkdir -p "${DIST}/share/glib-2.0/schemas"
