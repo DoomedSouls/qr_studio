@@ -15,7 +15,7 @@ set -euo pipefail
 APP_NAME="QR_Studio"
 APP_ID="com.example.qr_studio"
 BINARY="qr_studio"
-VERSION="1.0.0"
+VERSION="0.2.0"
 ARCH="x86_64"
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
