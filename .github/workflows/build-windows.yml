@@ -101,6 +101,13 @@ jobs:
           # Copy binary
           cp target/x86_64-pc-windows-gnu/release/qr_studio.exe "${DIST}/"
 
+          # Copy country flag SVGs (loaded by flag_svg_path() next to the exe)
+          if [ -d "flags" ]; then
+            cp -r flags "${DIST}/flags"
+            FLAG_COUNT=$(ls "${DIST}/flags"/*.svg 2>/dev/null | wc -l)
+            echo "Copied ${FLAG_COUNT} flag SVGs"
+          fi
+
           # Copy build tools needed for packaging (removed later)
           cp "${MINGW}/bin/glib-compile-schemas.exe" "${DIST}/"
           cp "${MINGW}/bin/gdk-pixbuf-query-loaders.exe" "${DIST}/"
