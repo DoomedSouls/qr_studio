@@ -50,26 +50,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "Inhalt");
         m.insert("tab_style", "Stil");
-        m.insert("tab_export", "Export");
         m.insert("btn_export_more", "Exportieren ▾");
         // Section headers
-        m.insert("section_content", "Inhalt");
-        m.insert("section_style", "Stil");
-        m.insert("section_logo", "Logo");
-        m.insert("section_frame", "Rahmen");
-        m.insert("section_background", "Hintergrund");
-        m.insert("section_presets", "Farb-Vorlagen (nur Stil)");
-        m.insert("section_templates", "Vorlagen");
-        m.insert("section_export", "Export");
         // Content types
-        m.insert("type_text", "Text");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/Kontakt");
-        m.insert("type_calendar", "Kalenderereignis");
-        m.insert("type_gps", "GPS-Standort");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "QR-Code generieren");
         m.insert("btn_copy", "Kopieren");
         m.insert("btn_save_png", "Als PNG speichern");
         m.insert("btn_save_svg", "Als SVG speichern");
@@ -82,65 +66,9 @@ impl I18n {
         m.insert("btn_remove", "Entfernen");
         m.insert("btn_clear_all", "Alles löschen");
         m.insert("tooltip_clear_all", "Alle Eingabefelder zurücksetzen");
-        m.insert("btn_save_template", "Vorlage speichern");
-        m.insert("btn_load_template", "Vorlage laden");
-        m.insert("btn_delete_template", "Vorlage löschen");
-        m.insert("btn_save_preset", "Stil speichern");
-        m.insert("btn_load_preset", "Stil laden");
-        m.insert("btn_delete_preset", "Stil löschen");
-        m.insert("btn_import_style", "Stil importieren...");
-        m.insert("btn_export_style", "Stil exportieren...");
-        m.insert("btn_import_csv", "CSV importieren");
-        m.insert("btn_export", "Exportieren");
-        m.insert("btn_cancel", "Abbrechen");
-        m.insert("btn_save", "Speichern");
         // Labels
-        m.insert("lbl_dot_style", "Punkt-Stil");
-        m.insert("lbl_corner_square", "Eck-Quadrate");
-        m.insert("lbl_corner_dot", "Eck-Punkte");
-        m.insert("lbl_fg_color", "Vordergrundfarbe");
-        m.insert("lbl_bg_color", "Hintergrundfarbe");
-        m.insert("lbl_corner_color", "Eckfarbe");
-        m.insert("lbl_transparent_bg", "Transparenter Hintergrund");
-        m.insert("lbl_gradient", "Farbverlauf");
-        m.insert("lbl_gradient_color", "Verlaufsfarbe");
-        m.insert("lbl_gradient_dir", "Verlaufsrichtung");
-        m.insert("lbl_ec_level", "Fehlerkorrektur");
-        m.insert("lbl_module_size", "Modulgröße (Pixel)");
-        m.insert("lbl_quiet_zone", "Ruhezone (Module)");
-        m.insert("lbl_module_gap", "Modulabstand");
-        m.insert("lbl_shadow", "Schatten");
-        m.insert("lbl_shadow_offset", "Schattenversatz");
-        m.insert("lbl_logo_shape", "Logo-Form");
-        m.insert("lbl_logo_size", "Logo-Größe (%)");
-        m.insert("lbl_logo_color", "Logo-Farbe");
-        m.insert("lbl_logo_border_width", "Logorahmen-Breite");
-        m.insert("lbl_logo_border_color", "Logorahmen-Farbe");
-        m.insert("lbl_logo_vectorize", "Logo vektorisieren");
-        m.insert("lbl_logo_vectorize_bg", "Vektorisierung Hintergrundfarbe");
-        m.insert("lbl_logo_clear_area", "Logo-Bereich freihalten");
-        m.insert("lbl_logo_clear_padding", "Freihaltung Abstand");
-        m.insert("lbl_outer_radius", "Äußerer Radius");
-        m.insert("lbl_inner_radius", "Innerer Radius");
-        m.insert("lbl_radius_sync", "Radius synchronisieren");
-        m.insert("lbl_frame_style", "Rahmen-Stil");
-        m.insert("lbl_frame_color", "Rahmenfarbe");
-        m.insert("lbl_frame_width", "Rahmendicke (1-10)");
-        m.insert("lbl_outer_text_top", "Text oben (Rahmen)");
-        m.insert("lbl_outer_text_bottom", "Text unten (Rahmen)");
-        m.insert("lbl_outer_text_color", "Textfarbe (Rahmen)");
-        m.insert("lbl_custom_dot_path", "Benutzerdefinierter Punkt-Pfad");
-        m.insert("lbl_palette", "Farbpalette");
-        m.insert("lbl_preset", "Gespeicherter Stil");
-        m.insert("lbl_template_name", "Vorlagenname");
-        m.insert("lbl_template", "Vorlage");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (Netzwerkname)");
         m.insert("wifi_password", "Passwort");
-        m.insert("wifi_encryption", "Verschlüsselung");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "Keine");
         // vCard fields
         m.insert("vcard_name", "Name");
         m.insert("vcard_phone", "Telefonnummer");
@@ -149,8 +77,6 @@ impl I18n {
         m.insert("vcard_url", "Website URL");
         // Calendar fields
         m.insert("cal_title", "Titel");
-        m.insert("cal_start", "Startdatum (JJJJMMTT)");
-        m.insert("cal_end", "Enddatum (JJJJMMTT)");
         m.insert("cal_location", "Ort");
         // GPS fields
         m.insert("gps_lat", "Breitengrad");
@@ -161,23 +87,8 @@ impl I18n {
         m.insert("sms_phone", "Telefonnummer");
         m.insert("sms_message", "Nachricht");
         // Frame styles
-        m.insert("frame_none", "Kein");
-        m.insert("frame_simple", "Einfach");
-        m.insert("frame_rounded", "Abgerundet");
-        m.insert("frame_banner", "Banner");
         // Gradient directions
-        m.insert("grad_horizontal", "Horizontal");
-        m.insert("grad_vertical", "Vertikal");
-        m.insert("grad_diagonal", "Diagonal");
-        m.insert("grad_radial", "Radial");
         // Status messages
-        m.insert("status_generated", "QR-Code generiert");
-        m.insert("status_saved", "Gespeichert");
-        m.insert("status_copied", "In Zwischenablage kopiert");
-        m.insert("status_logo_dropped", "Logo per Drag & Drop importiert");
-        m.insert("status_template_loaded", "Vorlage '{}' geladen");
-        m.insert("status_template_saved", "Vorlage '{}' gespeichert");
-        m.insert("status_template_deleted", "Vorlage '{}' gelöscht");
         m.insert(
             "status_template_saved_full",
             "Vorlage '{}' gespeichert (Stil + Inhalt)",
@@ -194,68 +105,15 @@ impl I18n {
             "status_template_loaded_style",
             "Vorlage '{}' geladen (nur Stil)",
         );
-        m.insert("status_preset_loaded", "Stil '{}' geladen");
-        m.insert("status_preset_saved", "Stil '{}' gespeichert");
-        m.insert("status_preset_deleted", "Stil '{}' gelöscht");
-        m.insert("status_no_data", "Keine Daten");
-        m.insert("status_data_too_long", "Daten zu lang für QR-Code");
         // Dialog titles
-        m.insert("dlg_save_pdf", "Als PDF speichern");
-        m.insert("dlg_save_png", "Als PNG speichern");
-        m.insert("dlg_save_svg", "Als SVG speichern");
-        m.insert("dlg_save_gif", "Als GIF speichern");
-        m.insert("dlg_batch_export", "Batch-Export");
-        m.insert("dlg_label_sheet", "Etiketten-Druckbogen");
-        m.insert("dlg_import_style", "Stil importieren");
-        m.insert("dlg_export_style", "Stil exportieren");
         // Batch dialog
-        m.insert("batch_data_label", "QR-Daten (eine pro Zeile):");
-        m.insert("batch_format", "Format:");
-        m.insert(
-            "batch_csv_hint",
-            "(Erste Spalte wird als QR-Daten verwendet, Kopfzeile übersprungen)",
-        );
-        m.insert("batch_csv_filter", "CSV-Dateien");
         // Label sheet dialog
-        m.insert("lbl_columns", "Spalten");
-        m.insert("lbl_rows", "Zeilen");
-        m.insert("lbl_margin_mm", "Rand (mm)");
-        m.insert("lbl_spacing_mm", "Abstand (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "Mehrere QR-Codes auf einer A4-Seite zum Ausdrucken",
-        );
         // EC levels
-        m.insert("ec_medium", "Mittel (15%)");
-        m.insert("ec_low", "Niedrig (7%)");
-        m.insert("ec_quartile", "Quartil (25%)");
-        m.insert("ec_high", "Hoch (30%)");
         // Dot styles
-        m.insert("dot_rounded", "Abgerundet");
-        m.insert("dot_square", "Quadrat");
-        m.insert("dot_dots", "Punkte");
-        m.insert("dot_diamond", "Raute");
-        m.insert("dot_custom", "Benutzerdefiniert");
         // Corner square styles
-        m.insert("corner_extra_rounded", "Stark abgerundet");
-        m.insert("corner_square", "Quadrat");
-        m.insert("corner_dot", "Punkt");
-        m.insert("corner_circle", "Kreis");
         // Logo shapes
-        m.insert("logo_circle", "Kreis");
-        m.insert("logo_rectangle", "Rechteck");
-        m.insert("logo_rounded_rect", "Abgerundetes Rechteck");
         // Harmonies
         m.insert("harmony_title", "Farbharmonien (als Hintergrund)");
-        m.insert("harmony_complementary", "Komplementär");
-        m.insert("harmony_analog_1", "Analog (+30°)");
-        m.insert("harmony_analog_2", "Analog (−30°)");
-        m.insert("harmony_triadic_1", "Triadisch (+120°)");
-        m.insert("harmony_triadic_2", "Triadisch (+240°)");
-        m.insert(
-            "harmony_tooltip",
-            "Klicken um als Hintergrundfarbe zu übernehmen",
-        );
         m.insert("color_fg", "Vordergrundfarbe");
         m.insert("color_bg", "Hintergrundfarbe");
         m.insert("color_corner", "Eckfarbe");
@@ -291,7 +149,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "Live-Vorschau");
         // Generate button
-        m.insert("btn_generate_full", "QR Code Generieren");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Text");
         m.insert("dd_content_wifi", "WiFi");
@@ -356,14 +213,18 @@ impl I18n {
         m.insert("btn_export_style_short", "Stil exportieren");
         m.insert("btn_import_style_short", "Stil importieren");
         m.insert("btn_print_calc", "Druckgrößenrechner");
+        m.insert("dlg_print_calc", "Druckgrößenrechner");
+        m.insert("btn_apply", "Anwenden");
+        m.insert("print_calc_result", "{} x {} Pixel (empfohlene Modulgröße: ~{}px)");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Transparenter Hintergrund");
         m.insert("check_gradient", "Farbverlauf aktivieren");
         m.insert("check_shadow", "Schatten aktivieren");
         m.insert("check_logo_vectorize", "Logo vektorisieren");
+        m.insert("check_logo_bg_transparent", "Transparenter Hintergrund");
         m.insert("check_logo_clear_area", "Bereich freihalten");
         m.insert("check_radius_sync", "Radius synchronisieren");
         m.insert("placeholder_template_name", "Vorlagenname...");
-        m.insert("placeholder_preset_name", "Vorlagenname...");
         m.insert("placeholder_top_text", "Text oben");
         m.insert("placeholder_bottom_text", "Text unten");
         m.insert("tooltip_undo", "Rückgängig (Ctrl+Z)");
@@ -392,12 +253,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "SMS Empfängernummer");
         m.insert("tooltip_sms_message", "SMS Nachrichtentext");
         m.insert("tooltip_preset_select", "Stil-Vorlage auswählen");
-        m.insert(
-            "tooltip_preset_save",
-            "Aktuellen Stil als Vorlage speichern",
-        );
-        m.insert("tooltip_preset_load", "Gespeicherte Vorlage laden");
-        m.insert("tooltip_preset_delete", "Ausgewählte Vorlage löschen");
         m.insert(
             "tooltip_template_save",
             "Aktuellen Stil + Inhalt als Vorlage speichern",
@@ -440,6 +295,10 @@ impl I18n {
             "Wandelt Raster-Logos (PNG/JPG) in Vektorpfade um",
         );
         m.insert("tooltip_logo_vectorize_bg", "HG-Farbe des vektorisierten Logos: Alpha=0 entfernt den Hintergrund, Alpha>0 ersetzt ihn durch diese Farbe");
+        m.insert(
+            "tooltip_logo_bg_transparent",
+            "Logo-Hintergrund transparent machen, unabhängig von der QR-Hintergrundfarbe",
+        );
         m.insert(
             "tooltip_logo_clear_area",
             "QR-Module um das Logo herum fließen lassen (erfordert Fehlerkorrektur)",
@@ -495,7 +354,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "Mehrere QR-Codes gleichzeitig exportieren");
         m.insert("tooltip_export_more", "Weitere Export-Optionen");
-        m.insert("tooltip_logo_bg_color", "Logo-Hintergrundfarbe");
         m.insert("tooltip_sidebar_toggle", "Seitenleiste ein-/ausblenden");
         // Feature 3: labels
         m.insert("label_start_date", "Startdatum");
@@ -517,7 +375,6 @@ impl I18n {
         m.insert("label_print_width", "Breite (cm):");
         m.insert("label_print_height", "Höhe (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "Ungültige URL");
         m.insert("validation_invalid_email", "Ungültige E-Mail-Adresse");
         m.insert(
             "validation_invalid_lat",
@@ -528,8 +385,6 @@ impl I18n {
             "Längengrad muss zwischen -180 und 180 liegen",
         );
         m.insert("validation_invalid_phone", "Ungültige Telefonnummer");
-        m.insert("validation_empty_ssid", "SSID darf nicht leer sein");
-        m.insert("validation_empty_title", "Titel darf nicht leer sein");
         // Feature 9: Font selection
         m.insert("label_font", "Schriftart");
         m.insert("label_font_size", "Schriftgröße");
@@ -558,7 +413,90 @@ impl I18n {
             "scan_detail_styled_corners",
             "Stilisierte Ecken — Smartphone-Scanner erkennen dies zuverlässig",
         );
-        m.insert("scan_detail_no_image", "Kein QR-Code zum Prüfen vorhanden");
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "Logo auswählen");
+        m.insert("dlg_select_bg", "Hintergrundbild auswählen");
+        m.insert("dlg_save_label_sheet", "Etiketten-Druckbogen speichern");
+        m.insert("dlg_select_csv", "CSV-Datei auswählen");
+        m.insert("dlg_select_folder", "Ordner auswählen");
+
+        // Dialog buttons
+        m.insert("btn_open", "Öffnen");
+        m.insert("btn_select", "Auswählen");
+
+        // File filter names
+        m.insert("filter_images", "Bilddateien");
+        m.insert("filter_json", "JSON-Dateien");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "Stil exportiert");
+        m.insert("status_pdf_saved", "PDF gespeichert");
+        m.insert("status_pdf_error", "Fehler beim PDF-Export");
+        m.insert(
+            "status_label_sheet_saved",
+            "Etiketten-Druckbogen gespeichert",
+        );
+        m.insert("status_label_sheet_error", "Fehler beim Etiketten-Export");
+        m.insert("status_png_saved", "PNG gespeichert");
+        m.insert("status_svg_saved", "SVG gespeichert");
+        m.insert("status_gif_saved", "GIF gespeichert");
+        m.insert(
+            "status_gif_gradient_only",
+            "GIF nur mit Farbverlauf verfügbar",
+        );
+        m.insert("status_batch_exported", "{} QR-Codes exportiert");
+        m.insert("status_saved_as", "Als {} gespeichert");
+        m.insert("status_enter_template_name", "Bitte Vorlagenname eingeben");
+        m.insert("status_template_deleted_fmt", "Vorlage '{}' gelöscht");
+        m.insert(
+            "status_render_error",
+            "Fehler: QR-Code konnte nicht gerendert werden",
+        );
+        m.insert("status_copied", "In Zwischenablage kopiert");
+        m.insert("status_copied_svg", "SVG in Zwischenablage kopiert");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "QR-Daten (eine pro Zeile):");
+        m.insert(
+            "batch_csv_hint",
+            "(Erste Spalte wird als QR-Daten verwendet, Kopfzeile übersprungen)",
+        );
+        m.insert("batch_format", "Format:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "Ordner:");
+        m.insert("batch_folder_selected", "Ordner: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "Spalten");
+        m.insert("lbl_rows", "Zeilen");
+        m.insert("lbl_margin_mm", "Rand (mm)");
+        m.insert("lbl_spacing_mm", "Abstand (mm)");
+        m.insert(
+            "lbl_sheet_info",
+            "Mehrere QR-Codes auf einer A4-Seite zum Ausdrucken",
+        );
+        m.insert(
+            "label_sheet_a4_info",
+            "Die QR-Codes werden auf einer A4-Seite angeordnet.",
+        );
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "Abbrechen");
+        m.insert("btn_export", "Exportieren");
+        m.insert("btn_save", "Speichern");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "Als PDF speichern");
+        m.insert("dlg_save_png", "Als PNG speichern");
+        m.insert("dlg_save_svg", "Als SVG speichern");
+        m.insert("dlg_save_gif", "Als GIF speichern");
+        m.insert("dlg_import_style", "Stil importieren");
+        m.insert("dlg_export_style", "Stil exportieren");
+        m.insert("dlg_batch_export", "Batch-Export");
+        m.insert("dlg_label_sheet", "Etiketten-Druckbogen");
+
         m
     }
 
@@ -567,26 +505,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "Content");
         m.insert("tab_style", "Style");
-        m.insert("tab_export", "Export");
         m.insert("btn_export_more", "Export ▾");
         // Section headers
-        m.insert("section_content", "Content");
-        m.insert("section_style", "Style");
-        m.insert("section_logo", "Logo");
-        m.insert("section_frame", "Frame");
-        m.insert("section_background", "Background");
-        m.insert("section_presets", "Color Presets (style only)");
-        m.insert("section_templates", "Templates");
-        m.insert("section_export", "Export");
         // Content types
-        m.insert("type_text", "Text");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/Contact");
-        m.insert("type_calendar", "Calendar Event");
-        m.insert("type_gps", "GPS Location");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "Generate QR Code");
         m.insert("btn_copy", "Copy");
         m.insert("btn_save_png", "Save as PNG");
         m.insert("btn_save_svg", "Save as SVG");
@@ -599,65 +521,9 @@ impl I18n {
         m.insert("btn_remove", "Remove");
         m.insert("btn_clear_all", "Clear All");
         m.insert("tooltip_clear_all", "Reset all input fields");
-        m.insert("btn_save_template", "Save Template");
-        m.insert("btn_load_template", "Load Template");
-        m.insert("btn_delete_template", "Delete Template");
-        m.insert("btn_save_preset", "Save Style");
-        m.insert("btn_load_preset", "Load Style");
-        m.insert("btn_delete_preset", "Delete Style");
-        m.insert("btn_import_style", "Import Style...");
-        m.insert("btn_export_style", "Export Style...");
-        m.insert("btn_import_csv", "Import CSV");
-        m.insert("btn_export", "Export");
-        m.insert("btn_cancel", "Cancel");
-        m.insert("btn_save", "Save");
         // Labels
-        m.insert("lbl_dot_style", "Dot Style");
-        m.insert("lbl_corner_square", "Corner Squares");
-        m.insert("lbl_corner_dot", "Corner Dots");
-        m.insert("lbl_fg_color", "Foreground Color");
-        m.insert("lbl_bg_color", "Background Color");
-        m.insert("lbl_corner_color", "Corner Color");
-        m.insert("lbl_transparent_bg", "Transparent Background");
-        m.insert("lbl_gradient", "Gradient");
-        m.insert("lbl_gradient_color", "Gradient Color");
-        m.insert("lbl_gradient_dir", "Gradient Direction");
-        m.insert("lbl_ec_level", "Error Correction");
-        m.insert("lbl_module_size", "Module Size (pixels)");
-        m.insert("lbl_quiet_zone", "Quiet Zone (modules)");
-        m.insert("lbl_module_gap", "Module Gap");
-        m.insert("lbl_shadow", "Shadow");
-        m.insert("lbl_shadow_offset", "Shadow Offset");
-        m.insert("lbl_logo_shape", "Logo Shape");
-        m.insert("lbl_logo_size", "Logo Size (%)");
-        m.insert("lbl_logo_color", "Logo Color");
-        m.insert("lbl_logo_border_width", "Logo Border Width");
-        m.insert("lbl_logo_border_color", "Logo Border Color");
-        m.insert("lbl_logo_vectorize", "Vectorize Logo");
-        m.insert("lbl_logo_vectorize_bg", "Vectorization Background Color");
-        m.insert("lbl_logo_clear_area", "Clear Logo Area");
-        m.insert("lbl_logo_clear_padding", "Clear Area Padding");
-        m.insert("lbl_outer_radius", "Outer Radius");
-        m.insert("lbl_inner_radius", "Inner Radius");
-        m.insert("lbl_radius_sync", "Synchronize Radii");
-        m.insert("lbl_frame_style", "Frame Style");
-        m.insert("lbl_frame_color", "Frame Color");
-        m.insert("lbl_frame_width", "Frame Width (1-10)");
-        m.insert("lbl_outer_text_top", "Top Text (Frame)");
-        m.insert("lbl_outer_text_bottom", "Bottom Text (Frame)");
-        m.insert("lbl_outer_text_color", "Text Color (Frame)");
-        m.insert("lbl_custom_dot_path", "Custom Dot Path");
-        m.insert("lbl_palette", "Color Palette");
-        m.insert("lbl_preset", "Saved Style");
-        m.insert("lbl_template_name", "Template Name");
-        m.insert("lbl_template", "Template");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (Network Name)");
         m.insert("wifi_password", "Password");
-        m.insert("wifi_encryption", "Encryption");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "None");
         // vCard fields
         m.insert("vcard_name", "Name");
         m.insert("vcard_phone", "Phone Number");
@@ -666,8 +532,6 @@ impl I18n {
         m.insert("vcard_url", "Website URL");
         // Calendar fields
         m.insert("cal_title", "Title");
-        m.insert("cal_start", "Start Date (YYYYMMDD)");
-        m.insert("cal_end", "End Date (YYYYMMDD)");
         m.insert("cal_location", "Location");
         // GPS fields
         m.insert("gps_lat", "Latitude");
@@ -678,23 +542,8 @@ impl I18n {
         m.insert("sms_phone", "Phone Number");
         m.insert("sms_message", "Message");
         // Frame styles
-        m.insert("frame_none", "None");
-        m.insert("frame_simple", "Simple");
-        m.insert("frame_rounded", "Rounded");
-        m.insert("frame_banner", "Banner");
         // Gradient directions
-        m.insert("grad_horizontal", "Horizontal");
-        m.insert("grad_vertical", "Vertical");
-        m.insert("grad_diagonal", "Diagonal");
-        m.insert("grad_radial", "Radial");
         // Status messages
-        m.insert("status_generated", "QR code generated");
-        m.insert("status_saved", "Saved");
-        m.insert("status_copied", "Copied to clipboard");
-        m.insert("status_logo_dropped", "Logo imported via drag & drop");
-        m.insert("status_template_loaded", "Template '{}' loaded");
-        m.insert("status_template_saved", "Template '{}' saved");
-        m.insert("status_template_deleted", "Template '{}' deleted");
         m.insert(
             "status_template_saved_full",
             "Template '{}' saved (style + content)",
@@ -711,65 +560,15 @@ impl I18n {
             "status_template_loaded_style",
             "Template '{}' loaded (style only)",
         );
-        m.insert("status_preset_loaded", "Style '{}' loaded");
-        m.insert("status_preset_saved", "Style '{}' saved");
-        m.insert("status_preset_deleted", "Style '{}' deleted");
-        m.insert("status_no_data", "No data");
-        m.insert("status_data_too_long", "Data too long for QR code");
         // Dialog titles
-        m.insert("dlg_save_pdf", "Save as PDF");
-        m.insert("dlg_save_png", "Save as PNG");
-        m.insert("dlg_save_svg", "Save as SVG");
-        m.insert("dlg_save_gif", "Save as GIF");
-        m.insert("dlg_batch_export", "Batch Export");
-        m.insert("dlg_label_sheet", "Label Sheet");
-        m.insert("dlg_import_style", "Import Style");
-        m.insert("dlg_export_style", "Export Style");
         // Batch dialog
-        m.insert("batch_data_label", "QR Data (one per line):");
-        m.insert("batch_format", "Format:");
-        m.insert(
-            "batch_csv_hint",
-            "(First column used as QR data, header row skipped)",
-        );
-        m.insert("batch_csv_filter", "CSV Files");
         // Label sheet dialog
-        m.insert("lbl_columns", "Columns");
-        m.insert("lbl_rows", "Rows");
-        m.insert("lbl_margin_mm", "Margin (mm)");
-        m.insert("lbl_spacing_mm", "Spacing (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "Multiple QR codes on an A4 page for printing",
-        );
         // EC levels
-        m.insert("ec_medium", "Medium (15%)");
-        m.insert("ec_low", "Low (7%)");
-        m.insert("ec_quartile", "Quartile (25%)");
-        m.insert("ec_high", "High (30%)");
         // Dot styles
-        m.insert("dot_rounded", "Rounded");
-        m.insert("dot_square", "Square");
-        m.insert("dot_dots", "Dots");
-        m.insert("dot_diamond", "Diamond");
-        m.insert("dot_custom", "Custom");
         // Corner square styles
-        m.insert("corner_extra_rounded", "Extra Rounded");
-        m.insert("corner_square", "Square");
-        m.insert("corner_dot", "Dot");
-        m.insert("corner_circle", "Circle");
         // Logo shapes
-        m.insert("logo_circle", "Circle");
-        m.insert("logo_rectangle", "Rectangle");
-        m.insert("logo_rounded_rect", "Rounded Rectangle");
         // Harmonies
         m.insert("harmony_title", "Color Harmonies (as background)");
-        m.insert("harmony_complementary", "Complementary");
-        m.insert("harmony_analog_1", "Analogous (+30°)");
-        m.insert("harmony_analog_2", "Analogous (−30°)");
-        m.insert("harmony_triadic_1", "Triadic (+120°)");
-        m.insert("harmony_triadic_2", "Triadic (+240°)");
-        m.insert("harmony_tooltip", "Click to apply as background color");
         m.insert("color_fg", "Foreground");
         m.insert("color_bg", "Background");
         m.insert("color_corner", "Corner Color");
@@ -805,7 +604,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "Live Preview");
         // Generate button
-        m.insert("btn_generate_full", "Generate QR Code");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Text");
         m.insert("dd_content_wifi", "WiFi");
@@ -870,14 +668,18 @@ impl I18n {
         m.insert("btn_export_style_short", "Export Style");
         m.insert("btn_import_style_short", "Import Style");
         m.insert("btn_print_calc", "Print Size Calculator");
+        m.insert("dlg_print_calc", "Print Size Calculator");
+        m.insert("btn_apply", "Apply");
+        m.insert("print_calc_result", "{} x {} pixels (recommended module size: ~{}px)");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Transparent Background");
         m.insert("check_gradient", "Enable Gradient");
         m.insert("check_shadow", "Enable Shadow");
         m.insert("check_logo_vectorize", "Vectorize Logo");
+        m.insert("check_logo_bg_transparent", "Transparent Background");
         m.insert("check_logo_clear_area", "Clear Area");
         m.insert("check_radius_sync", "Synchronize Radii");
         m.insert("placeholder_template_name", "Template name...");
-        m.insert("placeholder_preset_name", "Template name...");
         m.insert("placeholder_top_text", "Top text");
         m.insert("placeholder_bottom_text", "Bottom text");
         m.insert("tooltip_undo", "Undo (Ctrl+Z)");
@@ -906,9 +708,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "SMS recipient number");
         m.insert("tooltip_sms_message", "SMS message text");
         m.insert("tooltip_preset_select", "Select style preset");
-        m.insert("tooltip_preset_save", "Save current style as preset");
-        m.insert("tooltip_preset_load", "Load saved preset");
-        m.insert("tooltip_preset_delete", "Delete selected preset");
         m.insert(
             "tooltip_template_save",
             "Save current style + content as template",
@@ -948,6 +747,10 @@ impl I18n {
             "Convert raster logos (PNG/JPG) to vector paths",
         );
         m.insert("tooltip_logo_vectorize_bg", "Vectorized logo BG color: Alpha=0 removes background, Alpha>0 replaces with this color");
+        m.insert(
+            "tooltip_logo_bg_transparent",
+            "Make logo area background transparent, independent of QR background color",
+        );
         m.insert(
             "tooltip_logo_clear_area",
             "Reflow QR modules around logo (requires error correction)",
@@ -997,7 +800,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "Export multiple QR codes at once");
         m.insert("tooltip_export_more", "More export options");
-        m.insert("tooltip_logo_bg_color", "Logo background color");
         m.insert("tooltip_sidebar_toggle", "Toggle sidebar");
         // Feature 3: labels
         m.insert("label_start_date", "Start date");
@@ -1019,7 +821,6 @@ impl I18n {
         m.insert("label_print_width", "Width (cm):");
         m.insert("label_print_height", "Height (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "Invalid URL");
         m.insert("validation_invalid_email", "Invalid email address");
         m.insert(
             "validation_invalid_lat",
@@ -1030,8 +831,6 @@ impl I18n {
             "Longitude must be between -180 and 180",
         );
         m.insert("validation_invalid_phone", "Invalid phone number");
-        m.insert("validation_empty_ssid", "SSID must not be empty");
-        m.insert("validation_empty_title", "Title must not be empty");
         // Feature 9: Font selection
         m.insert("label_font", "Font");
         m.insert("label_font_size", "Font size");
@@ -1060,7 +859,87 @@ impl I18n {
             "scan_detail_styled_corners",
             "Styled corners — smartphone scanners handle these reliably",
         );
-        m.insert("scan_detail_no_image", "No QR code available to verify");
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "Select Logo");
+        m.insert("dlg_select_bg", "Select Background Image");
+        m.insert("dlg_save_label_sheet", "Save Label Sheet");
+        m.insert("dlg_select_csv", "Select CSV File");
+        m.insert("dlg_select_folder", "Select Folder");
+
+        // Dialog buttons
+        m.insert("btn_open", "Open");
+        m.insert("btn_select", "Select");
+
+        // File filter names
+        m.insert("filter_images", "Image Files");
+        m.insert("filter_json", "JSON Files");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "Style exported");
+        m.insert("status_pdf_saved", "PDF saved");
+        m.insert("status_pdf_error", "PDF export error");
+        m.insert("status_label_sheet_saved", "Label sheet saved");
+        m.insert("status_label_sheet_error", "Label sheet export error");
+        m.insert("status_png_saved", "PNG saved");
+        m.insert("status_svg_saved", "SVG saved");
+        m.insert("status_gif_saved", "GIF saved");
+        m.insert(
+            "status_gif_gradient_only",
+            "GIF only available with gradient",
+        );
+        m.insert("status_batch_exported", "{} QR codes exported");
+        m.insert("status_saved_as", "Saved as {}");
+        m.insert("status_enter_template_name", "Please enter a template name");
+        m.insert("status_template_deleted_fmt", "Template '{}' deleted");
+        m.insert(
+            "status_render_error",
+            "Error: QR code could not be rendered",
+        );
+        m.insert("status_copied", "Copied to clipboard");
+        m.insert("status_copied_svg", "SVG copied to clipboard");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "QR Data (one per line):");
+        m.insert(
+            "batch_csv_hint",
+            "(First column used as QR data, header row skipped)",
+        );
+        m.insert("batch_format", "Format:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "Folder:");
+        m.insert("batch_folder_selected", "Folder: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "Columns");
+        m.insert("lbl_rows", "Rows");
+        m.insert("lbl_margin_mm", "Margin (mm)");
+        m.insert("lbl_spacing_mm", "Spacing (mm)");
+        m.insert(
+            "lbl_sheet_info",
+            "Multiple QR codes on an A4 page for printing",
+        );
+        m.insert(
+            "label_sheet_a4_info",
+            "QR codes will be arranged on an A4 page.",
+        );
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "Cancel");
+        m.insert("btn_export", "Export");
+        m.insert("btn_save", "Save");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "Save as PDF");
+        m.insert("dlg_save_png", "Save as PNG");
+        m.insert("dlg_save_svg", "Save as SVG");
+        m.insert("dlg_save_gif", "Save as GIF");
+        m.insert("dlg_import_style", "Import Style");
+        m.insert("dlg_export_style", "Export Style");
+        m.insert("dlg_batch_export", "Batch Export");
+        m.insert("dlg_label_sheet", "Label Sheet");
+
         m
     }
 
@@ -1069,26 +948,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "Contenido");
         m.insert("tab_style", "Estilo");
-        m.insert("tab_export", "Exportar");
         m.insert("btn_export_more", "Exportar ▾");
         // Section headers
-        m.insert("section_content", "Contenido");
-        m.insert("section_style", "Estilo");
-        m.insert("section_logo", "Logotipo");
-        m.insert("section_frame", "Marco");
-        m.insert("section_background", "Fondo");
-        m.insert("section_presets", "Preajustes de color (solo estilo)");
-        m.insert("section_templates", "Plantillas");
-        m.insert("section_export", "Exportar");
         // Content types
-        m.insert("type_text", "Texto");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/Contacto");
-        m.insert("type_calendar", "Evento de calendario");
-        m.insert("type_gps", "Ubicación GPS");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "Generar código QR");
         m.insert("btn_copy", "Copiar");
         m.insert("btn_save_png", "Guardar como PNG");
         m.insert("btn_save_svg", "Guardar como SVG");
@@ -1100,66 +963,13 @@ impl I18n {
         m.insert("btn_select_image", "Seleccionar imagen");
         m.insert("btn_remove", "Eliminar");
         m.insert("btn_clear_all", "Borrar todo");
-        m.insert("tooltip_clear_all", "Restablecer todos los campos de entrada");
-        m.insert("btn_save_template", "Guardar plantilla");
-        m.insert("btn_load_template", "Cargar plantilla");
-        m.insert("btn_delete_template", "Eliminar plantilla");
-        m.insert("btn_save_preset", "Guardar estilo");
-        m.insert("btn_load_preset", "Cargar estilo");
-        m.insert("btn_delete_preset", "Eliminar estilo");
-        m.insert("btn_import_style", "Importar estilo...");
-        m.insert("btn_export_style", "Exportar estilo...");
-        m.insert("btn_import_csv", "Importar CSV");
-        m.insert("btn_export", "Exportar");
-        m.insert("btn_cancel", "Cancelar");
-        m.insert("btn_save", "Guardar");
+        m.insert(
+            "tooltip_clear_all",
+            "Restablecer todos los campos de entrada",
+        );
         // Labels
-        m.insert("lbl_dot_style", "Estilo de punto");
-        m.insert("lbl_corner_square", "Esquinas");
-        m.insert("lbl_corner_dot", "Puntos de esquina");
-        m.insert("lbl_fg_color", "Color de primer plano");
-        m.insert("lbl_bg_color", "Color de fondo");
-        m.insert("lbl_corner_color", "Color de esquina");
-        m.insert("lbl_transparent_bg", "Fondo transparente");
-        m.insert("lbl_gradient", "Degradado");
-        m.insert("lbl_gradient_color", "Color de degradado");
-        m.insert("lbl_gradient_dir", "Dirección del degradado");
-        m.insert("lbl_ec_level", "Corrección de errores");
-        m.insert("lbl_module_size", "Tamaño de módulo (píxeles)");
-        m.insert("lbl_quiet_zone", "Zona de silencio (módulos)");
-        m.insert("lbl_module_gap", "Separación de módulo");
-        m.insert("lbl_shadow", "Sombra");
-        m.insert("lbl_shadow_offset", "Desplazamiento de sombra");
-        m.insert("lbl_logo_shape", "Forma del logotipo");
-        m.insert("lbl_logo_size", "Tamaño del logotipo (%)");
-        m.insert("lbl_logo_color", "Color del logotipo");
-        m.insert("lbl_logo_border_width", "Ancho del borde del logotipo");
-        m.insert("lbl_logo_border_color", "Color del borde del logotipo");
-        m.insert("lbl_logo_vectorize", "Vectorizar logotipo");
-        m.insert("lbl_logo_vectorize_bg", "Color de fondo de vectorización");
-        m.insert("lbl_logo_clear_area", "Limpiar área del logotipo");
-        m.insert("lbl_logo_clear_padding", "Relleno del área limpia");
-        m.insert("lbl_outer_radius", "Radio exterior");
-        m.insert("lbl_inner_radius", "Radio interior");
-        m.insert("lbl_radius_sync", "Sincronizar radios");
-        m.insert("lbl_frame_style", "Estilo de marco");
-        m.insert("lbl_frame_color", "Color del marco");
-        m.insert("lbl_frame_width", "Ancho del marco (1-10)");
-        m.insert("lbl_outer_text_top", "Texto superior (marco)");
-        m.insert("lbl_outer_text_bottom", "Texto inferior (marco)");
-        m.insert("lbl_outer_text_color", "Color del texto (marco)");
-        m.insert("lbl_custom_dot_path", "Ruta de punto personalizada");
-        m.insert("lbl_palette", "Paleta de colores");
-        m.insert("lbl_preset", "Estilo guardado");
-        m.insert("lbl_template_name", "Nombre de plantilla");
-        m.insert("lbl_template", "Plantilla");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (Nombre de red)");
         m.insert("wifi_password", "Contraseña");
-        m.insert("wifi_encryption", "Cifrado");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "Ninguno");
         // vCard fields
         m.insert("vcard_name", "Nombre");
         m.insert("vcard_phone", "Número de teléfono");
@@ -1168,8 +978,6 @@ impl I18n {
         m.insert("vcard_url", "URL del sitio web");
         // Calendar fields
         m.insert("cal_title", "Título");
-        m.insert("cal_start", "Fecha de inicio (AAAAMMDD)");
-        m.insert("cal_end", "Fecha de fin (AAAAMMDD)");
         m.insert("cal_location", "Ubicación");
         // GPS fields
         m.insert("gps_lat", "Latitud");
@@ -1180,26 +988,8 @@ impl I18n {
         m.insert("sms_phone", "Número de teléfono");
         m.insert("sms_message", "Mensaje");
         // Frame styles
-        m.insert("frame_none", "Ninguno");
-        m.insert("frame_simple", "Simple");
-        m.insert("frame_rounded", "Redondeado");
-        m.insert("frame_banner", "Banner");
         // Gradient directions
-        m.insert("grad_horizontal", "Horizontal");
-        m.insert("grad_vertical", "Vertical");
-        m.insert("grad_diagonal", "Diagonal");
-        m.insert("grad_radial", "Radial");
         // Status messages
-        m.insert("status_generated", "Código QR generado");
-        m.insert("status_saved", "Guardado");
-        m.insert("status_copied", "Copiado al portapapeles");
-        m.insert(
-            "status_logo_dropped",
-            "Logotipo importado mediante arrastrar y soltar",
-        );
-        m.insert("status_template_loaded", "Plantilla '{}' cargada");
-        m.insert("status_template_saved", "Plantilla '{}' guardada");
-        m.insert("status_template_deleted", "Plantilla '{}' eliminada");
         m.insert(
             "status_template_saved_full",
             "Plantilla '{}' guardada (estilo + contenido)",
@@ -1216,68 +1006,15 @@ impl I18n {
             "status_template_loaded_style",
             "Plantilla '{}' cargada (solo estilo)",
         );
-        m.insert("status_preset_loaded", "Estilo '{}' cargado");
-        m.insert("status_preset_saved", "Estilo '{}' guardado");
-        m.insert("status_preset_deleted", "Estilo '{}' eliminado");
-        m.insert("status_no_data", "Sin datos");
-        m.insert(
-            "status_data_too_long",
-            "Datos demasiado largos para el código QR",
-        );
         // Dialog titles
-        m.insert("dlg_save_pdf", "Guardar como PDF");
-        m.insert("dlg_save_png", "Guardar como PNG");
-        m.insert("dlg_save_svg", "Guardar como SVG");
-        m.insert("dlg_save_gif", "Guardar como GIF");
-        m.insert("dlg_batch_export", "Exportación por lotes");
-        m.insert("dlg_label_sheet", "Hoja de etiquetas");
-        m.insert("dlg_import_style", "Importar estilo");
-        m.insert("dlg_export_style", "Exportar estilo");
         // Batch dialog
-        m.insert("batch_data_label", "Datos QR (uno por línea):");
-        m.insert("batch_format", "Formato:");
-        m.insert(
-            "batch_csv_hint",
-            "(Se usa la primera columna como datos QR, se omite la fila de encabezado)",
-        );
-        m.insert("batch_csv_filter", "Archivos CSV");
         // Label sheet dialog
-        m.insert("lbl_columns", "Columnas");
-        m.insert("lbl_rows", "Filas");
-        m.insert("lbl_margin_mm", "Margen (mm)");
-        m.insert("lbl_spacing_mm", "Espaciado (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "Múltiples códigos QR en una página A4 para imprimir",
-        );
         // EC levels
-        m.insert("ec_medium", "Medio (15%)");
-        m.insert("ec_low", "Bajo (7%)");
-        m.insert("ec_quartile", "Cuarto (25%)");
-        m.insert("ec_high", "Alto (30%)");
         // Dot styles
-        m.insert("dot_rounded", "Redondeado");
-        m.insert("dot_square", "Cuadrado");
-        m.insert("dot_dots", "Puntos");
-        m.insert("dot_diamond", "Diamante");
-        m.insert("dot_custom", "Personalizado");
         // Corner square styles
-        m.insert("corner_extra_rounded", "Muy redondeado");
-        m.insert("corner_square", "Cuadrado");
-        m.insert("corner_dot", "Punto");
-        m.insert("corner_circle", "Círculo");
         // Logo shapes
-        m.insert("logo_circle", "Círculo");
-        m.insert("logo_rectangle", "Rectángulo");
-        m.insert("logo_rounded_rect", "Rectángulo redondeado");
         // Harmonies
         m.insert("harmony_title", "Armonías de color (como fondo)");
-        m.insert("harmony_complementary", "Complementario");
-        m.insert("harmony_analog_1", "Análogo (+30°)");
-        m.insert("harmony_analog_2", "Análogo (−30°)");
-        m.insert("harmony_triadic_1", "Triádico (+120°)");
-        m.insert("harmony_triadic_2", "Triádico (+240°)");
-        m.insert("harmony_tooltip", "Clic para aplicar como color de fondo");
         m.insert("color_fg", "Primer plano");
         m.insert("color_bg", "Fondo");
         m.insert("color_corner", "Color de esquina");
@@ -1319,7 +1056,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "Vista previa en vivo");
         // Generate button
-        m.insert("btn_generate_full", "Generar código QR");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Texto");
         m.insert("dd_content_wifi", "WiFi");
@@ -1384,14 +1120,18 @@ impl I18n {
         m.insert("btn_export_style_short", "Exportar estilo");
         m.insert("btn_import_style_short", "Importar estilo");
         m.insert("btn_print_calc", "Calculadora de tamaño de impresión");
+        m.insert("dlg_print_calc", "Calculadora de tamaño de impresión");
+        m.insert("btn_apply", "Aplicar");
+        m.insert("print_calc_result", "{} x {} píxeles (tamaño de módulo recomendado: ~{}px)");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Fondo transparente");
         m.insert("check_gradient", "Activar degradado");
         m.insert("check_shadow", "Activar sombra");
         m.insert("check_logo_vectorize", "Vectorizar logotipo");
+        m.insert("check_logo_bg_transparent", "Fondo transparente");
         m.insert("check_logo_clear_area", "Limpiar área");
         m.insert("check_radius_sync", "Sincronizar radios");
         m.insert("placeholder_template_name", "Nombre de plantilla...");
-        m.insert("placeholder_preset_name", "Nombre de plantilla...");
         m.insert("placeholder_top_text", "Texto superior");
         m.insert("placeholder_bottom_text", "Texto inferior");
         m.insert("tooltip_undo", "Deshacer (Ctrl+Z)");
@@ -1420,12 +1160,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "Número de destinatario SMS");
         m.insert("tooltip_sms_message", "Texto del mensaje SMS");
         m.insert("tooltip_preset_select", "Seleccionar preajuste de estilo");
-        m.insert(
-            "tooltip_preset_save",
-            "Guardar estilo actual como preajuste",
-        );
-        m.insert("tooltip_preset_load", "Cargar preajuste guardado");
-        m.insert("tooltip_preset_delete", "Eliminar preajuste seleccionado");
         m.insert(
             "tooltip_template_save",
             "Guardar estilo actual + contenido como plantilla",
@@ -1480,6 +1214,7 @@ impl I18n {
             "Convertir logotipos rasterizados (PNG/JPG) a trazados vectoriales",
         );
         m.insert("tooltip_logo_vectorize_bg", "Color de fondo del logotipo vectorizado: Alfa=0 elimina el fondo, Alfa>0 lo reemplaza con este color");
+        m.insert("tooltip_logo_bg_transparent", "Hacer transparente el fondo del área del logo, independientemente del color de fondo del QR");
         m.insert(
             "tooltip_logo_clear_area",
             "Redistribuir módulos QR alrededor del logotipo (requiere corrección de errores)",
@@ -1541,7 +1276,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "Exportar múltiples códigos QR a la vez");
         m.insert("tooltip_export_more", "Más opciones de exportación");
-        m.insert("tooltip_logo_bg_color", "Color de fondo del logotipo");
         m.insert("tooltip_sidebar_toggle", "Alternar barra lateral");
         // Feature 3: labels
         m.insert("label_start_date", "Fecha de inicio");
@@ -1568,7 +1302,6 @@ impl I18n {
         m.insert("label_print_width", "Ancho (cm):");
         m.insert("label_print_height", "Alto (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "URL no válida");
         m.insert(
             "validation_invalid_email",
             "Dirección de correo electrónico no válida",
@@ -1582,8 +1315,6 @@ impl I18n {
             "La longitud debe estar entre -180 y 180",
         );
         m.insert("validation_invalid_phone", "Número de teléfono no válido");
-        m.insert("validation_empty_ssid", "El SSID no debe estar vacío");
-        m.insert("validation_empty_title", "El título no debe estar vacío");
         // Feature 9: Font selection
         m.insert("label_font", "Fuente");
         m.insert("label_font_size", "Tamaño de fuente");
@@ -1618,10 +1349,93 @@ impl I18n {
             "scan_detail_styled_corners",
             "Esquinas con estilo — los escáneres de smartphone las manejan de forma fiable",
         );
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "Seleccionar logo");
+        m.insert("dlg_select_bg", "Seleccionar imagen de fondo");
+        m.insert("dlg_save_label_sheet", "Guardar hoja de etiquetas");
+        m.insert("dlg_select_csv", "Seleccionar archivo CSV");
+        m.insert("dlg_select_folder", "Seleccionar carpeta");
+
+        // Dialog buttons
+        m.insert("btn_open", "Abrir");
+        m.insert("btn_select", "Seleccionar");
+
+        // File filter names
+        m.insert("filter_images", "Archivos de imagen");
+        m.insert("filter_json", "Archivos JSON");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "Estilo exportado");
+        m.insert("status_pdf_saved", "PDF guardado");
+        m.insert("status_pdf_error", "Error al exportar PDF");
+        m.insert("status_label_sheet_saved", "Hoja de etiquetas guardada");
         m.insert(
-            "scan_detail_no_image",
-            "No hay código QR disponible para verificar",
+            "status_label_sheet_error",
+            "Error al exportar hoja de etiquetas",
         );
+        m.insert("status_png_saved", "PNG guardado");
+        m.insert("status_svg_saved", "SVG guardado");
+        m.insert("status_gif_saved", "GIF guardado");
+        m.insert(
+            "status_gif_gradient_only",
+            "GIF solo disponible con degradado",
+        );
+        m.insert("status_batch_exported", "{} códigos QR exportados");
+        m.insert("status_saved_as", "Guardado como {}");
+        m.insert(
+            "status_enter_template_name",
+            "Introduzca nombre de plantilla",
+        );
+        m.insert("status_template_deleted_fmt", "Plantilla '{}' eliminada");
+        m.insert(
+            "status_render_error",
+            "Error: No se pudo renderizar el código QR",
+        );
+        m.insert("status_copied", "Copiado al portapapeles");
+        m.insert("status_copied_svg", "SVG copiado al portapapeles");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "Datos QR (uno por línea):");
+        m.insert(
+            "batch_csv_hint",
+            "(Primera columna como datos QR, cabecera omitida)",
+        );
+        m.insert("batch_format", "Formato:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "Carpeta:");
+        m.insert("batch_folder_selected", "Carpeta: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "Columnas");
+        m.insert("lbl_rows", "Filas");
+        m.insert("lbl_margin_mm", "Margen (mm)");
+        m.insert("lbl_spacing_mm", "Espaciado (mm)");
+        m.insert(
+            "lbl_sheet_info",
+            "Varios códigos QR en una página A4 para imprimir",
+        );
+        m.insert(
+            "label_sheet_a4_info",
+            "Los códigos QR se organizarán en una página A4.",
+        );
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "Cancelar");
+        m.insert("btn_export", "Exportar");
+        m.insert("btn_save", "Guardar");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "Guardar como PDF");
+        m.insert("dlg_save_png", "Guardar como PNG");
+        m.insert("dlg_save_svg", "Guardar como SVG");
+        m.insert("dlg_save_gif", "Guardar como GIF");
+        m.insert("dlg_import_style", "Importar estilo");
+        m.insert("dlg_export_style", "Exportar estilo");
+        m.insert("dlg_batch_export", "Exportación por lotes");
+        m.insert("dlg_label_sheet", "Hoja de etiquetas");
+
         m
     }
 
@@ -1630,29 +1444,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "Contenu");
         m.insert("tab_style", "Style");
-        m.insert("tab_export", "Exporter");
         m.insert("btn_export_more", "Exporter ▾");
         // Section headers
-        m.insert("section_content", "Contenu");
-        m.insert("section_style", "Style");
-        m.insert("section_logo", "Logo");
-        m.insert("section_frame", "Cadre");
-        m.insert("section_background", "Arrière-plan");
-        m.insert(
-            "section_presets",
-            "Préréglages de couleur (style uniquement)",
-        );
-        m.insert("section_templates", "Modèles");
-        m.insert("section_export", "Exporter");
         // Content types
-        m.insert("type_text", "Texte");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/Contact");
-        m.insert("type_calendar", "Événement calendrier");
-        m.insert("type_gps", "Localisation GPS");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "Générer le code QR");
         m.insert("btn_copy", "Copier");
         m.insert("btn_save_png", "Enregistrer en PNG");
         m.insert("btn_save_svg", "Enregistrer en SVG");
@@ -1664,69 +1459,13 @@ impl I18n {
         m.insert("btn_select_image", "Sélectionner une image");
         m.insert("btn_remove", "Supprimer");
         m.insert("btn_clear_all", "Tout effacer");
-        m.insert("tooltip_clear_all", "Réinitialiser tous les champs de saisie");
-        m.insert("btn_save_template", "Enregistrer le modèle");
-        m.insert("btn_load_template", "Charger le modèle");
-        m.insert("btn_delete_template", "Supprimer le modèle");
-        m.insert("btn_save_preset", "Enregistrer le style");
-        m.insert("btn_load_preset", "Charger le style");
-        m.insert("btn_delete_preset", "Supprimer le style");
-        m.insert("btn_import_style", "Importer le style…");
-        m.insert("btn_export_style", "Exporter le style…");
-        m.insert("btn_import_csv", "Importer CSV");
-        m.insert("btn_export", "Exporter");
-        m.insert("btn_cancel", "Annuler");
-        m.insert("btn_save", "Enregistrer");
-        // Labels
-        m.insert("lbl_dot_style", "Style des points");
-        m.insert("lbl_corner_square", "Carrés d'angle");
-        m.insert("lbl_corner_dot", "Points d'angle");
-        m.insert("lbl_fg_color", "Couleur de premier plan");
-        m.insert("lbl_bg_color", "Couleur d'arrière-plan");
-        m.insert("lbl_corner_color", "Couleur des angles");
-        m.insert("lbl_transparent_bg", "Arrière-plan transparent");
-        m.insert("lbl_gradient", "Dégradé");
-        m.insert("lbl_gradient_color", "Couleur du dégradé");
-        m.insert("lbl_gradient_dir", "Direction du dégradé");
-        m.insert("lbl_ec_level", "Correction d'erreur");
-        m.insert("lbl_module_size", "Taille du module (pixels)");
-        m.insert("lbl_quiet_zone", "Zone de silence (modules)");
-        m.insert("lbl_module_gap", "Espacement des modules");
-        m.insert("lbl_shadow", "Ombre");
-        m.insert("lbl_shadow_offset", "Décalage de l'ombre");
-        m.insert("lbl_logo_shape", "Forme du logo");
-        m.insert("lbl_logo_size", "Taille du logo (%)");
-        m.insert("lbl_logo_color", "Couleur du logo");
-        m.insert("lbl_logo_border_width", "Largeur de bordure du logo");
-        m.insert("lbl_logo_border_color", "Couleur de bordure du logo");
-        m.insert("lbl_logo_vectorize", "Vectoriser le logo");
         m.insert(
-            "lbl_logo_vectorize_bg",
-            "Couleur d'arrière-plan de vectorisation",
+            "tooltip_clear_all",
+            "Réinitialiser tous les champs de saisie",
         );
-        m.insert("lbl_logo_clear_area", "Effacer la zone du logo");
-        m.insert("lbl_logo_clear_padding", "Marge de la zone effacée");
-        m.insert("lbl_outer_radius", "Rayon extérieur");
-        m.insert("lbl_inner_radius", "Rayon intérieur");
-        m.insert("lbl_radius_sync", "Synchroniser les rayons");
-        m.insert("lbl_frame_style", "Style du cadre");
-        m.insert("lbl_frame_color", "Couleur du cadre");
-        m.insert("lbl_frame_width", "Largeur du cadre (1-10)");
-        m.insert("lbl_outer_text_top", "Texte supérieur (cadre)");
-        m.insert("lbl_outer_text_bottom", "Texte inférieur (cadre)");
-        m.insert("lbl_outer_text_color", "Couleur du texte (cadre)");
-        m.insert("lbl_custom_dot_path", "Chemin de point personnalisé");
-        m.insert("lbl_palette", "Palette de couleurs");
-        m.insert("lbl_preset", "Style enregistré");
-        m.insert("lbl_template_name", "Nom du modèle");
-        m.insert("lbl_template", "Modèle");
+        // Labels
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (Nom du réseau)");
         m.insert("wifi_password", "Mot de passe");
-        m.insert("wifi_encryption", "Chiffrement");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "Aucun");
         // vCard fields
         m.insert("vcard_name", "Nom");
         m.insert("vcard_phone", "Numéro de téléphone");
@@ -1735,8 +1474,6 @@ impl I18n {
         m.insert("vcard_url", "URL du site web");
         // Calendar fields
         m.insert("cal_title", "Titre");
-        m.insert("cal_start", "Date de début (AAAAMMJJ)");
-        m.insert("cal_end", "Date de fin (AAAAMMJJ)");
         m.insert("cal_location", "Lieu");
         // GPS fields
         m.insert("gps_lat", "Latitude");
@@ -1747,23 +1484,8 @@ impl I18n {
         m.insert("sms_phone", "Numéro de téléphone");
         m.insert("sms_message", "Message");
         // Frame styles
-        m.insert("frame_none", "Aucun");
-        m.insert("frame_simple", "Simple");
-        m.insert("frame_rounded", "Arrondi");
-        m.insert("frame_banner", "Bannière");
         // Gradient directions
-        m.insert("grad_horizontal", "Horizontal");
-        m.insert("grad_vertical", "Vertical");
-        m.insert("grad_diagonal", "Diagonal");
-        m.insert("grad_radial", "Radial");
         // Status messages
-        m.insert("status_generated", "Code QR généré");
-        m.insert("status_saved", "Enregistré");
-        m.insert("status_copied", "Copié dans le presse-papiers");
-        m.insert("status_logo_dropped", "Logo importé par glisser-déposer");
-        m.insert("status_template_loaded", "Modèle '{}' chargé");
-        m.insert("status_template_saved", "Modèle '{}' enregistré");
-        m.insert("status_template_deleted", "Modèle '{}' supprimé");
         m.insert(
             "status_template_saved_full",
             "Modèle '{}' enregistré (style + contenu)",
@@ -1780,71 +1502,15 @@ impl I18n {
             "status_template_loaded_style",
             "Modèle '{}' chargé (style uniquement)",
         );
-        m.insert("status_preset_loaded", "Style '{}' chargé");
-        m.insert("status_preset_saved", "Style '{}' enregistré");
-        m.insert("status_preset_deleted", "Style '{}' supprimé");
-        m.insert("status_no_data", "Aucune donnée");
-        m.insert(
-            "status_data_too_long",
-            "Données trop longues pour un code QR",
-        );
         // Dialog titles
-        m.insert("dlg_save_pdf", "Enregistrer en PDF");
-        m.insert("dlg_save_png", "Enregistrer en PNG");
-        m.insert("dlg_save_svg", "Enregistrer en SVG");
-        m.insert("dlg_save_gif", "Enregistrer en GIF");
-        m.insert("dlg_batch_export", "Export par lot");
-        m.insert("dlg_label_sheet", "Feuille d'étiquettes");
-        m.insert("dlg_import_style", "Importer le style");
-        m.insert("dlg_export_style", "Exporter le style");
         // Batch dialog
-        m.insert("batch_data_label", "Données QR (une par ligne) :");
-        m.insert("batch_format", "Format :");
-        m.insert(
-            "batch_csv_hint",
-            "(Première colonne utilisée comme données QR, en-tête ignoré)",
-        );
-        m.insert("batch_csv_filter", "Fichiers CSV");
         // Label sheet dialog
-        m.insert("lbl_columns", "Colonnes");
-        m.insert("lbl_rows", "Lignes");
-        m.insert("lbl_margin_mm", "Marge (mm)");
-        m.insert("lbl_spacing_mm", "Espacement (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "Plusieurs codes QR sur une page A4 pour impression",
-        );
         // EC levels
-        m.insert("ec_medium", "Moyen (15 %)");
-        m.insert("ec_low", "Bas (7 %)");
-        m.insert("ec_quartile", "Quartile (25 %)");
-        m.insert("ec_high", "Élevé (30 %)");
         // Dot styles
-        m.insert("dot_rounded", "Arrondi");
-        m.insert("dot_square", "Carré");
-        m.insert("dot_dots", "Points");
-        m.insert("dot_diamond", "Diamant");
-        m.insert("dot_custom", "Personnalisé");
         // Corner square styles
-        m.insert("corner_extra_rounded", "Très arrondi");
-        m.insert("corner_square", "Carré");
-        m.insert("corner_dot", "Point");
-        m.insert("corner_circle", "Cercle");
         // Logo shapes
-        m.insert("logo_circle", "Cercle");
-        m.insert("logo_rectangle", "Rectangle");
-        m.insert("logo_rounded_rect", "Rectangle arrondi");
         // Harmonies
         m.insert("harmony_title", "Harmonies de couleurs (en arrière-plan)");
-        m.insert("harmony_complementary", "Complémentaire");
-        m.insert("harmony_analog_1", "Analogue (+30°)");
-        m.insert("harmony_analog_2", "Analogue (−30°)");
-        m.insert("harmony_triadic_1", "Triadique (+120°)");
-        m.insert("harmony_triadic_2", "Triadique (+240°)");
-        m.insert(
-            "harmony_tooltip",
-            "Cliquez pour appliquer comme couleur d'arrière-plan",
-        );
         m.insert("color_fg", "Premier plan");
         m.insert("color_bg", "Arrière-plan");
         m.insert("color_corner", "Couleur des angles");
@@ -1886,7 +1552,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "Aperçu en direct");
         // Generate button
-        m.insert("btn_generate_full", "Générer le code QR");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Texte");
         m.insert("dd_content_wifi", "WiFi");
@@ -1951,14 +1616,18 @@ impl I18n {
         m.insert("btn_export_style_short", "Exporter le style");
         m.insert("btn_import_style_short", "Importer le style");
         m.insert("btn_print_calc", "Calculateur de taille d'impression");
+        m.insert("dlg_print_calc", "Calculateur de taille d'impression");
+        m.insert("btn_apply", "Appliquer");
+        m.insert("print_calc_result", "{} x {} pixels (taille de module recommandée : ~{}px)");
+        m.insert("label_dpi", "DPI :");
         m.insert("check_transparent_bg", "Arrière-plan transparent");
         m.insert("check_gradient", "Activer le dégradé");
         m.insert("check_shadow", "Activer l'ombre");
         m.insert("check_logo_vectorize", "Vectoriser le logo");
+        m.insert("check_logo_bg_transparent", "Fond transparent");
         m.insert("check_logo_clear_area", "Effacer la zone");
         m.insert("check_radius_sync", "Synchroniser les rayons");
         m.insert("placeholder_template_name", "Nom du modèle…");
-        m.insert("placeholder_preset_name", "Nom du modèle…");
         m.insert("placeholder_top_text", "Texte supérieur");
         m.insert("placeholder_bottom_text", "Texte inférieur");
         m.insert("tooltip_undo", "Annuler (Ctrl+Z)");
@@ -1992,15 +1661,6 @@ impl I18n {
         m.insert(
             "tooltip_preset_select",
             "Sélectionner un préréglage de style",
-        );
-        m.insert(
-            "tooltip_preset_save",
-            "Enregistrer le style actuel comme préréglage",
-        );
-        m.insert("tooltip_preset_load", "Charger le préréglage enregistré");
-        m.insert(
-            "tooltip_preset_delete",
-            "Supprimer le préréglage sélectionné",
         );
         m.insert(
             "tooltip_template_save",
@@ -2050,6 +1710,7 @@ impl I18n {
             "Convertir les logos matriciels (PNG/JPG) en chemins vectoriels",
         );
         m.insert("tooltip_logo_vectorize_bg", "Couleur d'arrière-plan du logo vectorisé : Alpha=0 supprime l'arrière-plan, Alpha>0 le remplace par cette couleur");
+        m.insert("tooltip_logo_bg_transparent", "Rendre le fond de la zone logo transparent, indépendamment de la couleur de fond du QR");
         m.insert(
             "tooltip_logo_clear_area",
             "Réorganiser les modules QR autour du logo (nécessite une correction d'erreur)",
@@ -2114,7 +1775,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "Exporter plusieurs codes QR à la fois");
         m.insert("tooltip_export_more", "Plus d'options d'exportation");
-        m.insert("tooltip_logo_bg_color", "Couleur d'arrière-plan du logo");
         m.insert("tooltip_sidebar_toggle", "Basculer la barre latérale");
         // Feature 3: labels
         m.insert("label_start_date", "Date de début");
@@ -2139,7 +1799,6 @@ impl I18n {
         m.insert("label_print_width", "Largeur (cm) :");
         m.insert("label_print_height", "Hauteur (cm) :");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "URL invalide");
         m.insert("validation_invalid_email", "Adresse e-mail invalide");
         m.insert(
             "validation_invalid_lat",
@@ -2150,8 +1809,6 @@ impl I18n {
             "La longitude doit être comprise entre -180 et 180",
         );
         m.insert("validation_invalid_phone", "Numéro de téléphone invalide");
-        m.insert("validation_empty_ssid", "Le SSID ne doit pas être vide");
-        m.insert("validation_empty_title", "Le titre ne doit pas être vide");
         // Feature 9: Font selection
         m.insert("label_font", "Police");
         m.insert("label_font_size", "Taille de police");
@@ -2186,10 +1843,99 @@ impl I18n {
             "scan_detail_styled_corners",
             "Angles stylisés — les scanneurs de smartphones les lisent de manière fiable",
         );
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "Sélectionner un logo");
+        m.insert("dlg_select_bg", "Sélectionner une image de fond");
         m.insert(
-            "scan_detail_no_image",
-            "Aucun code QR disponible à vérifier",
+            "dlg_save_label_sheet",
+            "Enregistrer la feuille d'étiquettes",
         );
+        m.insert("dlg_select_csv", "Sélectionner un fichier CSV");
+        m.insert("dlg_select_folder", "Sélectionner un dossier");
+
+        // Dialog buttons
+        m.insert("btn_open", "Ouvrir");
+        m.insert("btn_select", "Sélectionner");
+
+        // File filter names
+        m.insert("filter_images", "Fichiers image");
+        m.insert("filter_json", "Fichiers JSON");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "Style exporté");
+        m.insert("status_pdf_saved", "PDF enregistré");
+        m.insert("status_pdf_error", "Erreur lors de l'export PDF");
+        m.insert(
+            "status_label_sheet_saved",
+            "Feuille d'étiquettes enregistrée",
+        );
+        m.insert(
+            "status_label_sheet_error",
+            "Erreur lors de l'export des étiquettes",
+        );
+        m.insert("status_png_saved", "PNG enregistré");
+        m.insert("status_svg_saved", "SVG enregistré");
+        m.insert("status_gif_saved", "GIF enregistré");
+        m.insert(
+            "status_gif_gradient_only",
+            "GIF disponible uniquement avec dégradé",
+        );
+        m.insert("status_batch_exported", "{} codes QR exportés");
+        m.insert("status_saved_as", "Enregistré sous {}");
+        m.insert(
+            "status_enter_template_name",
+            "Veuillez entrer un nom de modèle",
+        );
+        m.insert("status_template_deleted_fmt", "Modèle '{}' supprimé");
+        m.insert(
+            "status_render_error",
+            "Erreur : Impossible de rendre le code QR",
+        );
+        m.insert("status_copied", "Copié dans le presse-papiers");
+        m.insert("status_copied_svg", "SVG copié dans le presse-papiers");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "Données QR (une par ligne) :");
+        m.insert(
+            "batch_csv_hint",
+            "(Première colonne utilisée, en-tête ignoré)",
+        );
+        m.insert("batch_format", "Format :");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "Dossier :");
+        m.insert("batch_folder_selected", "Dossier : {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "Colonnes");
+        m.insert("lbl_rows", "Lignes");
+        m.insert("lbl_margin_mm", "Marge (mm)");
+        m.insert("lbl_spacing_mm", "Espacement (mm)");
+        m.insert(
+            "lbl_sheet_info",
+            "Plusieurs codes QR sur une page A4 pour impression",
+        );
+        m.insert(
+            "label_sheet_a4_info",
+            "Les codes QR seront disposés sur une page A4.",
+        );
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "Annuler");
+        m.insert("btn_export", "Exporter");
+        m.insert("btn_save", "Enregistrer");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "Enregistrer en PDF");
+        m.insert("dlg_save_png", "Enregistrer en PNG");
+        m.insert("dlg_save_svg", "Enregistrer en SVG");
+        m.insert("dlg_save_gif", "Enregistrer en GIF");
+        m.insert("dlg_import_style", "Importer un style");
+        m.insert("dlg_export_style", "Exporter le style");
+        m.insert("dlg_batch_export", "Export par lots");
+        m.insert("dlg_label_sheet", "Feuille d'étiquettes");
+
         m
     }
 
@@ -2198,26 +1944,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "Contenuto");
         m.insert("tab_style", "Stile");
-        m.insert("tab_export", "Esporta");
         m.insert("btn_export_more", "Esporta ▾");
         // Section headers
-        m.insert("section_content", "Contenuto");
-        m.insert("section_style", "Stile");
-        m.insert("section_logo", "Logo");
-        m.insert("section_frame", "Cornice");
-        m.insert("section_background", "Sfondo");
-        m.insert("section_presets", "Preimpostazioni colore (solo stile)");
-        m.insert("section_templates", "Modelli");
-        m.insert("section_export", "Esporta");
         // Content types
-        m.insert("type_text", "Testo");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/Contatto");
-        m.insert("type_calendar", "Evento calendario");
-        m.insert("type_gps", "Posizione GPS");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "Genera codice QR");
         m.insert("btn_copy", "Copia");
         m.insert("btn_save_png", "Salva come PNG");
         m.insert("btn_save_svg", "Salva come SVG");
@@ -2230,65 +1960,9 @@ impl I18n {
         m.insert("btn_remove", "Rimuovi");
         m.insert("btn_clear_all", "Cancella tutto");
         m.insert("tooltip_clear_all", "Cancella tutti i campi di input");
-        m.insert("btn_save_template", "Salva modello");
-        m.insert("btn_load_template", "Carica modello");
-        m.insert("btn_delete_template", "Elimina modello");
-        m.insert("btn_save_preset", "Salva stile");
-        m.insert("btn_load_preset", "Carica stile");
-        m.insert("btn_delete_preset", "Elimina stile");
-        m.insert("btn_import_style", "Importa stile...");
-        m.insert("btn_export_style", "Esporta stile...");
-        m.insert("btn_import_csv", "Importa CSV");
-        m.insert("btn_export", "Esporta");
-        m.insert("btn_cancel", "Annulla");
-        m.insert("btn_save", "Salva");
         // Labels
-        m.insert("lbl_dot_style", "Stile punto");
-        m.insert("lbl_corner_square", "Angoli quadrati");
-        m.insert("lbl_corner_dot", "Punti angolo");
-        m.insert("lbl_fg_color", "Colore primo piano");
-        m.insert("lbl_bg_color", "Colore sfondo");
-        m.insert("lbl_corner_color", "Colore angoli");
-        m.insert("lbl_transparent_bg", "Sfondo trasparente");
-        m.insert("lbl_gradient", "Gradiente");
-        m.insert("lbl_gradient_color", "Colore gradiente");
-        m.insert("lbl_gradient_dir", "Direzione gradiente");
-        m.insert("lbl_ec_level", "Correzione errore");
-        m.insert("lbl_module_size", "Dimensione modulo (pixel)");
-        m.insert("lbl_quiet_zone", "Zona di quiete (moduli)");
-        m.insert("lbl_module_gap", "Spaziatura modulo");
-        m.insert("lbl_shadow", "Ombra");
-        m.insert("lbl_shadow_offset", "Scostamento ombra");
-        m.insert("lbl_logo_shape", "Forma logo");
-        m.insert("lbl_logo_size", "Dimensione logo (%)");
-        m.insert("lbl_logo_color", "Colore logo");
-        m.insert("lbl_logo_border_width", "Spessore bordo logo");
-        m.insert("lbl_logo_border_color", "Colore bordo logo");
-        m.insert("lbl_logo_vectorize", "Vettorizza logo");
-        m.insert("lbl_logo_vectorize_bg", "Colore sfondo vettorizzazione");
-        m.insert("lbl_logo_clear_area", "Cancella area logo");
-        m.insert("lbl_logo_clear_padding", "Padding area cancellata");
-        m.insert("lbl_outer_radius", "Raggio esterno");
-        m.insert("lbl_inner_radius", "Raggio interno");
-        m.insert("lbl_radius_sync", "Sincronizza raggi");
-        m.insert("lbl_frame_style", "Stile cornice");
-        m.insert("lbl_frame_color", "Colore cornice");
-        m.insert("lbl_frame_width", "Larghezza cornice (1-10)");
-        m.insert("lbl_outer_text_top", "Testo superiore (cornice)");
-        m.insert("lbl_outer_text_bottom", "Testo inferiore (cornice)");
-        m.insert("lbl_outer_text_color", "Colore testo (cornice)");
-        m.insert("lbl_custom_dot_path", "Percorso punto personalizzato");
-        m.insert("lbl_palette", "Tavolozza colori");
-        m.insert("lbl_preset", "Stile salvato");
-        m.insert("lbl_template_name", "Nome modello");
-        m.insert("lbl_template", "Modello");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (Nome rete)");
         m.insert("wifi_password", "Password");
-        m.insert("wifi_encryption", "Crittografia");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "Nessuna");
         // vCard fields
         m.insert("vcard_name", "Nome");
         m.insert("vcard_phone", "Numero di telefono");
@@ -2297,8 +1971,6 @@ impl I18n {
         m.insert("vcard_url", "Sito web URL");
         // Calendar fields
         m.insert("cal_title", "Titolo");
-        m.insert("cal_start", "Data inizio (AAAAMMGG)");
-        m.insert("cal_end", "Data fine (AAAAMMGG)");
         m.insert("cal_location", "Luogo");
         // GPS fields
         m.insert("gps_lat", "Latitudine");
@@ -2309,23 +1981,8 @@ impl I18n {
         m.insert("sms_phone", "Numero di telefono");
         m.insert("sms_message", "Messaggio");
         // Frame styles
-        m.insert("frame_none", "Nessuna");
-        m.insert("frame_simple", "Semplice");
-        m.insert("frame_rounded", "Arrotondata");
-        m.insert("frame_banner", "Banner");
         // Gradient directions
-        m.insert("grad_horizontal", "Orizzontale");
-        m.insert("grad_vertical", "Verticale");
-        m.insert("grad_diagonal", "Diagonale");
-        m.insert("grad_radial", "Radiale");
         // Status messages
-        m.insert("status_generated", "Codice QR generato");
-        m.insert("status_saved", "Salvato");
-        m.insert("status_copied", "Copiato negli appunti");
-        m.insert("status_logo_dropped", "Logo importato tramite drag & drop");
-        m.insert("status_template_loaded", "Modello '{}' caricato");
-        m.insert("status_template_saved", "Modello '{}' salvato");
-        m.insert("status_template_deleted", "Modello '{}' eliminato");
         m.insert(
             "status_template_saved_full",
             "Modello '{}' salvato (stile + contenuto)",
@@ -2342,71 +1999,15 @@ impl I18n {
             "status_template_loaded_style",
             "Modello '{}' caricato (solo stile)",
         );
-        m.insert("status_preset_loaded", "Stile '{}' caricato");
-        m.insert("status_preset_saved", "Stile '{}' salvato");
-        m.insert("status_preset_deleted", "Stile '{}' eliminato");
-        m.insert("status_no_data", "Nessun dato");
-        m.insert(
-            "status_data_too_long",
-            "Dati troppo lunghi per il codice QR",
-        );
         // Dialog titles
-        m.insert("dlg_save_pdf", "Salva come PDF");
-        m.insert("dlg_save_png", "Salva come PNG");
-        m.insert("dlg_save_svg", "Salva come SVG");
-        m.insert("dlg_save_gif", "Salva come GIF");
-        m.insert("dlg_batch_export", "Esportazione batch");
-        m.insert("dlg_label_sheet", "Foglio etichette");
-        m.insert("dlg_import_style", "Importa stile");
-        m.insert("dlg_export_style", "Esporta stile");
         // Batch dialog
-        m.insert("batch_data_label", "Dati QR (uno per riga):");
-        m.insert("batch_format", "Formato:");
-        m.insert(
-            "batch_csv_hint",
-            "(La prima colonna è usata come dati QR, la riga di intestazione viene saltata)",
-        );
-        m.insert("batch_csv_filter", "File CSV");
         // Label sheet dialog
-        m.insert("lbl_columns", "Colonne");
-        m.insert("lbl_rows", "Righe");
-        m.insert("lbl_margin_mm", "Margine (mm)");
-        m.insert("lbl_spacing_mm", "Spaziatura (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "Più codici QR su una pagina A4 per la stampa",
-        );
         // EC levels
-        m.insert("ec_medium", "Medio (15%)");
-        m.insert("ec_low", "Basso (7%)");
-        m.insert("ec_quartile", "Quartile (25%)");
-        m.insert("ec_high", "Alto (30%)");
         // Dot styles
-        m.insert("dot_rounded", "Arrotondato");
-        m.insert("dot_square", "Quadrato");
-        m.insert("dot_dots", "Punti");
-        m.insert("dot_diamond", "Diamante");
-        m.insert("dot_custom", "Personalizzato");
         // Corner square styles
-        m.insert("corner_extra_rounded", "Extra arrotondato");
-        m.insert("corner_square", "Quadrato");
-        m.insert("corner_dot", "Punto");
-        m.insert("corner_circle", "Cerchio");
         // Logo shapes
-        m.insert("logo_circle", "Cerchio");
-        m.insert("logo_rectangle", "Rettangolo");
-        m.insert("logo_rounded_rect", "Rettangolo arrotondato");
         // Harmonies
         m.insert("harmony_title", "Armonie cromatiche (come sfondo)");
-        m.insert("harmony_complementary", "Complementare");
-        m.insert("harmony_analog_1", "Analogo (+30°)");
-        m.insert("harmony_analog_2", "Analogo (−30°)");
-        m.insert("harmony_triadic_1", "Triadico (+120°)");
-        m.insert("harmony_triadic_2", "Triadico (+240°)");
-        m.insert(
-            "harmony_tooltip",
-            "Clicca per applicare come colore di sfondo",
-        );
         m.insert("color_fg", "Primo piano");
         m.insert("color_bg", "Sfondo");
         m.insert("color_corner", "Colore angoli");
@@ -2445,7 +2046,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "Anteprima dal vivo");
         // Generate button
-        m.insert("btn_generate_full", "Genera codice QR");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Testo");
         m.insert("dd_content_wifi", "WiFi");
@@ -2510,14 +2110,18 @@ impl I18n {
         m.insert("btn_export_style_short", "Esporta stile");
         m.insert("btn_import_style_short", "Importa stile");
         m.insert("btn_print_calc", "Calcolatore dimensione stampa");
+        m.insert("dlg_print_calc", "Calcolatore dimensione stampa");
+        m.insert("btn_apply", "Applica");
+        m.insert("print_calc_result", "{} x {} pixel (dimensione modulo consigliata: ~{}px)");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Sfondo trasparente");
         m.insert("check_gradient", "Abilita gradiente");
         m.insert("check_shadow", "Abilita ombra");
         m.insert("check_logo_vectorize", "Vettorizza logo");
+        m.insert("check_logo_bg_transparent", "Sfondo trasparente");
         m.insert("check_logo_clear_area", "Cancella area");
         m.insert("check_radius_sync", "Sincronizza raggi");
         m.insert("placeholder_template_name", "Nome modello...");
-        m.insert("placeholder_preset_name", "Nome modello...");
         m.insert("placeholder_top_text", "Testo superiore");
         m.insert("placeholder_bottom_text", "Testo inferiore");
         m.insert("tooltip_undo", "Annulla (Ctrl+Z)");
@@ -2546,15 +2150,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "Numero destinatario SMS");
         m.insert("tooltip_sms_message", "Testo messaggio SMS");
         m.insert("tooltip_preset_select", "Seleziona preimpostazione stile");
-        m.insert(
-            "tooltip_preset_save",
-            "Salva stile corrente come preimpostazione",
-        );
-        m.insert("tooltip_preset_load", "Carica preimpostazione salvata");
-        m.insert(
-            "tooltip_preset_delete",
-            "Elimina preimpostazione selezionata",
-        );
         m.insert(
             "tooltip_template_save",
             "Salva stile e contenuto correnti come modello",
@@ -2600,6 +2195,7 @@ impl I18n {
             "Converti logo raster (PNG/JPG) in percorsi vettoriali",
         );
         m.insert("tooltip_logo_vectorize_bg", "Colore sfondo logo vettorizzato: Alfa=0 rimuove lo sfondo, Alfa>0 lo sostituisce con questo colore");
+        m.insert("tooltip_logo_bg_transparent", "Rendi trasparente lo sfondo dell'area logo, indipendentemente dal colore di sfondo del QR");
         m.insert(
             "tooltip_logo_clear_area",
             "Riorganizza i moduli QR attorno al logo (richiede correzione errore)",
@@ -2652,7 +2248,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "Esporta più codici QR contemporaneamente");
         m.insert("tooltip_export_more", "Altre opzioni di esportazione");
-        m.insert("tooltip_logo_bg_color", "Colore sfondo logo");
         m.insert("tooltip_sidebar_toggle", "Attiva/disattiva barra laterale");
         // Feature 3: labels
         m.insert("label_start_date", "Data inizio");
@@ -2676,7 +2271,6 @@ impl I18n {
         m.insert("label_print_width", "Larghezza (cm):");
         m.insert("label_print_height", "Altezza (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "URL non valido");
         m.insert("validation_invalid_email", "Indirizzo email non valido");
         m.insert(
             "validation_invalid_lat",
@@ -2687,8 +2281,6 @@ impl I18n {
             "La longitudine deve essere compresa tra -180 e 180",
         );
         m.insert("validation_invalid_phone", "Numero di telefono non valido");
-        m.insert("validation_empty_ssid", "L’SSID non deve essere vuoto");
-        m.insert("validation_empty_title", "Il titolo non deve essere vuoto");
         // Feature 9: Font selection
         m.insert("label_font", "Carattere");
         m.insert("label_font_size", "Dimensione carattere");
@@ -2723,10 +2315,93 @@ impl I18n {
             "scan_detail_styled_corners",
             "Angoli stilizzati — gli scanner degli smartphone li gestiscono in modo affidabile",
         );
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "Seleziona logo");
+        m.insert("dlg_select_bg", "Seleziona immagine di sfondo");
+        m.insert("dlg_save_label_sheet", "Salva foglio etichette");
+        m.insert("dlg_select_csv", "Seleziona file CSV");
+        m.insert("dlg_select_folder", "Seleziona cartella");
+
+        // Dialog buttons
+        m.insert("btn_open", "Apri");
+        m.insert("btn_select", "Seleziona");
+
+        // File filter names
+        m.insert("filter_images", "File immagine");
+        m.insert("filter_json", "File JSON");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "Stile esportato");
+        m.insert("status_pdf_saved", "PDF salvato");
+        m.insert("status_pdf_error", "Errore nell'esportazione PDF");
+        m.insert("status_label_sheet_saved", "Foglio etichette salvato");
         m.insert(
-            "scan_detail_no_image",
-            "Nessun codice QR disponibile da verificare",
+            "status_label_sheet_error",
+            "Errore nell'esportazione etichette",
         );
+        m.insert("status_png_saved", "PNG salvato");
+        m.insert("status_svg_saved", "SVG salvato");
+        m.insert("status_gif_saved", "GIF salvato");
+        m.insert(
+            "status_gif_gradient_only",
+            "GIF disponibile solo con gradiente",
+        );
+        m.insert("status_batch_exported", "{} codici QR esportati");
+        m.insert("status_saved_as", "Salvato come {}");
+        m.insert(
+            "status_enter_template_name",
+            "Inserisci il nome del modello",
+        );
+        m.insert("status_template_deleted_fmt", "Modello '{}' eliminato");
+        m.insert(
+            "status_render_error",
+            "Errore: Impossibile renderizzare il codice QR",
+        );
+        m.insert("status_copied", "Copiato negli appunti");
+        m.insert("status_copied_svg", "SVG copiato negli appunti");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "Dati QR (uno per riga):");
+        m.insert(
+            "batch_csv_hint",
+            "(Prima colonna come dati QR, intestazione saltata)",
+        );
+        m.insert("batch_format", "Formato:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "Cartella:");
+        m.insert("batch_folder_selected", "Cartella: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "Colonne");
+        m.insert("lbl_rows", "Righe");
+        m.insert("lbl_margin_mm", "Margine (mm)");
+        m.insert("lbl_spacing_mm", "Spaziatura (mm)");
+        m.insert(
+            "lbl_sheet_info",
+            "Più codici QR su una pagina A4 per la stampa",
+        );
+        m.insert(
+            "label_sheet_a4_info",
+            "I codici QR verranno disposti su una pagina A4.",
+        );
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "Annulla");
+        m.insert("btn_export", "Esporta");
+        m.insert("btn_save", "Salva");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "Salva come PDF");
+        m.insert("dlg_save_png", "Salva come PNG");
+        m.insert("dlg_save_svg", "Salva come SVG");
+        m.insert("dlg_save_gif", "Salva come GIF");
+        m.insert("dlg_import_style", "Importa stile");
+        m.insert("dlg_export_style", "Esporta stile");
+        m.insert("dlg_batch_export", "Esportazione batch");
+        m.insert("dlg_label_sheet", "Foglio etichette");
+
         m
     }
 
@@ -2735,26 +2410,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "Conteúdo");
         m.insert("tab_style", "Estilo");
-        m.insert("tab_export", "Exportar");
         m.insert("btn_export_more", "Exportar ▾");
         // Section headers
-        m.insert("section_content", "Conteúdo");
-        m.insert("section_style", "Estilo");
-        m.insert("section_logo", "Logo");
-        m.insert("section_frame", "Moldura");
-        m.insert("section_background", "Plano de Fundo");
-        m.insert("section_presets", "Predefinições de Cores (apenas estilo)");
-        m.insert("section_templates", "Modelos");
-        m.insert("section_export", "Exportar");
         // Content types
-        m.insert("type_text", "Texto");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/Contato");
-        m.insert("type_calendar", "Evento de Calendário");
-        m.insert("type_gps", "Localização GPS");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "Gerar Código QR");
         m.insert("btn_copy", "Copiar");
         m.insert("btn_save_png", "Salvar como PNG");
         m.insert("btn_save_svg", "Salvar como SVG");
@@ -2767,68 +2426,9 @@ impl I18n {
         m.insert("btn_remove", "Remover");
         m.insert("btn_clear_all", "Limpar tudo");
         m.insert("tooltip_clear_all", "Limpar todos os campos de entrada");
-        m.insert("btn_save_template", "Salvar Modelo");
-        m.insert("btn_load_template", "Carregar Modelo");
-        m.insert("btn_delete_template", "Excluir Modelo");
-        m.insert("btn_save_preset", "Salvar Estilo");
-        m.insert("btn_load_preset", "Carregar Estilo");
-        m.insert("btn_delete_preset", "Excluir Estilo");
-        m.insert("btn_import_style", "Importar Estilo...");
-        m.insert("btn_export_style", "Exportar Estilo...");
-        m.insert("btn_import_csv", "Importar CSV");
-        m.insert("btn_export", "Exportar");
-        m.insert("btn_cancel", "Cancelar");
-        m.insert("btn_save", "Salvar");
         // Labels
-        m.insert("lbl_dot_style", "Estilo do Ponto");
-        m.insert("lbl_corner_square", "Quadrados de Canto");
-        m.insert("lbl_corner_dot", "Pontos de Canto");
-        m.insert("lbl_fg_color", "Cor do Primeiro Plano");
-        m.insert("lbl_bg_color", "Cor do Plano de Fundo");
-        m.insert("lbl_corner_color", "Cor do Canto");
-        m.insert("lbl_transparent_bg", "Plano de Fundo Transparente");
-        m.insert("lbl_gradient", "Gradiente");
-        m.insert("lbl_gradient_color", "Cor do Gradiente");
-        m.insert("lbl_gradient_dir", "Direção do Gradiente");
-        m.insert("lbl_ec_level", "Correção de Erro");
-        m.insert("lbl_module_size", "Tamanho do Módulo (pixels)");
-        m.insert("lbl_quiet_zone", "Zona de Silêncio (módulos)");
-        m.insert("lbl_module_gap", "Espaçamento do Módulo");
-        m.insert("lbl_shadow", "Sombra");
-        m.insert("lbl_shadow_offset", "Deslocamento da Sombra");
-        m.insert("lbl_logo_shape", "Forma da Logo");
-        m.insert("lbl_logo_size", "Tamanho da Logo (%)");
-        m.insert("lbl_logo_color", "Cor da Logo");
-        m.insert("lbl_logo_border_width", "Largura da Borda da Logo");
-        m.insert("lbl_logo_border_color", "Cor da Borda da Logo");
-        m.insert("lbl_logo_vectorize", "Vetorizar Logo");
-        m.insert(
-            "lbl_logo_vectorize_bg",
-            "Cor do Plano de Fundo da Vetorização",
-        );
-        m.insert("lbl_logo_clear_area", "Limpar Área da Logo");
-        m.insert("lbl_logo_clear_padding", "Espaçamento da Área Limpa");
-        m.insert("lbl_outer_radius", "Raio Externo");
-        m.insert("lbl_inner_radius", "Raio Interno");
-        m.insert("lbl_radius_sync", "Sincronizar Raios");
-        m.insert("lbl_frame_style", "Estilo da Moldura");
-        m.insert("lbl_frame_color", "Cor da Moldura");
-        m.insert("lbl_frame_width", "Largura da Moldura (1-10)");
-        m.insert("lbl_outer_text_top", "Texto Superior (Moldura)");
-        m.insert("lbl_outer_text_bottom", "Texto Inferior (Moldura)");
-        m.insert("lbl_outer_text_color", "Cor do Texto (Moldura)");
-        m.insert("lbl_custom_dot_path", "Caminho do Ponto Personalizado");
-        m.insert("lbl_palette", "Paleta de Cores");
-        m.insert("lbl_preset", "Estilo Salvo");
-        m.insert("lbl_template_name", "Nome do Modelo");
-        m.insert("lbl_template", "Modelo");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (Nome da Rede)");
         m.insert("wifi_password", "Senha");
-        m.insert("wifi_encryption", "Criptografia");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "Nenhuma");
         // vCard fields
         m.insert("vcard_name", "Nome");
         m.insert("vcard_phone", "Número de Telefone");
@@ -2837,8 +2437,6 @@ impl I18n {
         m.insert("vcard_url", "URL do Site");
         // Calendar fields
         m.insert("cal_title", "Título");
-        m.insert("cal_start", "Data de Início (AAAAMMDD)");
-        m.insert("cal_end", "Data de Término (AAAAMMDD)");
         m.insert("cal_location", "Local");
         // GPS fields
         m.insert("gps_lat", "Latitude");
@@ -2849,26 +2447,8 @@ impl I18n {
         m.insert("sms_phone", "Número de Telefone");
         m.insert("sms_message", "Mensagem");
         // Frame styles
-        m.insert("frame_none", "Nenhum");
-        m.insert("frame_simple", "Simples");
-        m.insert("frame_rounded", "Arredondado");
-        m.insert("frame_banner", "Faixa");
         // Gradient directions
-        m.insert("grad_horizontal", "Horizontal");
-        m.insert("grad_vertical", "Vertical");
-        m.insert("grad_diagonal", "Diagonal");
-        m.insert("grad_radial", "Radial");
         // Status messages
-        m.insert("status_generated", "Código QR gerado");
-        m.insert("status_saved", "Salvo");
-        m.insert("status_copied", "Copiado para a área de transferência");
-        m.insert(
-            "status_logo_dropped",
-            "Logo importada via arrastar e soltar",
-        );
-        m.insert("status_template_loaded", "Modelo '{}' carregado");
-        m.insert("status_template_saved", "Modelo '{}' salvo");
-        m.insert("status_template_deleted", "Modelo '{}' excluído");
         m.insert(
             "status_template_saved_full",
             "Modelo '{}' salvo (estilo + conteúdo)",
@@ -2885,71 +2465,15 @@ impl I18n {
             "status_template_loaded_style",
             "Modelo '{}' carregado (apenas estilo)",
         );
-        m.insert("status_preset_loaded", "Estilo '{}' carregado");
-        m.insert("status_preset_saved", "Estilo '{}' salvo");
-        m.insert("status_preset_deleted", "Estilo '{}' excluído");
-        m.insert("status_no_data", "Sem dados");
-        m.insert(
-            "status_data_too_long",
-            "Dados muito longos para o código QR",
-        );
         // Dialog titles
-        m.insert("dlg_save_pdf", "Salvar como PDF");
-        m.insert("dlg_save_png", "Salvar como PNG");
-        m.insert("dlg_save_svg", "Salvar como SVG");
-        m.insert("dlg_save_gif", "Salvar como GIF");
-        m.insert("dlg_batch_export", "Exportação em Lote");
-        m.insert("dlg_label_sheet", "Folha de Etiquetas");
-        m.insert("dlg_import_style", "Importar Estilo");
-        m.insert("dlg_export_style", "Exportar Estilo");
         // Batch dialog
-        m.insert("batch_data_label", "Dados QR (um por linha):");
-        m.insert("batch_format", "Formato:");
-        m.insert(
-            "batch_csv_hint",
-            "(Primeira coluna usada como dados QR, linha de cabeçalho ignorada)",
-        );
-        m.insert("batch_csv_filter", "Arquivos CSV");
         // Label sheet dialog
-        m.insert("lbl_columns", "Colunas");
-        m.insert("lbl_rows", "Linhas");
-        m.insert("lbl_margin_mm", "Margem (mm)");
-        m.insert("lbl_spacing_mm", "Espaçamento (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "Múltiplos códigos QR em uma página A4 para impressão",
-        );
         // EC levels
-        m.insert("ec_medium", "Médio (15%)");
-        m.insert("ec_low", "Baixo (7%)");
-        m.insert("ec_quartile", "Quartil (25%)");
-        m.insert("ec_high", "Alto (30%)");
         // Dot styles
-        m.insert("dot_rounded", "Arredondado");
-        m.insert("dot_square", "Quadrado");
-        m.insert("dot_dots", "Pontos");
-        m.insert("dot_diamond", "Diamante");
-        m.insert("dot_custom", "Personalizado");
         // Corner square styles
-        m.insert("corner_extra_rounded", "Extra Arredondado");
-        m.insert("corner_square", "Quadrado");
-        m.insert("corner_dot", "Ponto");
-        m.insert("corner_circle", "Círculo");
         // Logo shapes
-        m.insert("logo_circle", "Círculo");
-        m.insert("logo_rectangle", "Retângulo");
-        m.insert("logo_rounded_rect", "Retângulo Arredondado");
         // Harmonies
         m.insert("harmony_title", "Harmonias de Cores (como plano de fundo)");
-        m.insert("harmony_complementary", "Complementar");
-        m.insert("harmony_analog_1", "Análoga (+30°)");
-        m.insert("harmony_analog_2", "Análoga (−30°)");
-        m.insert("harmony_triadic_1", "Triádica (+120°)");
-        m.insert("harmony_triadic_2", "Triádica (+240°)");
-        m.insert(
-            "harmony_tooltip",
-            "Clique para aplicar como cor do plano de fundo",
-        );
         m.insert("color_fg", "Primeiro Plano");
         m.insert("color_bg", "Plano de Fundo");
         m.insert("color_corner", "Cor do Canto");
@@ -2988,7 +2512,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "Pré-visualização em Tempo Real");
         // Generate button
-        m.insert("btn_generate_full", "Gerar Código QR");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Texto");
         m.insert("dd_content_wifi", "WiFi");
@@ -3053,14 +2576,18 @@ impl I18n {
         m.insert("btn_export_style_short", "Exportar Estilo");
         m.insert("btn_import_style_short", "Importar Estilo");
         m.insert("btn_print_calc", "Calculadora de Tamanho de Impressão");
+        m.insert("dlg_print_calc", "Calculadora de Tamanho de Impressão");
+        m.insert("btn_apply", "Aplicar");
+        m.insert("print_calc_result", "{} x {} pixels (tamanho de módulo recomendado: ~{}px)");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Plano de Fundo Transparente");
         m.insert("check_gradient", "Ativar Gradiente");
         m.insert("check_shadow", "Ativar Sombra");
         m.insert("check_logo_vectorize", "Vetorizar Logo");
+        m.insert("check_logo_bg_transparent", "Fundo Transparente");
         m.insert("check_logo_clear_area", "Limpar Área");
         m.insert("check_radius_sync", "Sincronizar Raios");
         m.insert("placeholder_template_name", "Nome do modelo...");
-        m.insert("placeholder_preset_name", "Nome do modelo...");
         m.insert("placeholder_top_text", "Texto superior");
         m.insert("placeholder_bottom_text", "Texto inferior");
         m.insert("tooltip_undo", "Desfazer (Ctrl+Z)");
@@ -3092,12 +2619,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "Número do destinatário SMS");
         m.insert("tooltip_sms_message", "Texto da mensagem SMS");
         m.insert("tooltip_preset_select", "Selecionar predefinição de estilo");
-        m.insert(
-            "tooltip_preset_save",
-            "Salvar estilo atual como predefinição",
-        );
-        m.insert("tooltip_preset_load", "Carregar predefinição salva");
-        m.insert("tooltip_preset_delete", "Excluir predefinição selecionada");
         m.insert(
             "tooltip_template_save",
             "Salvar estilo atual + conteúdo como modelo",
@@ -3152,6 +2673,10 @@ impl I18n {
             "Converter logos rasterizadas (PNG/JPG) em caminhos vetoriais",
         );
         m.insert("tooltip_logo_vectorize_bg", "Cor do plano de fundo da logo vetorizada: Alfa=0 remove o fundo, Alfa>0 substitui por esta cor");
+        m.insert(
+            "tooltip_logo_bg_transparent",
+            "Tornar o fundo da área do logo transparente, independente da cor de fundo do QR",
+        );
         m.insert(
             "tooltip_logo_clear_area",
             "Reorganizar módulos QR ao redor da logo (requer correção de erro)",
@@ -3216,7 +2741,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "Exportar múltiplos códigos QR de uma vez");
         m.insert("tooltip_export_more", "Mais opções de exportação");
-        m.insert("tooltip_logo_bg_color", "Cor do plano de fundo da logo");
         m.insert("tooltip_sidebar_toggle", "Alternar barra lateral");
         // Feature 3: labels
         m.insert("label_start_date", "Data de início");
@@ -3238,7 +2762,6 @@ impl I18n {
         m.insert("label_print_width", "Largura (cm):");
         m.insert("label_print_height", "Altura (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "URL inválida");
         m.insert("validation_invalid_email", "Endereço de e-mail inválido");
         m.insert(
             "validation_invalid_lat",
@@ -3249,8 +2772,6 @@ impl I18n {
             "Longitude deve estar entre -180 e 180",
         );
         m.insert("validation_invalid_phone", "Número de telefone inválido");
-        m.insert("validation_empty_ssid", "SSID não deve estar vazio");
-        m.insert("validation_empty_title", "Título não deve estar vazio");
         // Feature 9: Font selection
         m.insert("label_font", "Fonte");
         m.insert("label_font_size", "Tamanho da fonte");
@@ -3285,10 +2806,90 @@ impl I18n {
             "scan_detail_styled_corners",
             "Cantos estilizados — escâneres de smartphones lidam com estes de forma confiável",
         );
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "Selecionar logo");
+        m.insert("dlg_select_bg", "Selecionar imagem de fundo");
+        m.insert("dlg_save_label_sheet", "Salvar folha de etiquetas");
+        m.insert("dlg_select_csv", "Selecionar arquivo CSV");
+        m.insert("dlg_select_folder", "Selecionar pasta");
+
+        // Dialog buttons
+        m.insert("btn_open", "Abrir");
+        m.insert("btn_select", "Selecionar");
+
+        // File filter names
+        m.insert("filter_images", "Arquivos de imagem");
+        m.insert("filter_json", "Arquivos JSON");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "Estilo exportado");
+        m.insert("status_pdf_saved", "PDF salvo");
+        m.insert("status_pdf_error", "Erro ao exportar PDF");
+        m.insert("status_label_sheet_saved", "Folha de etiquetas salva");
+        m.insert("status_label_sheet_error", "Erro ao exportar etiquetas");
+        m.insert("status_png_saved", "PNG salvo");
+        m.insert("status_svg_saved", "SVG salvo");
+        m.insert("status_gif_saved", "GIF salvo");
         m.insert(
-            "scan_detail_no_image",
-            "Nenhum código QR disponível para verificar",
+            "status_gif_gradient_only",
+            "GIF disponível apenas com gradiente",
         );
+        m.insert("status_batch_exported", "{} códigos QR exportados");
+        m.insert("status_saved_as", "Salvo como {}");
+        m.insert("status_enter_template_name", "Digite o nome do modelo");
+        m.insert("status_template_deleted_fmt", "Modelo '{}' excluído");
+        m.insert(
+            "status_render_error",
+            "Erro: Não foi possível renderizar o código QR",
+        );
+        m.insert("status_copied", "Copiado para a área de transferência");
+        m.insert(
+            "status_copied_svg",
+            "SVG copiado para a área de transferência",
+        );
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "Dados QR (um por linha):");
+        m.insert(
+            "batch_csv_hint",
+            "(Primeira coluna como dados QR, cabeçalho ignorado)",
+        );
+        m.insert("batch_format", "Formato:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "Pasta:");
+        m.insert("batch_folder_selected", "Pasta: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "Colunas");
+        m.insert("lbl_rows", "Linhas");
+        m.insert("lbl_margin_mm", "Margem (mm)");
+        m.insert("lbl_spacing_mm", "Espaçamento (mm)");
+        m.insert(
+            "lbl_sheet_info",
+            "Vários códigos QR em uma página A4 para impressão",
+        );
+        m.insert(
+            "label_sheet_a4_info",
+            "Os códigos QR serão organizados em uma página A4.",
+        );
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "Cancelar");
+        m.insert("btn_export", "Exportar");
+        m.insert("btn_save", "Salvar");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "Salvar como PDF");
+        m.insert("dlg_save_png", "Salvar como PNG");
+        m.insert("dlg_save_svg", "Salvar como SVG");
+        m.insert("dlg_save_gif", "Salvar como GIF");
+        m.insert("dlg_import_style", "Importar estilo");
+        m.insert("dlg_export_style", "Exportar estilo");
+        m.insert("dlg_batch_export", "Exportação em lote");
+        m.insert("dlg_label_sheet", "Folha de etiquetas");
+
         m
     }
 
@@ -3297,26 +2898,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "コンテンツ");
         m.insert("tab_style", "スタイル");
-        m.insert("tab_export", "エクスポート");
         m.insert("btn_export_more", "エクスポート ▾");
         // Section headers
-        m.insert("section_content", "コンテンツ");
-        m.insert("section_style", "スタイル");
-        m.insert("section_logo", "ロゴ");
-        m.insert("section_frame", "フレーム");
-        m.insert("section_background", "背景");
-        m.insert("section_presets", "カラープリセット（スタイルのみ）");
-        m.insert("section_templates", "テンプレート");
-        m.insert("section_export", "エクスポート");
         // Content types
-        m.insert("type_text", "テキスト");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/連絡先");
-        m.insert("type_calendar", "カレンダーイベント");
-        m.insert("type_gps", "GPS 位置情報");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "QR コードを生成");
         m.insert("btn_copy", "コピー");
         m.insert("btn_save_png", "PNG で保存");
         m.insert("btn_save_svg", "SVG で保存");
@@ -3329,65 +2914,9 @@ impl I18n {
         m.insert("btn_remove", "削除");
         m.insert("btn_clear_all", "すべてクリア");
         m.insert("tooltip_clear_all", "すべての入力フィールドをリセット");
-        m.insert("btn_save_template", "テンプレートを保存");
-        m.insert("btn_load_template", "テンプレートを読み込む");
-        m.insert("btn_delete_template", "テンプレートを削除");
-        m.insert("btn_save_preset", "スタイルを保存");
-        m.insert("btn_load_preset", "スタイルを読み込む");
-        m.insert("btn_delete_preset", "スタイルを削除");
-        m.insert("btn_import_style", "スタイルをインポート...");
-        m.insert("btn_export_style", "スタイルをエクスポート...");
-        m.insert("btn_import_csv", "CSV をインポート");
-        m.insert("btn_export", "エクスポート");
-        m.insert("btn_cancel", "キャンセル");
-        m.insert("btn_save", "保存");
         // Labels
-        m.insert("lbl_dot_style", "ドットスタイル");
-        m.insert("lbl_corner_square", "角の四角形");
-        m.insert("lbl_corner_dot", "角のドット");
-        m.insert("lbl_fg_color", "前景色");
-        m.insert("lbl_bg_color", "背景色");
-        m.insert("lbl_corner_color", "角の色");
-        m.insert("lbl_transparent_bg", "透明な背景");
-        m.insert("lbl_gradient", "グラデーション");
-        m.insert("lbl_gradient_color", "グラデーションカラー");
-        m.insert("lbl_gradient_dir", "グラデーションの方向");
-        m.insert("lbl_ec_level", "誤り訂正");
-        m.insert("lbl_module_size", "モジュールサイズ（ピクセル）");
-        m.insert("lbl_quiet_zone", "クワイエットゾーン（モジュール）");
-        m.insert("lbl_module_gap", "モジュールギャップ");
-        m.insert("lbl_shadow", "シャドウ");
-        m.insert("lbl_shadow_offset", "シャドウオフセット");
-        m.insert("lbl_logo_shape", "ロゴの形");
-        m.insert("lbl_logo_size", "ロゴサイズ (%)");
-        m.insert("lbl_logo_color", "ロゴの色");
-        m.insert("lbl_logo_border_width", "ロゴの枠線の太さ");
-        m.insert("lbl_logo_border_color", "ロゴの枠線の色");
-        m.insert("lbl_logo_vectorize", "ロゴをベクター化");
-        m.insert("lbl_logo_vectorize_bg", "ベクター化の背景色");
-        m.insert("lbl_logo_clear_area", "ロゴ領域をクリア");
-        m.insert("lbl_logo_clear_padding", "クリア領域のパディング");
-        m.insert("lbl_outer_radius", "外側の半径");
-        m.insert("lbl_inner_radius", "内側の半径");
-        m.insert("lbl_radius_sync", "半径を同期");
-        m.insert("lbl_frame_style", "フレームスタイル");
-        m.insert("lbl_frame_color", "フレームの色");
-        m.insert("lbl_frame_width", "フレームの太さ (1-10)");
-        m.insert("lbl_outer_text_top", "上部テキスト（フレーム）");
-        m.insert("lbl_outer_text_bottom", "下部テキスト（フレーム）");
-        m.insert("lbl_outer_text_color", "テキストの色（フレーム）");
-        m.insert("lbl_custom_dot_path", "カスタムドットパス");
-        m.insert("lbl_palette", "カラーパレット");
-        m.insert("lbl_preset", "保存済みスタイル");
-        m.insert("lbl_template_name", "テンプレート名");
-        m.insert("lbl_template", "テンプレート");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID（ネットワーク名）");
         m.insert("wifi_password", "パスワード");
-        m.insert("wifi_encryption", "暗号化");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "なし");
         // vCard fields
         m.insert("vcard_name", "名前");
         m.insert("vcard_phone", "電話番号");
@@ -3396,8 +2925,6 @@ impl I18n {
         m.insert("vcard_url", "ウェブサイト URL");
         // Calendar fields
         m.insert("cal_title", "タイトル");
-        m.insert("cal_start", "開始日 (YYYYMMDD)");
-        m.insert("cal_end", "終了日 (YYYYMMDD)");
         m.insert("cal_location", "場所");
         // GPS fields
         m.insert("gps_lat", "緯度");
@@ -3408,32 +2935,8 @@ impl I18n {
         m.insert("sms_phone", "電話番号");
         m.insert("sms_message", "メッセージ");
         // Frame styles
-        m.insert("frame_none", "なし");
-        m.insert("frame_simple", "シンプル");
-        m.insert("frame_rounded", "角丸");
-        m.insert("frame_banner", "バナー");
         // Gradient directions
-        m.insert("grad_horizontal", "水平");
-        m.insert("grad_vertical", "垂直");
-        m.insert("grad_diagonal", "斜め");
-        m.insert("grad_radial", "放射状");
         // Status messages
-        m.insert("status_generated", "QR コードが生成されました");
-        m.insert("status_saved", "保存しました");
-        m.insert("status_copied", "クリップボードにコピーしました");
-        m.insert(
-            "status_logo_dropped",
-            "ドラッグ＆ドロップでロゴをインポートしました",
-        );
-        m.insert(
-            "status_template_loaded",
-            "テンプレート '{}' を読み込みました",
-        );
-        m.insert("status_template_saved", "テンプレート '{}' を保存しました");
-        m.insert(
-            "status_template_deleted",
-            "テンプレート '{}' を削除しました",
-        );
         m.insert(
             "status_template_saved_full",
             "テンプレート '{}' を保存しました (スタイル + コンテンツ)",
@@ -3450,65 +2953,15 @@ impl I18n {
             "status_template_loaded_style",
             "テンプレート '{}' を読み込みました (スタイルのみ)",
         );
-        m.insert("status_preset_loaded", "スタイル '{}' を読み込みました");
-        m.insert("status_preset_saved", "スタイル '{}' を保存しました");
-        m.insert("status_preset_deleted", "スタイル '{}' を削除しました");
-        m.insert("status_no_data", "データなし");
-        m.insert("status_data_too_long", "QR コードにはデータが長すぎます");
         // Dialog titles
-        m.insert("dlg_save_pdf", "PDF で保存");
-        m.insert("dlg_save_png", "PNG で保存");
-        m.insert("dlg_save_svg", "SVG で保存");
-        m.insert("dlg_save_gif", "GIF で保存");
-        m.insert("dlg_batch_export", "一括エクスポート");
-        m.insert("dlg_label_sheet", "ラベルシート");
-        m.insert("dlg_import_style", "スタイルをインポート");
-        m.insert("dlg_export_style", "スタイルをエクスポート");
         // Batch dialog
-        m.insert("batch_data_label", "QR データ（1行に1つ）:");
-        m.insert("batch_format", "形式:");
-        m.insert(
-            "batch_csv_hint",
-            "（最初の列が QR データとして使用され、ヘッダー行はスキップされます）",
-        );
-        m.insert("batch_csv_filter", "CSV ファイル");
         // Label sheet dialog
-        m.insert("lbl_columns", "列");
-        m.insert("lbl_rows", "行");
-        m.insert("lbl_margin_mm", "余白 (mm)");
-        m.insert("lbl_spacing_mm", "間隔 (mm)");
-        m.insert(
-            "lbl_sheet_info",
-            "A4 ページに複数の QR コードを配置して印刷",
-        );
         // EC levels
-        m.insert("ec_medium", "中 (15%)");
-        m.insert("ec_low", "低 (7%)");
-        m.insert("ec_quartile", "四分位 (25%)");
-        m.insert("ec_high", "高 (30%)");
         // Dot styles
-        m.insert("dot_rounded", "角丸");
-        m.insert("dot_square", "四角");
-        m.insert("dot_dots", "ドット");
-        m.insert("dot_diamond", "ダイヤモンド");
-        m.insert("dot_custom", "カスタム");
         // Corner square styles
-        m.insert("corner_extra_rounded", "非常に角丸");
-        m.insert("corner_square", "四角");
-        m.insert("corner_dot", "ドット");
-        m.insert("corner_circle", "円");
         // Logo shapes
-        m.insert("logo_circle", "円");
-        m.insert("logo_rectangle", "長方形");
-        m.insert("logo_rounded_rect", "角丸長方形");
         // Harmonies
         m.insert("harmony_title", "カラーハーモニー（背景として）");
-        m.insert("harmony_complementary", "補色");
-        m.insert("harmony_analog_1", "類似色 (+30°)");
-        m.insert("harmony_analog_2", "類似色 (−30°)");
-        m.insert("harmony_triadic_1", "三色調和 (+120°)");
-        m.insert("harmony_triadic_2", "三色調和 (+240°)");
-        m.insert("harmony_tooltip", "クリックして背景色として適用");
         m.insert("color_fg", "前景色");
         m.insert("color_bg", "背景色");
         m.insert("color_corner", "角の色");
@@ -3547,7 +3000,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "ライブプレビュー");
         // Generate button
-        m.insert("btn_generate_full", "QR コードを生成");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "テキスト");
         m.insert("dd_content_wifi", "WiFi");
@@ -3612,14 +3064,18 @@ impl I18n {
         m.insert("btn_export_style_short", "スタイルをエクスポート");
         m.insert("btn_import_style_short", "スタイルをインポート");
         m.insert("btn_print_calc", "印刷サイズ計算ツール");
+        m.insert("dlg_print_calc", "印刷サイズ計算ツール");
+        m.insert("btn_apply", "適用");
+        m.insert("print_calc_result", "{} x {} ピクセル（推奨モジュールサイズ: ~{}px）");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "透明な背景");
         m.insert("check_gradient", "グラデーションを有効化");
         m.insert("check_shadow", "シャドウを有効化");
         m.insert("check_logo_vectorize", "ロゴをベクター化");
+        m.insert("check_logo_bg_transparent", "背景を透明にする");
         m.insert("check_logo_clear_area", "領域をクリア");
         m.insert("check_radius_sync", "半径を同期");
         m.insert("placeholder_template_name", "テンプレート名...");
-        m.insert("placeholder_preset_name", "テンプレート名...");
         m.insert("placeholder_top_text", "上部テキスト");
         m.insert("placeholder_bottom_text", "下部テキスト");
         m.insert("tooltip_undo", "元に戻す (Ctrl+Z)");
@@ -3651,12 +3107,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "SMS 宛先番号");
         m.insert("tooltip_sms_message", "SMS メッセージ本文");
         m.insert("tooltip_preset_select", "スタイルプリセットを選択");
-        m.insert(
-            "tooltip_preset_save",
-            "現在のスタイルをプリセットとして保存",
-        );
-        m.insert("tooltip_preset_load", "保存済みプリセットを読み込む");
-        m.insert("tooltip_preset_delete", "選択したプリセットを削除");
         m.insert(
             "tooltip_template_save",
             "現在のスタイルとコンテンツをテンプレートとして保存",
@@ -3698,6 +3148,10 @@ impl I18n {
         m.insert(
             "tooltip_logo_vectorize_bg",
             "ベクター化されたロゴの背景色: Alpha=0 で背景を削除、Alpha>0 でこの色に置き換え",
+        );
+        m.insert(
+            "tooltip_logo_bg_transparent",
+            "QR背景色に関係なく、ロゴ領域の背景を透明にする",
         );
         m.insert(
             "tooltip_logo_clear_area",
@@ -3751,7 +3205,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "複数の QR コードを一括エクスポート");
         m.insert("tooltip_export_more", "その他のエクスポートオプション");
-        m.insert("tooltip_logo_bg_color", "ロゴの背景色");
         m.insert("tooltip_sidebar_toggle", "サイドバーの切り替え");
         // Feature 3: labels
         m.insert("label_start_date", "開始日");
@@ -3773,7 +3226,6 @@ impl I18n {
         m.insert("label_print_width", "幅 (cm):");
         m.insert("label_print_height", "高さ (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "無効な URL");
         m.insert("validation_invalid_email", "無効なメールアドレス");
         m.insert(
             "validation_invalid_lat",
@@ -3784,8 +3236,6 @@ impl I18n {
             "経度は -180 から 180 の間である必要があります",
         );
         m.insert("validation_invalid_phone", "無効な電話番号");
-        m.insert("validation_empty_ssid", "SSID は空にできません");
-        m.insert("validation_empty_title", "タイトルは空にできません");
         // Feature 9: Font selection
         m.insert("label_font", "フォント");
         m.insert("label_font_size", "フォントサイズ");
@@ -3820,7 +3270,90 @@ impl I18n {
             "scan_detail_styled_corners",
             "スタイル付きコーナー — スマートフォンのスキャナーはこれらを確実に認識します",
         );
-        m.insert("scan_detail_no_image", "検証する QR コードがありません");
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "ロゴを選択");
+        m.insert("dlg_select_bg", "背景画像を選択");
+        m.insert("dlg_save_label_sheet", "ラベルシートを保存");
+        m.insert("dlg_select_csv", "CSVファイルを選択");
+        m.insert("dlg_select_folder", "フォルダーを選択");
+
+        // Dialog buttons
+        m.insert("btn_open", "開く");
+        m.insert("btn_select", "選択");
+
+        // File filter names
+        m.insert("filter_images", "画像ファイル");
+        m.insert("filter_json", "JSONファイル");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "スタイルをエクスポートしました");
+        m.insert("status_pdf_saved", "PDFを保存しました");
+        m.insert("status_pdf_error", "PDFエクスポートエラー");
+        m.insert("status_label_sheet_saved", "ラベルシートを保存しました");
+        m.insert("status_label_sheet_error", "ラベルシートエクスポートエラー");
+        m.insert("status_png_saved", "PNGを保存しました");
+        m.insert("status_svg_saved", "SVGを保存しました");
+        m.insert("status_gif_saved", "GIFを保存しました");
+        m.insert(
+            "status_gif_gradient_only",
+            "GIFはグラデーション使用時のみ利用可能",
+        );
+        m.insert(
+            "status_batch_exported",
+            "{}個のQRコードをエクスポートしました",
+        );
+        m.insert("status_saved_as", "{}として保存しました");
+        m.insert(
+            "status_enter_template_name",
+            "テンプレート名を入力してください",
+        );
+        m.insert(
+            "status_template_deleted_fmt",
+            "テンプレート'{}'を削除しました",
+        );
+        m.insert(
+            "status_render_error",
+            "エラー：QRコードのレンダリングに失敗しました",
+        );
+        m.insert("status_copied", "クリップボードにコピーしました");
+        m.insert("status_copied_svg", "SVGをクリップボードにコピーしました");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "QRデータ（1行に1つ）:");
+        m.insert(
+            "batch_csv_hint",
+            "（最初の列をQRデータとして使用、ヘッダー行はスキップ）",
+        );
+        m.insert("batch_format", "形式:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "フォルダー:");
+        m.insert("batch_folder_selected", "フォルダー: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "列");
+        m.insert("lbl_rows", "行");
+        m.insert("lbl_margin_mm", "マージン (mm)");
+        m.insert("lbl_spacing_mm", "間隔 (mm)");
+        m.insert("lbl_sheet_info", "A4ページに複数のQRコードを配置して印刷");
+        m.insert("label_sheet_a4_info", "QRコードはA4ページに配置されます。");
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "キャンセル");
+        m.insert("btn_export", "エクスポート");
+        m.insert("btn_save", "保存");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "PDFとして保存");
+        m.insert("dlg_save_png", "PNGとして保存");
+        m.insert("dlg_save_svg", "SVGとして保存");
+        m.insert("dlg_save_gif", "GIFとして保存");
+        m.insert("dlg_import_style", "スタイルをインポート");
+        m.insert("dlg_export_style", "スタイルをエクスポート");
+        m.insert("dlg_batch_export", "一括エクスポート");
+        m.insert("dlg_label_sheet", "ラベルシート");
+
         m
     }
 
@@ -3829,26 +3362,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "콘텐츠");
         m.insert("tab_style", "스타일");
-        m.insert("tab_export", "내보내기");
         m.insert("btn_export_more", "내보내기 ▾");
         // Section headers
-        m.insert("section_content", "콘텐츠");
-        m.insert("section_style", "스타일");
-        m.insert("section_logo", "로고");
-        m.insert("section_frame", "프레임");
-        m.insert("section_background", "배경");
-        m.insert("section_presets", "색상 프리셋 (스타일만)");
-        m.insert("section_templates", "템플릿");
-        m.insert("section_export", "내보내기");
         // Content types
-        m.insert("type_text", "텍스트");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/연락처");
-        m.insert("type_calendar", "일정 이벤트");
-        m.insert("type_gps", "GPS 위치");
-        m.insert("type_sms", "SMS");
         // Buttons
-        m.insert("btn_generate", "QR 코드 생성");
         m.insert("btn_copy", "복사");
         m.insert("btn_save_png", "PNG로 저장");
         m.insert("btn_save_svg", "SVG로 저장");
@@ -3861,65 +3378,9 @@ impl I18n {
         m.insert("btn_remove", "제거");
         m.insert("btn_clear_all", "모두 지우기");
         m.insert("tooltip_clear_all", "모든 입력 필드 초기화");
-        m.insert("btn_save_template", "템플릿 저장");
-        m.insert("btn_load_template", "템플릿 불러오기");
-        m.insert("btn_delete_template", "템플릿 삭제");
-        m.insert("btn_save_preset", "스타일 저장");
-        m.insert("btn_load_preset", "스타일 불러오기");
-        m.insert("btn_delete_preset", "스타일 삭제");
-        m.insert("btn_import_style", "스타일 가져오기...");
-        m.insert("btn_export_style", "스타일 내보내기...");
-        m.insert("btn_import_csv", "CSV 가져오기");
-        m.insert("btn_export", "내보내기");
-        m.insert("btn_cancel", "취소");
-        m.insert("btn_save", "저장");
         // Labels
-        m.insert("lbl_dot_style", "도트 스타일");
-        m.insert("lbl_corner_square", "모서리 사각형");
-        m.insert("lbl_corner_dot", "모서리 도트");
-        m.insert("lbl_fg_color", "전경 색상");
-        m.insert("lbl_bg_color", "배경 색상");
-        m.insert("lbl_corner_color", "모서리 색상");
-        m.insert("lbl_transparent_bg", "투명 배경");
-        m.insert("lbl_gradient", "그라데이션");
-        m.insert("lbl_gradient_color", "그라데이션 색상");
-        m.insert("lbl_gradient_dir", "그라데이션 방향");
-        m.insert("lbl_ec_level", "오류 정정");
-        m.insert("lbl_module_size", "모듈 크기 (픽셀)");
-        m.insert("lbl_quiet_zone", "여백 영역 (모듈)");
-        m.insert("lbl_module_gap", "모듈 간격");
-        m.insert("lbl_shadow", "그림자");
-        m.insert("lbl_shadow_offset", "그림자 오프셋");
-        m.insert("lbl_logo_shape", "로고 모양");
-        m.insert("lbl_logo_size", "로고 크기 (%)");
-        m.insert("lbl_logo_color", "로고 색상");
-        m.insert("lbl_logo_border_width", "로고 테두리 너비");
-        m.insert("lbl_logo_border_color", "로고 테두리 색상");
-        m.insert("lbl_logo_vectorize", "로고 벡터화");
-        m.insert("lbl_logo_vectorize_bg", "벡터화 배경 색상");
-        m.insert("lbl_logo_clear_area", "로고 영역 비우기");
-        m.insert("lbl_logo_clear_padding", "비우기 영역 여백");
-        m.insert("lbl_outer_radius", "바깥쪽 반경");
-        m.insert("lbl_inner_radius", "안쪽 반경");
-        m.insert("lbl_radius_sync", "반경 동기화");
-        m.insert("lbl_frame_style", "프레임 스타일");
-        m.insert("lbl_frame_color", "프레임 색상");
-        m.insert("lbl_frame_width", "프레임 너비 (1-10)");
-        m.insert("lbl_outer_text_top", "상단 텍스트 (프레임)");
-        m.insert("lbl_outer_text_bottom", "하단 텍스트 (프레임)");
-        m.insert("lbl_outer_text_color", "텍스트 색상 (프레임)");
-        m.insert("lbl_custom_dot_path", "사용자 정의 도트 경로");
-        m.insert("lbl_palette", "색상 팔레트");
-        m.insert("lbl_preset", "저장된 스타일");
-        m.insert("lbl_template_name", "템플릿 이름");
-        m.insert("lbl_template", "템플릿");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID (네트워크 이름)");
         m.insert("wifi_password", "비밀번호");
-        m.insert("wifi_encryption", "암호화");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "없음");
         // vCard fields
         m.insert("vcard_name", "이름");
         m.insert("vcard_phone", "전화번호");
@@ -3928,8 +3389,6 @@ impl I18n {
         m.insert("vcard_url", "웹사이트 URL");
         // Calendar fields
         m.insert("cal_title", "제목");
-        m.insert("cal_start", "시작 날짜 (YYYYMMDD)");
-        m.insert("cal_end", "종료 날짜 (YYYYMMDD)");
         m.insert("cal_location", "위치");
         // GPS fields
         m.insert("gps_lat", "위도");
@@ -3940,26 +3399,8 @@ impl I18n {
         m.insert("sms_phone", "전화번호");
         m.insert("sms_message", "메시지");
         // Frame styles
-        m.insert("frame_none", "없음");
-        m.insert("frame_simple", "단순");
-        m.insert("frame_rounded", "둥근");
-        m.insert("frame_banner", "배너");
         // Gradient directions
-        m.insert("grad_horizontal", "가로");
-        m.insert("grad_vertical", "세로");
-        m.insert("grad_diagonal", "대각선");
-        m.insert("grad_radial", "방사형");
         // Status messages
-        m.insert("status_generated", "QR 코드가 생성되었습니다");
-        m.insert("status_saved", "저장됨");
-        m.insert("status_copied", "클립보드에 복사됨");
-        m.insert(
-            "status_logo_dropped",
-            "드래그 앤 드롭으로 로고를 가져왔습니다",
-        );
-        m.insert("status_template_loaded", "템플릿 '{}'을(를) 불러왔습니다");
-        m.insert("status_template_saved", "템플릿 '{}'을(를) 저장했습니다");
-        m.insert("status_template_deleted", "템플릿 '{}'을(를) 삭제했습니다");
         m.insert(
             "status_template_saved_full",
             "템플릿 '{}'을(를) 저장했습니다 (스타일 + 콘텐츠)",
@@ -3976,62 +3417,15 @@ impl I18n {
             "status_template_loaded_style",
             "템플릿 '{}'을(를) 불러왔습니다 (스타일만)",
         );
-        m.insert("status_preset_loaded", "스타일 '{}'을(를) 불러왔습니다");
-        m.insert("status_preset_saved", "스타일 '{}'을(를) 저장했습니다");
-        m.insert("status_preset_deleted", "스타일 '{}'을(를) 삭제했습니다");
-        m.insert("status_no_data", "데이터 없음");
-        m.insert("status_data_too_long", "QR 코드에 너무 긴 데이터입니다");
         // Dialog titles
-        m.insert("dlg_save_pdf", "PDF로 저장");
-        m.insert("dlg_save_png", "PNG로 저장");
-        m.insert("dlg_save_svg", "SVG로 저장");
-        m.insert("dlg_save_gif", "GIF로 저장");
-        m.insert("dlg_batch_export", "일괄 내보내기");
-        m.insert("dlg_label_sheet", "라벨 시트");
-        m.insert("dlg_import_style", "스타일 가져오기");
-        m.insert("dlg_export_style", "스타일 내보내기");
         // Batch dialog
-        m.insert("batch_data_label", "QR 데이터 (한 줄에 하나):");
-        m.insert("batch_format", "형식:");
-        m.insert(
-            "batch_csv_hint",
-            "(첫 번째 열이 QR 데이터로 사용되며, 헤더 행은 건너뜁니다)",
-        );
-        m.insert("batch_csv_filter", "CSV 파일");
         // Label sheet dialog
-        m.insert("lbl_columns", "열");
-        m.insert("lbl_rows", "행");
-        m.insert("lbl_margin_mm", "여백 (mm)");
-        m.insert("lbl_spacing_mm", "간격 (mm)");
-        m.insert("lbl_sheet_info", "인쇄용 A4 페이지에 여러 QR 코드 배치");
         // EC levels
-        m.insert("ec_medium", "보통 (15%)");
-        m.insert("ec_low", "낮음 (7%)");
-        m.insert("ec_quartile", "사분위 (25%)");
-        m.insert("ec_high", "높음 (30%)");
         // Dot styles
-        m.insert("dot_rounded", "둥근");
-        m.insert("dot_square", "사각형");
-        m.insert("dot_dots", "점");
-        m.insert("dot_diamond", "다이아몬드");
-        m.insert("dot_custom", "사용자 정의");
         // Corner square styles
-        m.insert("corner_extra_rounded", "매우 둥근");
-        m.insert("corner_square", "사각형");
-        m.insert("corner_dot", "점");
-        m.insert("corner_circle", "원형");
         // Logo shapes
-        m.insert("logo_circle", "원형");
-        m.insert("logo_rectangle", "사각형");
-        m.insert("logo_rounded_rect", "둥근 사각형");
         // Harmonies
         m.insert("harmony_title", "색상 조화 (배경으로)");
-        m.insert("harmony_complementary", "보색");
-        m.insert("harmony_analog_1", "유사색 (+30°)");
-        m.insert("harmony_analog_2", "유사색 (−30°)");
-        m.insert("harmony_triadic_1", "삼색 조화 (+120°)");
-        m.insert("harmony_triadic_2", "삼색 조화 (+240°)");
-        m.insert("harmony_tooltip", "클릭하여 배경 색상으로 적용");
         m.insert("color_fg", "전경");
         m.insert("color_bg", "배경");
         m.insert("color_corner", "모서리 색상");
@@ -4073,7 +3467,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "실시간 미리보기");
         // Generate button
-        m.insert("btn_generate_full", "QR 코드 생성");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "텍스트");
         m.insert("dd_content_wifi", "WiFi");
@@ -4138,14 +3531,18 @@ impl I18n {
         m.insert("btn_export_style_short", "스타일 내보내기");
         m.insert("btn_import_style_short", "스타일 가져오기");
         m.insert("btn_print_calc", "인쇄 크기 계산기");
+        m.insert("dlg_print_calc", "인쇄 크기 계산기");
+        m.insert("btn_apply", "적용");
+        m.insert("print_calc_result", "{} x {} 픽셀 (권장 모듈 크기: ~{}px)");
+        m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "투명 배경");
         m.insert("check_gradient", "그라데이션 사용");
         m.insert("check_shadow", "그림자 사용");
         m.insert("check_logo_vectorize", "로고 벡터화");
+        m.insert("check_logo_bg_transparent", "투명 배경");
         m.insert("check_logo_clear_area", "영역 비우기");
         m.insert("check_radius_sync", "반경 동기화");
         m.insert("placeholder_template_name", "템플릿 이름...");
-        m.insert("placeholder_preset_name", "템플릿 이름...");
         m.insert("placeholder_top_text", "상단 텍스트");
         m.insert("placeholder_bottom_text", "하단 텍스트");
         m.insert("tooltip_undo", "실행 취소 (Ctrl+Z)");
@@ -4174,9 +3571,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "SMS 수신 번호");
         m.insert("tooltip_sms_message", "SMS 메시지 텍스트");
         m.insert("tooltip_preset_select", "스타일 프리셋 선택");
-        m.insert("tooltip_preset_save", "현재 스타일을 프리셋으로 저장");
-        m.insert("tooltip_preset_load", "저장된 프리셋 불러오기");
-        m.insert("tooltip_preset_delete", "선택한 프리셋 삭제");
         m.insert(
             "tooltip_template_save",
             "현재 스타일 + 콘텐츠를 템플릿으로 저장",
@@ -4218,6 +3612,10 @@ impl I18n {
         m.insert(
             "tooltip_logo_vectorize_bg",
             "벡터화된 로고 배경 색상: 알파=0이면 배경 제거, 알파>0이면 이 색상으로 교체",
+        );
+        m.insert(
+            "tooltip_logo_bg_transparent",
+            "QR 배경색과 관계없이 로고 영역 배경을 투명하게 만들기",
         );
         m.insert(
             "tooltip_logo_clear_area",
@@ -4268,7 +3666,6 @@ impl I18n {
         );
         m.insert("tooltip_batch", "여러 QR 코드를 한 번에 내보내기");
         m.insert("tooltip_export_more", "더 많은 내보내기 옵션");
-        m.insert("tooltip_logo_bg_color", "로고 배경 색상");
         m.insert("tooltip_sidebar_toggle", "사이드바 전환");
         // Feature 3: labels
         m.insert("label_start_date", "시작 날짜");
@@ -4295,7 +3692,6 @@ impl I18n {
         m.insert("label_print_width", "너비 (cm):");
         m.insert("label_print_height", "높이 (cm):");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "잘못된 URL");
         m.insert("validation_invalid_email", "잘못된 이메일 주소");
         m.insert(
             "validation_invalid_lat",
@@ -4306,8 +3702,6 @@ impl I18n {
             "경도는 -180에서 180 사이여야 합니다",
         );
         m.insert("validation_invalid_phone", "잘못된 전화번호");
-        m.insert("validation_empty_ssid", "SSID는 비워둘 수 없습니다");
-        m.insert("validation_empty_title", "제목은 비워둘 수 없습니다");
         // Feature 9: Font selection
         m.insert("label_font", "글꼴");
         m.insert("label_font_size", "글꼴 크기");
@@ -4333,7 +3727,81 @@ impl I18n {
             "scan_detail_styled_corners",
             "스타일이 적용된 모서리 — 스마트폰 스캐너에서 안정적으로 인식됩니다",
         );
-        m.insert("scan_detail_no_image", "확인할 QR 코드가 없습니다");
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "로고 선택");
+        m.insert("dlg_select_bg", "배경 이미지 선택");
+        m.insert("dlg_save_label_sheet", "라벨 시트 저장");
+        m.insert("dlg_select_csv", "CSV 파일 선택");
+        m.insert("dlg_select_folder", "폴더 선택");
+
+        // Dialog buttons
+        m.insert("btn_open", "열기");
+        m.insert("btn_select", "선택");
+
+        // File filter names
+        m.insert("filter_images", "이미지 파일");
+        m.insert("filter_json", "JSON 파일");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "스타일 내보내기 완료");
+        m.insert("status_pdf_saved", "PDF 저장됨");
+        m.insert("status_pdf_error", "PDF 내보내기 오류");
+        m.insert("status_label_sheet_saved", "라벨 시트 저장됨");
+        m.insert("status_label_sheet_error", "라벨 시트 내보내기 오류");
+        m.insert("status_png_saved", "PNG 저장됨");
+        m.insert("status_svg_saved", "SVG 저장됨");
+        m.insert("status_gif_saved", "GIF 저장됨");
+        m.insert(
+            "status_gif_gradient_only",
+            "그라데이션 사용 시에만 GIF 사용 가능",
+        );
+        m.insert("status_batch_exported", "{}개 QR 코드 내보내기 완료");
+        m.insert("status_saved_as", "{}(으)로 저장됨");
+        m.insert("status_enter_template_name", "템플릿 이름을 입력하세요");
+        m.insert("status_template_deleted_fmt", "템플릿 '{}' 삭제됨");
+        m.insert(
+            "status_render_error",
+            "오류: QR 코드를 렌더링할 수 없습니다",
+        );
+        m.insert("status_copied", "클립보드에 복사됨");
+        m.insert("status_copied_svg", "SVG가 클립보드에 복사됨");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "QR 데이터 (한 줄에 하나):");
+        m.insert(
+            "batch_csv_hint",
+            "(첫 번째 열이 QR 데이터로 사용, 헤더 행 건너뜀)",
+        );
+        m.insert("batch_format", "형식:");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "폴더:");
+        m.insert("batch_folder_selected", "폴더: {}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "열");
+        m.insert("lbl_rows", "행");
+        m.insert("lbl_margin_mm", "여백 (mm)");
+        m.insert("lbl_spacing_mm", "간격 (mm)");
+        m.insert("lbl_sheet_info", "A4 페이지에 여러 QR 코드 배치하여 인쇄");
+        m.insert("label_sheet_a4_info", "QR 코드가 A4 페이지에 배치됩니다.");
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "취소");
+        m.insert("btn_export", "내보내기");
+        m.insert("btn_save", "저장");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "PDF로 저장");
+        m.insert("dlg_save_png", "PNG로 저장");
+        m.insert("dlg_save_svg", "SVG로 저장");
+        m.insert("dlg_save_gif", "GIF로 저장");
+        m.insert("dlg_import_style", "스타일 가져오기");
+        m.insert("dlg_export_style", "스타일 내보내기");
+        m.insert("dlg_batch_export", "일괄 내보내기");
+        m.insert("dlg_label_sheet", "라벨 시트");
+
         m
     }
 
@@ -4342,26 +3810,10 @@ impl I18n {
         // Tab labels
         m.insert("tab_content", "内容");
         m.insert("tab_style", "样式");
-        m.insert("tab_export", "导出");
         m.insert("btn_export_more", "导出 ▾");
         // Section headers
-        m.insert("section_content", "内容");
-        m.insert("section_style", "样式");
-        m.insert("section_logo", "标志");
-        m.insert("section_frame", "边框");
-        m.insert("section_background", "背景");
-        m.insert("section_presets", "颜色预设（仅样式）");
-        m.insert("section_templates", "模板");
-        m.insert("section_export", "导出");
         // Content types
-        m.insert("type_text", "文本");
-        m.insert("type_wifi", "WiFi");
-        m.insert("type_vcard", "vCard/联系人");
-        m.insert("type_calendar", "日历事件");
-        m.insert("type_gps", "GPS 位置");
-        m.insert("type_sms", "短信");
         // Buttons
-        m.insert("btn_generate", "生成 QR 码");
         m.insert("btn_copy", "复制");
         m.insert("btn_save_png", "保存为 PNG");
         m.insert("btn_save_svg", "保存为 SVG");
@@ -4374,65 +3826,9 @@ impl I18n {
         m.insert("btn_remove", "移除");
         m.insert("btn_clear_all", "全部清除");
         m.insert("tooltip_clear_all", "重置所有输入字段");
-        m.insert("btn_save_template", "保存模板");
-        m.insert("btn_load_template", "加载模板");
-        m.insert("btn_delete_template", "删除模板");
-        m.insert("btn_save_preset", "保存样式");
-        m.insert("btn_load_preset", "加载样式");
-        m.insert("btn_delete_preset", "删除样式");
-        m.insert("btn_import_style", "导入样式…");
-        m.insert("btn_export_style", "导出样式…");
-        m.insert("btn_import_csv", "导入 CSV");
-        m.insert("btn_export", "导出");
-        m.insert("btn_cancel", "取消");
-        m.insert("btn_save", "保存");
         // Labels
-        m.insert("lbl_dot_style", "点样式");
-        m.insert("lbl_corner_square", "定位角");
-        m.insert("lbl_corner_dot", "定位点");
-        m.insert("lbl_fg_color", "前景色");
-        m.insert("lbl_bg_color", "背景色");
-        m.insert("lbl_corner_color", "定位角颜色");
-        m.insert("lbl_transparent_bg", "透明背景");
-        m.insert("lbl_gradient", "渐变");
-        m.insert("lbl_gradient_color", "渐变颜色");
-        m.insert("lbl_gradient_dir", "渐变方向");
-        m.insert("lbl_ec_level", "纠错等级");
-        m.insert("lbl_module_size", "模块大小（像素）");
-        m.insert("lbl_quiet_zone", "静区（模块数）");
-        m.insert("lbl_module_gap", "模块间距");
-        m.insert("lbl_shadow", "阴影");
-        m.insert("lbl_shadow_offset", "阴影偏移");
-        m.insert("lbl_logo_shape", "标志形状");
-        m.insert("lbl_logo_size", "标志大小 (%)");
-        m.insert("lbl_logo_color", "标志颜色");
-        m.insert("lbl_logo_border_width", "标志边框宽度");
-        m.insert("lbl_logo_border_color", "标志边框颜色");
-        m.insert("lbl_logo_vectorize", "矢量化标志");
-        m.insert("lbl_logo_vectorize_bg", "矢量化背景色");
-        m.insert("lbl_logo_clear_area", "清除标志区域");
-        m.insert("lbl_logo_clear_padding", "清除区域边距");
-        m.insert("lbl_outer_radius", "外圆角");
-        m.insert("lbl_inner_radius", "内圆角");
-        m.insert("lbl_radius_sync", "同步圆角");
-        m.insert("lbl_frame_style", "边框样式");
-        m.insert("lbl_frame_color", "边框颜色");
-        m.insert("lbl_frame_width", "边框宽度 (1-10)");
-        m.insert("lbl_outer_text_top", "顶部文字（边框）");
-        m.insert("lbl_outer_text_bottom", "底部文字（边框）");
-        m.insert("lbl_outer_text_color", "文字颜色（边框）");
-        m.insert("lbl_custom_dot_path", "自定义点路径");
-        m.insert("lbl_palette", "调色板");
-        m.insert("lbl_preset", "已保存样式");
-        m.insert("lbl_template_name", "模板名称");
-        m.insert("lbl_template", "模板");
         // WiFi fields
-        m.insert("wifi_ssid", "SSID（网络名称）");
         m.insert("wifi_password", "密码");
-        m.insert("wifi_encryption", "加密方式");
-        m.insert("wifi_wpa", "WPA/WPA2");
-        m.insert("wifi_wep", "WEP");
-        m.insert("wifi_none", "无");
         // vCard fields
         m.insert("vcard_name", "姓名");
         m.insert("vcard_phone", "电话号码");
@@ -4441,8 +3837,6 @@ impl I18n {
         m.insert("vcard_url", "网站 URL");
         // Calendar fields
         m.insert("cal_title", "标题");
-        m.insert("cal_start", "开始日期 (YYYYMMDD)");
-        m.insert("cal_end", "结束日期 (YYYYMMDD)");
         m.insert("cal_location", "地点");
         // GPS fields
         m.insert("gps_lat", "纬度");
@@ -4453,23 +3847,8 @@ impl I18n {
         m.insert("sms_phone", "电话号码");
         m.insert("sms_message", "消息");
         // Frame styles
-        m.insert("frame_none", "无");
-        m.insert("frame_simple", "简单");
-        m.insert("frame_rounded", "圆角");
-        m.insert("frame_banner", "横幅");
         // Gradient directions
-        m.insert("grad_horizontal", "水平");
-        m.insert("grad_vertical", "垂直");
-        m.insert("grad_diagonal", "对角线");
-        m.insert("grad_radial", "径向");
         // Status messages
-        m.insert("status_generated", "QR 码已生成");
-        m.insert("status_saved", "已保存");
-        m.insert("status_copied", "已复制到剪贴板");
-        m.insert("status_logo_dropped", "标志已通过拖放导入");
-        m.insert("status_template_loaded", "模板 '{}' 已加载");
-        m.insert("status_template_saved", "模板 '{}' 已保存");
-        m.insert("status_template_deleted", "模板 '{}' 已删除");
         m.insert(
             "status_template_saved_full",
             "模板 '{}' 已保存 (样式 + 内容)",
@@ -4480,59 +3859,15 @@ impl I18n {
             "模板 '{}' 已加载 (样式 + 内容)",
         );
         m.insert("status_template_loaded_style", "模板 '{}' 已加载 (仅样式)");
-        m.insert("status_preset_loaded", "样式 '{}' 已加载");
-        m.insert("status_preset_saved", "样式 '{}' 已保存");
-        m.insert("status_preset_deleted", "样式 '{}' 已删除");
-        m.insert("status_no_data", "无数据");
-        m.insert("status_data_too_long", "数据过长，无法生成 QR 码");
         // Dialog titles
-        m.insert("dlg_save_pdf", "保存为 PDF");
-        m.insert("dlg_save_png", "保存为 PNG");
-        m.insert("dlg_save_svg", "保存为 SVG");
-        m.insert("dlg_save_gif", "保存为 GIF");
-        m.insert("dlg_batch_export", "批量导出");
-        m.insert("dlg_label_sheet", "标签页");
-        m.insert("dlg_import_style", "导入样式");
-        m.insert("dlg_export_style", "导出样式");
         // Batch dialog
-        m.insert("batch_data_label", "QR 数据（每行一条）：");
-        m.insert("batch_format", "格式：");
-        m.insert("batch_csv_hint", "（使用第一列作为 QR 数据，跳过标题行）");
-        m.insert("batch_csv_filter", "CSV 文件");
         // Label sheet dialog
-        m.insert("lbl_columns", "列");
-        m.insert("lbl_rows", "行");
-        m.insert("lbl_margin_mm", "边距 (mm)");
-        m.insert("lbl_spacing_mm", "间距 (mm)");
-        m.insert("lbl_sheet_info", "在 A4 页面上排列多个 QR 码以便打印");
         // EC levels
-        m.insert("ec_medium", "中等 (15%)");
-        m.insert("ec_low", "低 (7%)");
-        m.insert("ec_quartile", "四分之一 (25%)");
-        m.insert("ec_high", "高 (30%)");
         // Dot styles
-        m.insert("dot_rounded", "圆角");
-        m.insert("dot_square", "方形");
-        m.insert("dot_dots", "圆点");
-        m.insert("dot_diamond", "菱形");
-        m.insert("dot_custom", "自定义");
         // Corner square styles
-        m.insert("corner_extra_rounded", "大圆角");
-        m.insert("corner_square", "方形");
-        m.insert("corner_dot", "点");
-        m.insert("corner_circle", "圆形");
         // Logo shapes
-        m.insert("logo_circle", "圆形");
-        m.insert("logo_rectangle", "矩形");
-        m.insert("logo_rounded_rect", "圆角矩形");
         // Harmonies
         m.insert("harmony_title", "色彩和谐（作为背景）");
-        m.insert("harmony_complementary", "互补色");
-        m.insert("harmony_analog_1", "类似色 (+30°)");
-        m.insert("harmony_analog_2", "类似色 (−30°)");
-        m.insert("harmony_triadic_1", "三色组 (+120°)");
-        m.insert("harmony_triadic_2", "三色组 (+240°)");
-        m.insert("harmony_tooltip", "点击应用为背景色");
         m.insert("color_fg", "前景色");
         m.insert("color_bg", "背景色");
         m.insert("color_corner", "定位角颜色");
@@ -4571,7 +3906,6 @@ impl I18n {
         // Preview
         m.insert("preview_label", "实时预览");
         // Generate button
-        m.insert("btn_generate_full", "生成 QR 码");
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "文本");
         m.insert("dd_content_wifi", "WiFi");
@@ -4636,14 +3970,18 @@ impl I18n {
         m.insert("btn_export_style_short", "导出样式");
         m.insert("btn_import_style_short", "导入样式");
         m.insert("btn_print_calc", "打印尺寸计算器");
+        m.insert("dlg_print_calc", "打印尺寸计算器");
+        m.insert("btn_apply", "应用");
+        m.insert("print_calc_result", "{} x {} 像素（推荐模块大小：~{}px）");
+        m.insert("label_dpi", "DPI：");
         m.insert("check_transparent_bg", "透明背景");
         m.insert("check_gradient", "启用渐变");
         m.insert("check_shadow", "启用阴影");
         m.insert("check_logo_vectorize", "矢量化标志");
+        m.insert("check_logo_bg_transparent", "透明背景");
         m.insert("check_logo_clear_area", "清除区域");
         m.insert("check_radius_sync", "同步圆角");
         m.insert("placeholder_template_name", "模板名称…");
-        m.insert("placeholder_preset_name", "模板名称…");
         m.insert("placeholder_top_text", "顶部文字");
         m.insert("placeholder_bottom_text", "底部文字");
         m.insert("tooltip_undo", "撤销 (Ctrl+Z)");
@@ -4672,9 +4010,6 @@ impl I18n {
         m.insert("tooltip_sms_phone", "短信接收号码");
         m.insert("tooltip_sms_message", "短信内容");
         m.insert("tooltip_preset_select", "选择样式预设");
-        m.insert("tooltip_preset_save", "将当前样式保存为预设");
-        m.insert("tooltip_preset_load", "加载已保存的预设");
-        m.insert("tooltip_preset_delete", "删除选中的预设");
         m.insert("tooltip_template_save", "将当前样式和内容保存为模板");
         m.insert("tooltip_template_load", "加载已保存的模板（样式和内容）");
         m.insert("tooltip_template_delete", "删除选中的模板");
@@ -4710,6 +4045,10 @@ impl I18n {
         m.insert(
             "tooltip_logo_vectorize_bg",
             "矢量化标志背景色：Alpha=0 移除背景，Alpha>0 替换为此颜色",
+        );
+        m.insert(
+            "tooltip_logo_bg_transparent",
+            "使标志区域背景透明，不受QR背景色影响",
         );
         m.insert(
             "tooltip_logo_clear_area",
@@ -4751,7 +4090,6 @@ impl I18n {
         m.insert("tooltip_label_sheet", "在 A4 纸上排列多个 QR 码作为标签");
         m.insert("tooltip_batch", "一次导出多个 QR 码");
         m.insert("tooltip_export_more", "更多导出选项");
-        m.insert("tooltip_logo_bg_color", "标志背景色");
         m.insert("tooltip_sidebar_toggle", "切换侧边栏");
         // Feature 3: labels
         m.insert("label_start_date", "开始日期");
@@ -4773,13 +4111,10 @@ impl I18n {
         m.insert("label_print_width", "宽度 (cm)：");
         m.insert("label_print_height", "高度 (cm)：");
         // Feature 6: Content validation
-        m.insert("validation_invalid_url", "无效的 URL");
         m.insert("validation_invalid_email", "无效的邮箱地址");
         m.insert("validation_invalid_lat", "纬度必须在 -90 到 90 之间");
         m.insert("validation_invalid_lon", "经度必须在 -180 到 180 之间");
         m.insert("validation_invalid_phone", "无效的电话号码");
-        m.insert("validation_empty_ssid", "SSID 不能为空");
-        m.insert("validation_empty_title", "标题不能为空");
         // Feature 9: Font selection
         m.insert("label_font", "字体");
         m.insert("label_font_size", "字体大小");
@@ -4799,7 +4134,72 @@ impl I18n {
             "scan_detail_styled_corners",
             "已设置定位角样式 — 智能手机扫描器可可靠识别",
         );
-        m.insert("scan_detail_no_image", "没有可验证的 QR 码");
+
+        // Dialog titles for file choosers
+        m.insert("dlg_select_logo", "选择Logo");
+        m.insert("dlg_select_bg", "选择背景图片");
+        m.insert("dlg_save_label_sheet", "保存标签页");
+        m.insert("dlg_select_csv", "选择CSV文件");
+        m.insert("dlg_select_folder", "选择文件夹");
+
+        // Dialog buttons
+        m.insert("btn_open", "打开");
+        m.insert("btn_select", "选择");
+
+        // File filter names
+        m.insert("filter_images", "图片文件");
+        m.insert("filter_json", "JSON文件");
+        m.insert("filter_csv_txt", "CSV/TXT");
+
+        // Status messages (file operations)
+        m.insert("status_style_exported", "样式已导出");
+        m.insert("status_pdf_saved", "PDF已保存");
+        m.insert("status_pdf_error", "PDF导出错误");
+        m.insert("status_label_sheet_saved", "标签页已保存");
+        m.insert("status_label_sheet_error", "标签页导出错误");
+        m.insert("status_png_saved", "PNG已保存");
+        m.insert("status_svg_saved", "SVG已保存");
+        m.insert("status_gif_saved", "GIF已保存");
+        m.insert("status_gif_gradient_only", "GIF仅在渐变模式下可用");
+        m.insert("status_batch_exported", "{}个二维码已导出");
+        m.insert("status_saved_as", "已保存为{}");
+        m.insert("status_enter_template_name", "请输入模板名称");
+        m.insert("status_template_deleted_fmt", "模板'{}'已删除");
+        m.insert("status_render_error", "错误：无法渲染二维码");
+        m.insert("status_copied", "已复制到剪贴板");
+        m.insert("status_copied_svg", "SVG已复制到剪贴板");
+
+        // Batch/Label dialog labels
+        m.insert("batch_data_label", "二维码数据（每行一个）：");
+        m.insert("batch_csv_hint", "（第一列作为二维码数据，跳过标题行）");
+        m.insert("batch_format", "格式：");
+        m.insert("batch_csv_filter", "CSV/TXT");
+        m.insert("batch_folder_label", "文件夹：");
+        m.insert("batch_folder_selected", "文件夹：{}");
+
+        // Label sheet dialog
+        m.insert("lbl_columns", "列");
+        m.insert("lbl_rows", "行");
+        m.insert("lbl_margin_mm", "边距 (mm)");
+        m.insert("lbl_spacing_mm", "间距 (mm)");
+        m.insert("lbl_sheet_info", "在A4页面上排列多个二维码以便打印");
+        m.insert("label_sheet_a4_info", "二维码将排列在A4页面上。");
+
+        // Dialog buttons for batch/label
+        m.insert("btn_cancel", "取消");
+        m.insert("btn_export", "导出");
+        m.insert("btn_save", "保存");
+
+        // Dialog titles (FileChooserDialog)
+        m.insert("dlg_save_pdf", "保存为PDF");
+        m.insert("dlg_save_png", "保存为PNG");
+        m.insert("dlg_save_svg", "保存为SVG");
+        m.insert("dlg_save_gif", "保存为GIF");
+        m.insert("dlg_import_style", "导入样式");
+        m.insert("dlg_export_style", "导出样式");
+        m.insert("dlg_batch_export", "批量导出");
+        m.insert("dlg_label_sheet", "标签页");
+
         m
     }
 }

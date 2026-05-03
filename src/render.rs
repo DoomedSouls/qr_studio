@@ -42,6 +42,7 @@ pub fn render_vector_qr(
     bg_image_path: Option<&PathBuf>,
     logo_vectorize: bool,
     logo_vectorize_bg_color: Rgba<u8>,
+    logo_bg_transparent: bool,
     logo_clear_area: bool,
     logo_clear_padding: f64,
     logo_outer_radius: f64,
@@ -85,6 +86,7 @@ pub fn render_vector_qr(
         bg_image_path,
         logo_vectorize,
         logo_vectorize_bg_color,
+        logo_bg_transparent,
         logo_clear_area,
         logo_clear_padding,
         logo_outer_radius,
@@ -162,6 +164,7 @@ pub fn render_vector_gif(
     bg_image_path: Option<&PathBuf>,
     logo_vectorize: bool,
     logo_vectorize_bg_color: Rgba<u8>,
+    logo_bg_transparent: bool,
     logo_clear_area: bool,
     logo_clear_padding: f64,
     logo_outer_radius: f64,
@@ -231,6 +234,7 @@ pub fn render_vector_gif(
                 bg_image_path,
                 logo_vectorize,
                 logo_vectorize_bg_color,
+                logo_bg_transparent,
                 logo_clear_area,
                 logo_clear_padding,
                 logo_outer_radius,
@@ -298,6 +302,7 @@ pub fn render_qr_from_state(state: &AppState) -> Option<RgbaImage> {
     let bg_image_path = state.bg_image_path.borrow().clone();
     let logo_vectorize = *state.logo_vectorize.borrow();
     let logo_vectorize_bg_color = *state.logo_vectorize_bg_color.borrow();
+    let logo_bg_transparent = *state.logo_bg_transparent.borrow();
     let logo_clear_area = *state.logo_clear_area.borrow();
     let logo_clear_padding = *state.logo_clear_padding.borrow();
     let custom_dot_path = state.custom_dot_path.borrow().clone();
@@ -339,6 +344,7 @@ pub fn render_qr_from_state(state: &AppState) -> Option<RgbaImage> {
         bg_image_path.as_ref(),
         logo_vectorize,
         logo_vectorize_bg_color,
+        logo_bg_transparent,
         logo_clear_area,
         logo_clear_padding,
         *state.logo_outer_radius.borrow(),
@@ -383,6 +389,7 @@ pub fn render_svg_from_state(state: &AppState) -> Option<String> {
     let shadow_offset = *state.shadow_offset.borrow();
     let logo_vectorize = *state.logo_vectorize.borrow();
     let logo_vectorize_bg_color = *state.logo_vectorize_bg_color.borrow();
+    let logo_bg_transparent = *state.logo_bg_transparent.borrow();
     let logo_clear_area = *state.logo_clear_area.borrow();
     let logo_clear_padding = *state.logo_clear_padding.borrow();
     let custom_dot_path = state.custom_dot_path.borrow().clone();
@@ -423,6 +430,7 @@ pub fn render_svg_from_state(state: &AppState) -> Option<String> {
         None,
         logo_vectorize,
         logo_vectorize_bg_color,
+        logo_bg_transparent,
         logo_clear_area,
         logo_clear_padding,
         *state.logo_outer_radius.borrow(),
@@ -461,6 +469,7 @@ pub fn render_gif_from_state(state: &AppState) -> Option<Vec<u8>> {
     let bg_image_path = state.bg_image_path.borrow().clone();
     let logo_vectorize = *state.logo_vectorize.borrow();
     let logo_vectorize_bg_color = *state.logo_vectorize_bg_color.borrow();
+    let logo_bg_transparent = *state.logo_bg_transparent.borrow();
     let logo_clear_area = *state.logo_clear_area.borrow();
     let logo_clear_padding = *state.logo_clear_padding.borrow();
     let custom_dot_path = state.custom_dot_path.borrow().clone();
@@ -496,6 +505,7 @@ pub fn render_gif_from_state(state: &AppState) -> Option<Vec<u8>> {
         bg_image_path.as_ref(),
         logo_vectorize,
         logo_vectorize_bg_color,
+        logo_bg_transparent,
         logo_clear_area,
         logo_clear_padding,
         *state.logo_outer_radius.borrow(),

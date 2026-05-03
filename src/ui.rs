@@ -7,6 +7,7 @@ use crate::helpers::*;
 use crate::i18n::*;
 use crate::render::*;
 use crate::svg::*;
+use crate::types::ToastType;
 use crate::types::*;
 
 use adw::prelude::*;
@@ -20,10 +21,11 @@ use gtk4::{
     ProgressBar, Scale, ScrolledWindow, SelectionMode, Separator, SignalListItemFactory,
     SpinButton, Stack, StackSwitcher, StackTransitionType, StringList, TextBuffer, TextView,
 };
+use gtk4::{CallbackAction, Shortcut, ShortcutController, ShortcutTrigger};
 use image::Rgba;
 use libshumate as shumate;
 use shumate::prelude::*;
-use shumate::{Map, MapLayer, Marker, MarkerLayer, RasterRenderer};
+use shumate::{Map, MapLayer, Marker, MarkerLayer, RasterRenderer, VectorRenderer};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -113,6 +115,7 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
     let bg_image_path = s.bg_image_path.borrow().clone();
     let logo_vectorize = *s.logo_vectorize.borrow();
     let logo_vectorize_bg_color = *s.logo_vectorize_bg_color.borrow();
+    let logo_bg_transparent = *s.logo_bg_transparent.borrow();
     let logo_clear_area = *s.logo_clear_area.borrow();
     let logo_clear_padding = *s.logo_clear_padding.borrow();
     let frame_width = *s.frame_width.borrow();
@@ -132,9 +135,11 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
     // Contrast warning (WCAG 2.0)
     let ratio = contrast_ratio(&fg, &bg);
     if ratio < 3.0 {
+        let i18n = s.i18n.borrow();
+        let warning_template = i18n.t("scan_detail_low_contrast");
         s.contrast_warning_label.set_text(&format!(
-            "⚠️ Niedriger Kontrast: {:.1}:1 (empfohlen ≥ 4.5:1)",
-            ratio
+            "⚠️ {}",
+            warning_template.replace("{:.1}", &format!("{:.1}", ratio))
         ));
         s.contrast_warning_label.set_visible(true);
         // Animation 10: Contrast warning shake
@@ -204,6 +209,7 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
             bg_image_path.as_ref(),
             logo_vectorize,
             logo_vectorize_bg_color,
+            logo_bg_transparent,
             logo_clear_area,
             logo_clear_padding,
             logo_outer_radius,
@@ -909,7 +915,10 @@ pub fn build_ui(app: &Application) {
     wifi_password_entry.set_tooltip_text(Some(&i18n.t("tooltip_wifi_password")));
     wifi_password_entry.set_visibility(false);
     wifi_box.append(&wifi_password_entry);
-    let wifi_enc_types = StringList::new(&["WPA", "WEP", "Keine"]);
+    let wifi_enc_types = StringList::new(&[]);
+    wifi_enc_types.append(&i18n.t("dd_wifi_wpa"));
+    wifi_enc_types.append(&i18n.t("dd_wifi_wep"));
+    wifi_enc_types.append(&i18n.t("dd_wifi_none"));
     let wifi_enc_dd = DropDown::new(
         Some(wifi_enc_types.clone().upcast::<gtk4::gio::ListModel>()),
         None::<gtk4::Expression>,
@@ -1046,67 +1055,162 @@ pub fn build_ui(app: &Application) {
     gps_map.set_vexpand(true);
     gps_map.add_css_class("gps-map");
 
-    // CartoDB tiles: start with style matching current color scheme
-    let gps_map_dark: Rc<RefCell<bool>> =
-        Rc::new(RefCell::new(adw::StyleManager::default().is_dark()));
-    let tile_url = if *gps_map_dark.borrow() {
-        "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-    } else {
-        "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-    };
-    let source = RasterRenderer::from_url(tile_url);
-    gps_map.set_map_source(&source);
-    gps_map.center_on(52.52, 13.405);
+    // OpenFreeMap vector tiles with language-aware labels (fallback: CartoDB raster)
+    let gps_map_style: Rc<RefCell<crate::map_styles::MapStyle>> = Rc::new(RefCell::new(
+        crate::map_styles::MapStyle::default_for_system(),
+    ));
+    let style_json = crate::map_styles::get_map_style(*gps_map_style.borrow(), lang);
+    let vector_ok: Rc<RefCell<bool>> = Rc::new(RefCell::new(false));
     let gps_map_layer: Rc<RefCell<Option<MapLayer>>> = Rc::new(RefCell::new(None));
-    if let Some(vp) = gps_map.viewport() {
-        vp.set_zoom_level(12.0);
-        let map_layer = MapLayer::new(&source, &vp);
-        gps_map.add_layer(&map_layer);
-        *gps_map_layer.borrow_mut() = Some(map_layer);
+
+    gps_map.center_on(52.0, 10.0);
+
+    // Try vector tiles first, fall back to raster
+    match VectorRenderer::new("ofm", &style_json) {
+        Ok(source) => {
+            *vector_ok.borrow_mut() = true;
+            if let Some(vp) = gps_map.viewport() {
+                vp.set_zoom_level(3.5);
+                vp.set_reference_map_source(Some(&source));
+                let map_layer = MapLayer::new(&source, &vp);
+                gps_map.add_layer(&map_layer);
+                *gps_map_layer.borrow_mut() = Some(map_layer);
+            }
+        }
+        Err(_e) => {
+            let url = if gps_map_style.borrow().is_dark_style() {
+                "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+            } else {
+                "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+            };
+            let source = RasterRenderer::from_url(url);
+            if let Some(vp) = gps_map.viewport() {
+                vp.set_zoom_level(3.5);
+                vp.set_reference_map_source(Some(&source));
+                let map_layer = MapLayer::new(&source, &vp);
+                gps_map.add_layer(&map_layer);
+                *gps_map_layer.borrow_mut() = Some(map_layer);
+            }
+        }
     }
 
     // Marker at current position
     let gps_marker = Marker::new();
-    gps_marker.set_location(52.52, 13.405);
+    gps_marker.set_location(52.0, 10.0);
     let gps_pin = Label::new(Some("📍"));
     gps_marker.set_child(Some(&gps_pin));
+    // Store marker layer so we can re-add it on top after style switches
+    let gps_marker_layer: Rc<RefCell<Option<MarkerLayer>>> = Rc::new(RefCell::new(None));
     if let Some(vp) = gps_map.viewport() {
-        let gps_marker_layer = MarkerLayer::new(&vp);
-        gps_marker_layer.add_marker(&gps_marker);
-        gps_map.add_layer(&gps_marker_layer);
+        let ml = MarkerLayer::new(&vp);
+        ml.add_marker(&gps_marker);
+        gps_map.add_layer(&ml);
+        *gps_marker_layer.borrow_mut() = Some(ml);
     }
 
-    // OSD pill button: toggle light / dark map tiles (bottom-right)
-    let gps_theme_btn = Button::new();
-    gps_theme_btn.add_css_class("gps-osd-btn");
-    gps_theme_btn.set_halign(Align::End);
-    gps_theme_btn.set_valign(Align::End);
-    gps_theme_btn.set_margin_bottom(6);
-    gps_theme_btn.set_margin_end(6);
+    // ── OSD style picker: gear icon that expands to pill on hover ──────────
+    let style_picker = Box::new(Orientation::Horizontal, 0);
+    style_picker.add_css_class("gps-osd-picker");
+    style_picker.set_halign(Align::End);
+    style_picker.set_valign(Align::End);
+    style_picker.set_margin_bottom(6);
+    style_picker.set_margin_end(6);
+
+    // Gear icon (always visible)
+    let gear_btn = Label::new(Some("⚙️"));
+    gear_btn.add_css_class("gps-osd-gear");
+    style_picker.append(&gear_btn);
+
+    // Revealer: wraps the buttons and provides a smooth slide animation
+    let style_revealer = gtk4::Revealer::new();
+    style_revealer.set_transition_type(gtk4::RevealerTransitionType::SlideRight);
+    style_revealer.set_transition_duration(300);
+    style_revealer.set_reveal_child(false);
+    style_revealer.set_overflow(gtk4::Overflow::Hidden);
+
+    // Style name buttons inside the revealer
+    let style_btns_box = Box::new(Orientation::Horizontal, 2);
+    style_btns_box.add_css_class("gps-osd-style-btns");
+
+    // Build one button per map style
+    let all_styles = crate::map_styles::MapStyle::all();
+    let mut style_buttons: Vec<Button> = Vec::new();
+    for &s in all_styles {
+        let btn = Button::with_label(s.label());
+        btn.add_css_class("gps-osd-style-item");
+        if s == *gps_map_style.borrow() {
+            btn.add_css_class("gps-osd-style-active");
+        }
+        style_buttons.push(btn.clone());
+        style_btns_box.append(&btn);
+    }
+    style_revealer.set_child(Some(&style_btns_box));
+    style_picker.append(&style_revealer);
+
+    // Hover detection: reveal / hide the buttons + spin the gear
     {
-        let initial_label = if *gps_map_dark.borrow() {
-            "☀️ Light"
-        } else {
-            "🌙 Dark"
-        };
-        gps_theme_btn.set_child(Some(&Label::new(Some(initial_label))));
+        let revealer_c = style_revealer.clone();
+        let gear_c = gear_btn.clone();
+        let motion = gtk4::EventControllerMotion::new();
+        motion.connect_enter(move |_, _, _| {
+            gear_c.add_css_class("gps-osd-gear-spin");
+            revealer_c.set_reveal_child(true);
+        });
+        let revealer_c2 = style_revealer.clone();
+        let gear_c2 = gear_btn.clone();
+        motion.connect_leave(move |_| {
+            gear_c2.remove_css_class("gps-osd-gear-spin");
+            revealer_c2.set_reveal_child(false);
+        });
+        style_picker.add_controller(motion);
     }
 
     // Wrap map in Overlay
     let gps_overlay = Overlay::new();
     gps_overlay.set_child(Some(&gps_map));
-    gps_overlay.add_overlay(&gps_theme_btn);
+    gps_overlay.add_overlay(&style_picker);
     gps_box.append(&gps_overlay);
 
-    // OSD button CSS (pill-shaped floating button)
+    // OSD picker CSS
     {
         let osd_css = gtk4::CssProvider::new();
         osd_css.load_from_data(
-            ".gps-osd-btn { border-radius: 9999px; padding: 4px 12px; \
-             background: alpha(@card_bg_color, 0.88); color: @card_fg_color; \
-             border: 1px solid alpha(currentColor, 0.12); \
-             box-shadow: 0 2px 8px alpha(black, 0.25); font-size: 0.85em; } \
-             .gps-osd-btn:hover { background: alpha(@accent_color, 0.15); }",
+            ".gps-osd-picker { \
+               border-radius: 9999px; \
+               background: alpha(@card_bg_color, 0.88); \
+               color: @card_fg_color; \
+               border: 1px solid alpha(currentColor, 0.12); \
+               box-shadow: 0 2px 8px alpha(black, 0.25); \
+               padding: 5px 9px; \
+             } \
+             .gps-osd-gear { \
+               font-size: 1.15em; \
+               padding: 0 1px; \
+               transition: transform 0.4s ease-in-out; \
+               transform-origin: center; \
+             } \
+             .gps-osd-gear-spin { \
+               transform: rotate(360deg); \
+             } \
+             .gps-osd-style-item { \
+               border-radius: 9999px; \
+               padding: 2px 10px; \
+               background: transparent; \
+               color: @card_fg_color; \
+               border: 1px solid transparent; \
+               font-size: 0.78em; \
+               font-weight: normal; \
+               transition: all 150ms ease-out; \
+             } \
+             .gps-osd-style-item:hover { \
+               background: alpha(@accent_color, 0.15); \
+               border-color: alpha(@accent_color, 0.3); \
+             } \
+             .gps-osd-style-active { \
+               background: alpha(@accent_color, 0.2); \
+               border-color: @accent_color; \
+               font-weight: bold; \
+             }",
         );
         gtk4::style_context_add_provider_for_display(
             &gtk4::gdk::Display::default().unwrap(),
@@ -1115,40 +1219,74 @@ pub fn build_ui(app: &Application) {
         );
     }
 
-    // OSD button: toggle map tile style
-    {
+    // Style button click handlers: switch map style
+    for (i, btn) in style_buttons.iter().enumerate() {
         let map_c = gps_map.clone();
         let map_layer_c = gps_map_layer.clone();
-        let dark_c = gps_map_dark.clone();
-        let btn_c = gps_theme_btn.clone();
-        gps_theme_btn.connect_clicked(move |_| {
-            let new_dark = !*dark_c.borrow();
-            *dark_c.borrow_mut() = new_dark;
+        let style_c = gps_map_style.clone();
+        let lang_c = lang;
+        let vector_ok_c = vector_ok.clone();
+        let btn_c = btn.clone();
+        let all_btns: Vec<Button> = style_buttons.iter().cloned().collect();
+        btn.connect_clicked(move |_| {
+            let new_style = crate::map_styles::MapStyle::all()[i];
+            *style_c.borrow_mut() = new_style;
 
-            let url = if new_dark {
-                "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-            } else {
-                "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-            };
-            let new_source = RasterRenderer::from_url(url);
-            map_c.set_map_source(&new_source);
-            if let Some(vp) = map_c.viewport() {
-                if let Some(old) = map_layer_c.borrow_mut().take() {
-                    map_c.remove_layer(&old);
-                }
-                let new_layer = MapLayer::new(&new_source, &vp);
-                map_c.add_layer(&new_layer);
-                *map_layer_c.borrow_mut() = Some(new_layer);
+            // Update active highlighting
+            for b in &all_btns {
+                b.remove_css_class("gps-osd-style-active");
             }
+            btn_c.add_css_class("gps-osd-style-active");
 
-            let label = if new_dark {
-                "☀️ Light"
+            // Adopt the GNOME Maps approach: insert new layer ABOVE old, then remove old.
+            // This ensures there is never a frame without a tile layer.
+            let old_layer = map_layer_c.borrow_mut().take();
+
+            if *vector_ok_c.borrow() {
+                let style_json = crate::map_styles::get_map_style(new_style, lang_c);
+                match VectorRenderer::new("ofm", &style_json) {
+                    Ok(new_source) => {
+                        if let Some(vp) = map_c.viewport() {
+                            vp.set_reference_map_source(Some(&new_source));
+                            let new_layer = MapLayer::new(&new_source, &vp);
+
+                            // Insert new layer above old (or just add if no old layer)
+                            if let Some(ref old) = old_layer {
+                                map_c.insert_layer_above(&new_layer, Some(old));
+                                map_c.remove_layer(old);
+                            } else {
+                                map_c.add_layer(&new_layer);
+                            }
+                            *map_layer_c.borrow_mut() = Some(new_layer);
+                        }
+                    }
+                    Err(_e) => {
+                        // Restore old layer on failure
+                        if let Some(ref old) = old_layer {
+                            map_c.add_layer(old);
+                            *map_layer_c.borrow_mut() = Some(old.clone());
+                        }
+                    }
+                }
             } else {
-                "🌙 Dark"
-            };
-            if let Some(child) = btn_c.child() {
-                if let Some(lbl) = child.downcast_ref::<Label>() {
-                    lbl.set_label(label);
+                // Fallback: CartoDB raster tiles
+                let url = if new_style.is_dark_style() {
+                    "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+                } else {
+                    "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+                };
+                let new_source = RasterRenderer::from_url(url);
+                if let Some(vp) = map_c.viewport() {
+                    vp.set_reference_map_source(Some(&new_source));
+                    let new_layer = MapLayer::new(&new_source, &vp);
+
+                    if let Some(ref old) = old_layer {
+                        map_c.insert_layer_above(&new_layer, Some(old));
+                        map_c.remove_layer(old);
+                    } else {
+                        map_c.add_layer(&new_layer);
+                    }
+                    *map_layer_c.borrow_mut() = Some(new_layer);
                 }
             }
         });
@@ -1536,6 +1674,9 @@ pub fn build_ui(app: &Application) {
     let quiet_zone_label = Label::new(Some(&i18n.t("label_quiet_zone")));
     settings_box.append(&quiet_zone_label);
     let quiet_zone_scale = Scale::with_range(Orientation::Horizontal, 0.0, 10.0, 1.0);
+    quiet_zone_scale.set_draw_value(true);
+    quiet_zone_scale.set_has_origin(false);
+    quiet_zone_scale.set_format_value_func(move |_, v| format!("{:.0}", v));
     quiet_zone_scale.set_value(4.0);
     quiet_zone_scale.set_tooltip_text(Some(&i18n.t("tooltip_quiet_zone")));
     settings_box.append(&quiet_zone_scale);
@@ -1543,6 +1684,9 @@ pub fn build_ui(app: &Application) {
     let gap_label = Label::new(Some(&i18n.t("label_module_gap")));
     settings_box.append(&gap_label);
     let module_gap_scale = Scale::with_range(Orientation::Horizontal, 0.0, 0.4, 0.05);
+    module_gap_scale.set_draw_value(true);
+    module_gap_scale.set_has_origin(false);
+    module_gap_scale.set_format_value_func(move |_, v| format!("{:.2}", v));
     module_gap_scale.set_value(0.0);
     module_gap_scale.set_tooltip_text(Some(&i18n.t("tooltip_module_gap")));
     settings_box.append(&module_gap_scale);
@@ -1587,6 +1731,9 @@ pub fn build_ui(app: &Application) {
     let shadow_offset_label = Label::new(Some(&i18n.t("label_shadow_offset")));
     advanced_box.append(&shadow_offset_label);
     let shadow_offset_scale = Scale::with_range(Orientation::Horizontal, 1.0, 5.0, 0.5);
+    shadow_offset_scale.set_draw_value(true);
+    shadow_offset_scale.set_has_origin(false);
+    shadow_offset_scale.set_format_value_func(move |_, v| format!("{:.1} px", v));
     shadow_offset_scale.set_value(2.0);
     shadow_offset_scale.set_tooltip_text(Some(&i18n.t("tooltip_shadow_offset")));
     advanced_box.append(&shadow_offset_scale);
@@ -1614,6 +1761,9 @@ pub fn build_ui(app: &Application) {
     let logo_size_label = Label::new(Some(&i18n.t("label_logo_size")));
     logo_box.append(&logo_size_label);
     let logo_size_scale = Scale::with_range(Orientation::Horizontal, 0.1, 0.6, 0.05);
+    logo_size_scale.set_draw_value(true);
+    logo_size_scale.set_has_origin(false);
+    logo_size_scale.set_format_value_func(move |_, v| format!("{:.0} %", v * 100.0));
     logo_size_scale.set_value(0.4);
     logo_size_scale.set_tooltip_text(Some(&i18n.t("tooltip_logo_size")));
     logo_box.append(&logo_size_scale);
@@ -1633,6 +1783,8 @@ pub fn build_ui(app: &Application) {
     let logo_outer_radius_label = Label::new(Some(&i18n.t("label_outer_radius")));
     let logo_outer_radius_scale = Scale::with_range(Orientation::Horizontal, 0.0, 0.5, 0.01);
     logo_outer_radius_scale.set_draw_value(true);
+    logo_outer_radius_scale.set_has_origin(false);
+    logo_outer_radius_scale.set_format_value_func(move |_, v| format!("{:.0} %", v * 100.0));
     logo_outer_radius_scale.set_value(0.15);
     logo_outer_radius_scale.set_tooltip_text(Some(&i18n.t("tooltip_outer_radius")));
     logo_outer_radius_box.append(&logo_outer_radius_label);
@@ -1650,6 +1802,8 @@ pub fn build_ui(app: &Application) {
     let logo_inner_radius_label = Label::new(Some(&i18n.t("label_inner_radius")));
     let logo_inner_radius_scale = Scale::with_range(Orientation::Horizontal, 0.0, 0.5, 0.01);
     logo_inner_radius_scale.set_draw_value(true);
+    logo_inner_radius_scale.set_has_origin(false);
+    logo_inner_radius_scale.set_format_value_func(move |_, v| format!("{:.0} %", v * 100.0));
     logo_inner_radius_scale.set_value(0.15);
     logo_inner_radius_scale.set_tooltip_text(Some(&i18n.t("tooltip_inner_radius")));
     logo_inner_radius_box.append(&logo_inner_radius_label);
@@ -1664,6 +1818,9 @@ pub fn build_ui(app: &Application) {
     let logo_border_width_label = Label::new(Some(&i18n.t("label_logo_border_width")));
     logo_box.append(&logo_border_width_label);
     let logo_border_width_scale = Scale::with_range(Orientation::Horizontal, 0.0, 20.0, 1.0);
+    logo_border_width_scale.set_draw_value(true);
+    logo_border_width_scale.set_has_origin(false);
+    logo_border_width_scale.set_format_value_func(move |_, v| format!("{:.0} px", v));
     logo_border_width_scale.set_value(0.0);
     logo_border_width_scale.set_tooltip_text(Some(&i18n.t("tooltip_logo_border_width")));
     logo_box.append(&logo_border_width_scale);
@@ -1681,6 +1838,11 @@ pub fn build_ui(app: &Application) {
     logo_vectorize_bg_color_btn.set_use_alpha(true);
     logo_vectorize_bg_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_vectorize_bg")));
     logo_box.append(&logo_vectorize_bg_color_btn);
+
+    let logo_bg_transparent_check = CheckButton::with_label(&i18n.t("check_logo_bg_transparent"));
+    logo_bg_transparent_check.set_tooltip_text(Some(&i18n.t("tooltip_logo_bg_transparent")));
+    logo_bg_transparent_check.set_active(false);
+    logo_box.append(&logo_bg_transparent_check);
 
     let logo_clear_area_check = CheckButton::with_label(&i18n.t("check_logo_clear_area"));
     logo_clear_area_check.set_tooltip_text(Some(&i18n.t("tooltip_logo_clear_area")));
@@ -1806,6 +1968,9 @@ pub fn build_ui(app: &Application) {
     let frame_width_label = Label::new(Some(&i18n.t("label_frame_width")));
     frame_box.append(&frame_width_label);
     let frame_width_scale = Scale::with_range(Orientation::Horizontal, 1.0, 10.0, 1.0);
+    frame_width_scale.set_draw_value(true);
+    frame_width_scale.set_has_origin(false);
+    frame_width_scale.set_format_value_func(move |_, v| format!("{:.0} px", v));
     frame_width_scale.set_value(2.0);
     frame_width_scale.set_tooltip_text(Some(&i18n.t("tooltip_frame_width")));
     frame_box.append(&frame_width_scale);
@@ -1814,6 +1979,8 @@ pub fn build_ui(app: &Application) {
     let frame_outer_radius_label = Label::new(Some(&i18n.t("label_frame_outer_radius")));
     let frame_outer_radius_scale = Scale::with_range(Orientation::Horizontal, 0.0, 0.5, 0.01);
     frame_outer_radius_scale.set_draw_value(true);
+    frame_outer_radius_scale.set_has_origin(false);
+    frame_outer_radius_scale.set_format_value_func(move |_, v| format!("{:.0} %", v * 100.0));
     frame_outer_radius_scale.set_value(0.15);
     frame_outer_radius_scale.set_tooltip_text(Some(&i18n.t("tooltip_frame_outer_radius")));
     frame_outer_radius_box.append(&frame_outer_radius_label);
@@ -2111,6 +2278,7 @@ pub fn build_ui(app: &Application) {
         scan_verify_btn: scan_verify_btn.clone(),
         logo_vectorize: RefCell::new(false),
         logo_vectorize_bg_color: RefCell::new(Rgba([0, 0, 0, 0])),
+        logo_bg_transparent: RefCell::new(false),
         logo_clear_area: RefCell::new(false),
         logo_clear_padding: RefCell::new(0.0),
         logo_outer_radius: RefCell::new(0.15),
@@ -2264,18 +2432,25 @@ pub fn build_ui(app: &Application) {
             cal_start_minute.set_value(0.0);
             gps_suggestions_scroll.set_visible(false);
             gps_marker.set_visible(false);
-            gps_map.center_on(52.52, 13.405);
+            gps_map.center_on(52.0, 10.0);
             update_preview(&state);
         });
     }
 
-    // Content type change - show/hide boxes
+    // Content type change - show/hide boxes (index-based, language-independent)
     {
         let state = state.clone();
         let content_stack = content_stack.clone();
         content_type_dd.connect_selected_notify(move |dd| {
-            let label_str = get_dropdown_string(dd);
-            let ct = parse_content_type(&label_str);
+            let ct = match dd.selected() {
+                0 => ContentType::Text,
+                1 => ContentType::Wifi,
+                2 => ContentType::Vcard,
+                3 => ContentType::Calendar,
+                4 => ContentType::Gps,
+                5 => ContentType::Sms,
+                _ => ContentType::Text,
+            };
             {
                 let s = state.borrow();
                 *s.content_type.borrow_mut() = ct;
@@ -2322,8 +2497,12 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         wifi_enc_dd.connect_selected_notify(move |dd| {
-            let label_str = get_dropdown_string(dd);
-            let enc = parse_wifi_encryption(&label_str);
+            let enc = match dd.selected() {
+                0 => WifiEncryption::Wpa,
+                1 => WifiEncryption::Wep,
+                2 => WifiEncryption::None,
+                _ => WifiEncryption::Wpa,
+            };
             state.borrow().wifi_encryption.replace(enc);
             schedule_preview(&state);
         });
@@ -2568,6 +2747,7 @@ pub fn build_ui(app: &Application) {
                 if let Ok(lon) = state.borrow().gps_lon.borrow().parse::<f64>() {
                     if lat >= -90.0 && lat <= 90.0 && lon >= -180.0 && lon <= 180.0 {
                         mm.set_location(lat, lon);
+                        mm.set_visible(true);
                     }
                 }
             }
@@ -2575,6 +2755,7 @@ pub fn build_ui(app: &Application) {
         });
     }
 
+    // Longitude entry change → update marker
     // GPS Lon (with validation)
     {
         let state = state.clone();
@@ -2607,6 +2788,7 @@ pub fn build_ui(app: &Application) {
                 if let Ok(lat) = state.borrow().gps_lat.borrow().parse::<f64>() {
                     if lat >= -90.0 && lat <= 90.0 && lon >= -180.0 && lon <= 180.0 {
                         mm.set_location(lat, lon);
+                        mm.set_visible(true);
                     }
                 }
             }
@@ -2635,6 +2817,7 @@ pub fn build_ui(app: &Application) {
                 if let Some(vp) = map_c.viewport() {
                     let (lat, lon) = vp.widget_coords_to_location(&map_c, x, y);
                     marker_c.set_location(lat, lon);
+                    marker_c.set_visible(true);
                     lat_ec.set_text(&format!("{:.6}", lat));
                     lon_ec.set_text(&format!("{:.6}", lon));
                 }
@@ -2813,6 +2996,7 @@ pub fn build_ui(app: &Application) {
             if let Some((lat, lon)) = result {
                 map_c2.center_on(lat, lon);
                 marker_c2.set_location(lat, lon);
+                marker_c2.set_visible(true);
                 lat_ec2.set_text(&format!("{:.6}", lat));
                 lon_ec2.set_text(&format!("{:.6}", lon));
                 if let Some(vp) = map_c2.viewport() {
@@ -3142,8 +3326,14 @@ pub fn build_ui(app: &Application) {
         let custom_dot_box = custom_dot_box.clone();
         dot_style_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            let style = parse_dot_style(&label_str);
+            let style = match dd.selected() {
+                0 => DotStyle::Rounded,
+                1 => DotStyle::Square,
+                2 => DotStyle::Dots,
+                3 => DotStyle::Diamond,
+                4 => DotStyle::Custom,
+                _ => DotStyle::Rounded,
+            };
             *state.borrow().dot_style.borrow_mut() = style;
             custom_dot_box.set_visible(matches!(style, DotStyle::Custom));
             schedule_preview(&state);
@@ -3165,9 +3355,14 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         corner_sq_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().corner_square_style.borrow_mut() =
-                parse_corner_square_style(&label_str);
+            let style = match dd.selected() {
+                0 => CornerSquareStyle::ExtraRounded,
+                1 => CornerSquareStyle::Square,
+                2 => CornerSquareStyle::Dot,
+                3 => CornerSquareStyle::Circle,
+                _ => CornerSquareStyle::ExtraRounded,
+            };
+            *state.borrow().corner_square_style.borrow_mut() = style;
             schedule_preview(&state);
         });
     }
@@ -3177,8 +3372,14 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         corner_dot_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().corner_dot_style.borrow_mut() = parse_corner_dot_style(&label_str);
+            let style = match dd.selected() {
+                0 => CornerDotStyle::Dot,
+                1 => CornerDotStyle::Square,
+                2 => CornerDotStyle::Circle,
+                3 => CornerDotStyle::ExtraRounded,
+                _ => CornerDotStyle::Dot,
+            };
+            *state.borrow().corner_dot_style.borrow_mut() = style;
             schedule_preview(&state);
         });
     }
@@ -3326,8 +3527,14 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         grad_dir_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().gradient_direction.borrow_mut() = parse_gradient_direction(&label_str);
+            let dir = match dd.selected() {
+                0 => GradientDirection::Horizontal,
+                1 => GradientDirection::Vertical,
+                2 => GradientDirection::Diagonal,
+                3 => GradientDirection::Radial,
+                _ => GradientDirection::Horizontal,
+            };
+            *state.borrow().gradient_direction.borrow_mut() = dir;
             schedule_preview(&state);
         });
     }
@@ -3337,8 +3544,14 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         ec_level_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().ec_level.borrow_mut() = parse_ec_level(&label_str);
+            let ec = match dd.selected() {
+                0 => ErrorCorrectionLevel::Medium,
+                1 => ErrorCorrectionLevel::Low,
+                2 => ErrorCorrectionLevel::Quartile,
+                3 => ErrorCorrectionLevel::High,
+                _ => ErrorCorrectionLevel::Medium,
+            };
+            *state.borrow().ec_level.borrow_mut() = ec;
             schedule_preview(&state);
         });
     }
@@ -3348,8 +3561,14 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         module_size_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().module_size.borrow_mut() = parse_module_size(&label_str);
+            let size = match dd.selected() {
+                0 => 32,
+                1 => 16,
+                2 => 64,
+                3 => 128,
+                _ => 32,
+            };
+            *state.borrow().module_size.borrow_mut() = size;
             schedule_preview(&state);
         });
     }
@@ -3399,18 +3618,22 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         let ec_level_dd = ec_level_dd.clone();
         logo_select_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Logo auswählen"),
+                Some(&i18n.t("dlg_select_logo")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Open,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Öffnen", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_open"), gtk4::ResponseType::Accept),
                 ],
             );
             let filter = FileFilter::new();
             filter.add_mime_type("image/*");
-            filter.set_name(Some("Bilddateien"));
+            filter.set_name(Some(&i18n.t("filter_images")));
+            drop(i18n);
+            drop(state_ref);
             dialog.set_filter(&filter);
             let state = state.clone();
             let ec_level_dd = ec_level_dd.clone();
@@ -3469,9 +3692,14 @@ pub fn build_ui(app: &Application) {
         let sync_clone = logo_radius_sync_btn.clone();
         logo_shape_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().logo_shape.borrow_mut() = parse_logo_shape(&label_str);
-            let is_rounded = matches!(parse_logo_shape(&label_str), LogoShape::RoundedRect);
+            let shape = match dd.selected() {
+                0 => LogoShape::Circle,
+                1 => LogoShape::Rectangle,
+                2 => LogoShape::RoundedRect,
+                _ => LogoShape::Circle,
+            };
+            *state.borrow().logo_shape.borrow_mut() = shape;
+            let is_rounded = matches!(shape, LogoShape::RoundedRect);
             orb_clone.set_visible(is_rounded);
             irb_clone.set_visible(is_rounded);
             sync_clone.set_visible(is_rounded);
@@ -3576,9 +3804,15 @@ pub fn build_ui(app: &Application) {
         let for_clone = frame_outer_radius_box.clone();
         frame_style_dd.connect_selected_notify(move |dd| {
             save_undo_state(&state.borrow());
-            let label_str = get_dropdown_string(dd);
-            *state.borrow().frame_style.borrow_mut() = parse_frame_style(&label_str);
-            let is_rounded = matches!(parse_frame_style(&label_str), FrameStyle::Rounded);
+            let style = match dd.selected() {
+                0 => FrameStyle::None,
+                1 => FrameStyle::Simple,
+                2 => FrameStyle::Rounded,
+                3 => FrameStyle::Banner,
+                _ => FrameStyle::None,
+            };
+            *state.borrow().frame_style.borrow_mut() = style;
+            let is_rounded = matches!(style, FrameStyle::Rounded);
             for_clone.set_visible(is_rounded);
             schedule_preview(&state);
         });
@@ -3679,6 +3913,16 @@ pub fn build_ui(app: &Application) {
         });
     }
 
+    // Logo background transparent toggle
+    {
+        let state = state.clone();
+        logo_bg_transparent_check.connect_toggled(move |btn| {
+            save_undo_state(&state.borrow());
+            *state.borrow().logo_bg_transparent.borrow_mut() = btn.is_active();
+            schedule_preview(&state);
+        });
+    }
+
     // Logo clear area toggle
     {
         let state = state.clone();
@@ -3703,18 +3947,22 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         bg_select_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Hintergrundbild auswählen"),
+                Some(&i18n.t("dlg_select_bg")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Open,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Öffnen", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_open"), gtk4::ResponseType::Accept),
                 ],
             );
             let filter = FileFilter::new();
             filter.add_mime_type("image/*");
-            filter.set_name(Some("Bilddateien"));
+            filter.set_name(Some(&i18n.t("filter_images")));
+            drop(i18n);
+            drop(state_ref);
             dialog.set_filter(&filter);
             let state = state.clone();
             dialog.connect_response(move |dlg, resp| {
@@ -3747,15 +3995,19 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         export_style_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Stil exportieren"),
+                Some(&i18n.t("dlg_export_style")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Save,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Speichern", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_save"), gtk4::ResponseType::Accept),
                 ],
             );
+            drop(i18n);
+            drop(state_ref);
             dialog.set_current_name("qr_style.json");
             let state = state.clone();
             dialog.connect_response(move |dlg, resp| {
@@ -3765,7 +4017,10 @@ pub fn build_ui(app: &Application) {
                             let settings = current_style_settings(&state.borrow());
                             if let Ok(json) = serde_json::to_string_pretty(&settings) {
                                 let _ = std::fs::write(path, json);
-                                state.borrow().update_status("Stil exportiert");
+                                state.borrow().update_status_typed(
+                                    &state.borrow().i18n.borrow().t("status_style_exported"),
+                                    ToastType::Success,
+                                );
                             }
                         }
                     }
@@ -3800,6 +4055,7 @@ pub fn build_ui(app: &Application) {
         let logo_border_width_scale = logo_border_width_scale.clone();
         let logo_border_color_btn = logo_border_color_btn.clone();
         let logo_vectorize_bg_color_btn = logo_vectorize_bg_color_btn.clone();
+        let logo_bg_transparent_check = logo_bg_transparent_check.clone();
         let logo_clear_area_check = logo_clear_area_check.clone();
         let logo_clear_padding_spin = logo_clear_padding_spin.clone();
         let frame_style_dd = frame_style_dd.clone();
@@ -3816,19 +4072,23 @@ pub fn build_ui(app: &Application) {
         let logo_radius_sync_btn = logo_radius_sync_btn.clone();
         let custom_dot_box = custom_dot_box.clone();
         import_style_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Stil importieren"),
+                Some(&i18n.t("dlg_import_style")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Open,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Öffnen", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_open"), gtk4::ResponseType::Accept),
                 ],
             );
             let filter = FileFilter::new();
             filter.add_mime_type("application/json");
             filter.add_pattern("*.json");
-            filter.set_name(Some("JSON-Dateien"));
+            filter.set_name(Some(&i18n.t("filter_json")));
+            drop(i18n);
+            drop(state_ref);
             dialog.set_filter(&filter);
             let state = state.clone();
             let dot_style_dd = dot_style_dd.clone();
@@ -3852,6 +4112,7 @@ pub fn build_ui(app: &Application) {
             let logo_border_width_scale = logo_border_width_scale.clone();
             let logo_border_color_btn = logo_border_color_btn.clone();
             let logo_vectorize_bg_color_btn = logo_vectorize_bg_color_btn.clone();
+            let logo_bg_transparent_check = logo_bg_transparent_check.clone();
             let logo_clear_area_check = logo_clear_area_check.clone();
             let logo_clear_padding_spin = logo_clear_padding_spin.clone();
             let frame_style_dd = frame_style_dd.clone();
@@ -3899,6 +4160,7 @@ pub fn build_ui(app: &Application) {
                                     let logo_border_color = s.logo_border_color.borrow().0;
                                     let logo_vectorize_bg_color =
                                         s.logo_vectorize_bg_color.borrow().0;
+                                    let logo_bg_transparent = *s.logo_bg_transparent.borrow();
                                     let logo_clear_area = *s.logo_clear_area.borrow();
                                     let logo_clear_padding = *s.logo_clear_padding.borrow();
                                     let logo_outer_radius = *s.logo_outer_radius.borrow();
@@ -4009,6 +4271,7 @@ pub fn build_ui(app: &Application) {
                                         logo_vectorize_bg_color[2] as f32 / 255.0,
                                         logo_vectorize_bg_color[3] as f32 / 255.0,
                                     ));
+                                    logo_bg_transparent_check.set_active(logo_bg_transparent);
                                     logo_clear_area_check.set_active(logo_clear_area);
                                     logo_clear_padding_spin.set_value(logo_clear_padding);
                                     logo_outer_radius_scale.set_value(logo_outer_radius);
@@ -4048,13 +4311,20 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         let module_size_dd = module_size_dd.clone();
         print_calc_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n_ref = state_ref.i18n.borrow();
+            let dlg_title = i18n_ref.t("dlg_print_calc").to_string();
+            let cancel_btn = i18n_ref.t("btn_cancel").to_string();
+            let apply_btn = i18n_ref.t("btn_apply").to_string();
+            drop(i18n_ref);
+            drop(state_ref);
             let dialog = gtk4::Dialog::with_buttons(
-                Some("Druckgrößenrechner"),
+                Some(&dlg_title),
                 None::<&gtk4::Window>,
                 gtk4::DialogFlags::MODAL,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Anwenden", gtk4::ResponseType::Apply),
+                    (&cancel_btn, gtk4::ResponseType::Cancel),
+                    (&apply_btn, gtk4::ResponseType::Apply),
                 ],
             );
             dialog.set_default_size(350, 250);
@@ -4078,7 +4348,7 @@ pub fn build_ui(app: &Application) {
             height_spin.set_value(10.0);
             box_v.append(&height_spin);
 
-            let dpi_label = Label::new(Some("DPI:"));
+            let dpi_label = Label::new(Some(&state.borrow().i18n.borrow().t("label_dpi")));
             box_v.append(&dpi_label);
             let dpi_spin = SpinButton::with_range(72.0, 600.0, 1.0);
             dpi_spin.set_value(300.0);
@@ -4088,58 +4358,93 @@ pub fn build_ui(app: &Application) {
             box_v.append(&result_label);
 
             {
+                let tmpl = state
+                    .borrow()
+                    .i18n
+                    .borrow()
+                    .t("print_calc_result")
+                    .to_string();
                 let w_px = (10.0 * 300.0 / 2.54) as u32;
                 let h_px = (10.0 * 300.0 / 2.54) as u32;
                 let rec = (w_px.min(h_px) / 25).max(8);
-                result_label.set_text(&format!(
-                    "{} x {} Pixel (empfohlene Modulgröße: ~{}px)",
-                    w_px, h_px, rec
-                ));
+                result_label.set_text(
+                    &tmpl
+                        .replacen("{}", &w_px.to_string(), 1)
+                        .replacen("{}", &h_px.to_string(), 1)
+                        .replacen("{}", &rec.to_string(), 1),
+                );
             }
 
             {
+                let state = state.clone();
                 let result_label = result_label.clone();
                 let w_clone = width_spin.clone();
                 let h_clone = height_spin.clone();
                 let d_clone = dpi_spin.clone();
                 width_spin.connect_value_changed(move |_| {
+                    let tmpl = state
+                        .borrow()
+                        .i18n
+                        .borrow()
+                        .t("print_calc_result")
+                        .to_string();
                     let w_px = (w_clone.value() * d_clone.value() / 2.54) as u32;
                     let h_px = (h_clone.value() * d_clone.value() / 2.54) as u32;
                     let rec = (w_px.min(h_px) / 25).max(8);
-                    result_label.set_text(&format!(
-                        "{} x {} Pixel (empfohlene Modulgröße: ~{}px)",
-                        w_px, h_px, rec
-                    ));
+                    result_label.set_text(
+                        &tmpl
+                            .replacen("{}", &w_px.to_string(), 1)
+                            .replacen("{}", &h_px.to_string(), 1)
+                            .replacen("{}", &rec.to_string(), 1),
+                    );
                 });
             }
             {
+                let state = state.clone();
                 let result_label = result_label.clone();
                 let w_clone = width_spin.clone();
                 let h_clone = height_spin.clone();
                 let d_clone = dpi_spin.clone();
                 height_spin.connect_value_changed(move |_| {
+                    let tmpl = state
+                        .borrow()
+                        .i18n
+                        .borrow()
+                        .t("print_calc_result")
+                        .to_string();
                     let w_px = (w_clone.value() * d_clone.value() / 2.54) as u32;
                     let h_px = (h_clone.value() * d_clone.value() / 2.54) as u32;
                     let rec = (w_px.min(h_px) / 25).max(8);
-                    result_label.set_text(&format!(
-                        "{} x {} Pixel (empfohlene Modulgröße: ~{}px)",
-                        w_px, h_px, rec
-                    ));
+                    result_label.set_text(
+                        &tmpl
+                            .replacen("{}", &w_px.to_string(), 1)
+                            .replacen("{}", &h_px.to_string(), 1)
+                            .replacen("{}", &rec.to_string(), 1),
+                    );
                 });
             }
             {
+                let state = state.clone();
                 let result_label = result_label.clone();
                 let w_clone = width_spin.clone();
                 let h_clone = height_spin.clone();
                 let d_clone = dpi_spin.clone();
                 dpi_spin.connect_value_changed(move |_| {
+                    let tmpl = state
+                        .borrow()
+                        .i18n
+                        .borrow()
+                        .t("print_calc_result")
+                        .to_string();
                     let w_px = (w_clone.value() * d_clone.value() / 2.54) as u32;
                     let h_px = (h_clone.value() * d_clone.value() / 2.54) as u32;
                     let rec = (w_px.min(h_px) / 25).max(8);
-                    result_label.set_text(&format!(
-                        "{} x {} Pixel (empfohlene Modulgröße: ~{}px)",
-                        w_px, h_px, rec
-                    ));
+                    result_label.set_text(
+                        &tmpl
+                            .replacen("{}", &w_px.to_string(), 1)
+                            .replacen("{}", &h_px.to_string(), 1)
+                            .replacen("{}", &rec.to_string(), 1),
+                    );
                 });
             }
 
@@ -4201,7 +4506,10 @@ pub fn build_ui(app: &Application) {
         template_save_btn.connect_clicked(move |_| {
             let name = template_name_entry.text().trim().to_string();
             if name.is_empty() {
-                state.borrow().update_status("Bitte Vorlagenname eingeben");
+                state.borrow().update_status_typed(
+                    &state.borrow().i18n.borrow().t("status_enter_template_name"),
+                    ToastType::Error,
+                );
                 return;
             }
 
@@ -4278,7 +4586,9 @@ pub fn build_ui(app: &Application) {
                         i18n.t("status_template_saved_style").replace("{}", &name)
                     }
                 };
-                state.borrow().update_status(&status);
+                state
+                    .borrow()
+                    .update_status_typed(&status, ToastType::Success);
                 // Animation 2: Save confirmation flash
                 save_btn_anim.add_css_class("save-confirmed");
                 {
@@ -4317,6 +4627,7 @@ pub fn build_ui(app: &Application) {
         let logo_border_color_btn = logo_border_color_btn.clone();
         let logo_vectorize_check = logo_vectorize_check.clone();
         let logo_vectorize_bg_color_btn = logo_vectorize_bg_color_btn.clone();
+        let logo_bg_transparent_check = logo_bg_transparent_check.clone();
         let logo_clear_area_check = logo_clear_area_check.clone();
         let logo_clear_padding_spin = logo_clear_padding_spin.clone();
         let logo_outer_radius_scale = logo_outer_radius_scale.clone();
@@ -4492,6 +4803,7 @@ pub fn build_ui(app: &Application) {
                 let logo_border_color = s.logo_border_color.borrow().0;
                 let logo_vectorize = *s.logo_vectorize.borrow();
                 let logo_vectorize_bg_color = s.logo_vectorize_bg_color.borrow().0;
+                let logo_bg_transparent = *s.logo_bg_transparent.borrow();
                 let logo_clear_area = *s.logo_clear_area.borrow();
                 let logo_clear_padding = *s.logo_clear_padding.borrow();
                 let logo_outer_radius = *s.logo_outer_radius.borrow();
@@ -4610,6 +4922,7 @@ pub fn build_ui(app: &Application) {
                     logo_vectorize_bg_color[2] as f32 / 255.0,
                     logo_vectorize_bg_color[3] as f32 / 255.0,
                 ));
+                logo_bg_transparent_check.set_active(logo_bg_transparent);
                 logo_clear_area_check.set_active(logo_clear_area);
                 logo_clear_padding_spin.set_value(logo_clear_padding);
                 logo_outer_radius_scale.set_value(logo_outer_radius);
@@ -4638,7 +4951,9 @@ pub fn build_ui(app: &Application) {
                         i18n.t("status_template_loaded_style").replace("{}", &name)
                     }
                 };
-                state.borrow().update_status(&status);
+                state
+                    .borrow()
+                    .update_status_typed(&status, ToastType::Success);
             }
         });
     }
@@ -4665,9 +4980,15 @@ pub fn build_ui(app: &Application) {
                     }
                 }
                 template_dd.set_selected(0);
-                state
-                    .borrow()
-                    .update_status(&format!("Vorlage '{}' gelöscht", name));
+                state.borrow().update_status_typed(
+                    &state
+                        .borrow()
+                        .i18n
+                        .borrow()
+                        .t("status_template_deleted_fmt")
+                        .replace("{}", &name),
+                    ToastType::Info,
+                );
             }
         });
     }
@@ -4678,15 +4999,19 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         save_pdf_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Als PDF speichern"),
+                Some(&i18n.t("dlg_save_pdf")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Save,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Speichern", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_save"), gtk4::ResponseType::Accept),
                 ],
             );
+            drop(i18n);
+            drop(state_ref);
             dialog.set_current_name("qrcode.pdf");
             let state = state.clone();
             dialog.connect_response(move |dlg, resp| {
@@ -4696,9 +5021,15 @@ pub fn build_ui(app: &Application) {
                             let s = state.borrow();
                             if let Some(pdf_data) = render_pdf_from_state(&s) {
                                 let _ = std::fs::write(path, pdf_data);
-                                s.update_status("PDF gespeichert");
+                                s.update_status_typed(
+                                    &s.i18n.borrow().t("status_pdf_saved"),
+                                    ToastType::Success,
+                                );
                             } else {
-                                s.update_status("Fehler beim PDF-Export");
+                                s.update_status_typed(
+                                    &s.i18n.borrow().t("status_pdf_error"),
+                                    ToastType::Error,
+                                );
                             }
                         }
                     }
@@ -4715,13 +5046,15 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         label_sheet_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = gtk4::Dialog::with_buttons(
-                Some("Etiketten-Druckbogen"),
+                Some(&i18n.t("dlg_label_sheet")),
                 None::<&gtk4::Window>,
                 gtk4::DialogFlags::MODAL,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Exportieren", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_export"), gtk4::ResponseType::Accept),
                 ],
             );
             dialog.set_default_size(400, 350);
@@ -4732,31 +5065,33 @@ pub fn build_ui(app: &Application) {
             box_v.set_margin_top(12);
             box_v.set_margin_bottom(12);
 
-            let cols_label = Label::new(Some("Spalten:"));
+            let cols_label = Label::new(Some(&format!("{}:", i18n.t("lbl_columns"))));
             box_v.append(&cols_label);
             let cols_spin = SpinButton::with_range(1.0, 10.0, 1.0);
             cols_spin.set_value(4.0);
             box_v.append(&cols_spin);
 
-            let rows_label = Label::new(Some("Zeilen:"));
+            let rows_label = Label::new(Some(&format!("{}:", i18n.t("lbl_rows"))));
             box_v.append(&rows_label);
             let rows_spin = SpinButton::with_range(1.0, 15.0, 1.0);
             rows_spin.set_value(10.0);
             box_v.append(&rows_spin);
 
-            let margin_label = Label::new(Some("Rand (mm):"));
+            let margin_label = Label::new(Some(&format!("{}:", i18n.t("lbl_margin_mm"))));
             box_v.append(&margin_label);
             let margin_spin = SpinButton::with_range(0.0, 30.0, 1.0);
             margin_spin.set_value(5.0);
             box_v.append(&margin_spin);
 
-            let spacing_label = Label::new(Some("Abstand (mm):"));
+            let spacing_label = Label::new(Some(&format!("{}:", i18n.t("lbl_spacing_mm"))));
             box_v.append(&spacing_label);
             let spacing_spin = SpinButton::with_range(0.0, 20.0, 0.5);
             spacing_spin.set_value(2.0);
             box_v.append(&spacing_spin);
 
-            let info_label = Label::new(Some("Die QR-Codes werden auf einer A4-Seite angeordnet."));
+            let info_label = Label::new(Some(&i18n.t("label_sheet_a4_info")));
+            drop(i18n);
+            drop(state_ref);
             box_v.append(&info_label);
 
             content.append(&box_v);
@@ -4771,12 +5106,18 @@ pub fn build_ui(app: &Application) {
 
                     // Now ask for save location
                     let save_dialog = FileChooserDialog::new(
-                        Some("Etiketten-Druckbogen speichern"),
+                        Some(&state.borrow().i18n.borrow().t("dlg_save_label_sheet")),
                         None::<&gtk4::Window>,
                         gtk4::FileChooserAction::Save,
                         &[
-                            ("Abbrechen", gtk4::ResponseType::Cancel),
-                            ("Speichern", gtk4::ResponseType::Accept),
+                            (
+                                &state.borrow().i18n.borrow().t("btn_cancel"),
+                                gtk4::ResponseType::Cancel,
+                            ),
+                            (
+                                &state.borrow().i18n.borrow().t("btn_save"),
+                                gtk4::ResponseType::Accept,
+                            ),
                         ],
                     );
                     save_dialog.set_current_name("etiketten.pdf");
@@ -4790,9 +5131,15 @@ pub fn build_ui(app: &Application) {
                                         render_label_sheet(&s, cols, rows, margin, spacing)
                                     {
                                         let _ = std::fs::write(path, pdf_data);
-                                        s.update_status("Etiketten-Druckbogen gespeichert");
+                                        s.update_status_typed(
+                                            &s.i18n.borrow().t("status_label_sheet_saved"),
+                                            ToastType::Success,
+                                        );
                                     } else {
-                                        s.update_status("Fehler beim Etiketten-Export");
+                                        s.update_status_typed(
+                                            &s.i18n.borrow().t("status_label_sheet_error"),
+                                            ToastType::Error,
+                                        );
                                     }
                                 }
                             }
@@ -4932,6 +5279,7 @@ pub fn build_ui(app: &Application) {
                 let logo_border_color = s.logo_border_color.borrow().0;
                 let logo_vectorize = *s.logo_vectorize.borrow();
                 let logo_vectorize_bg_color = s.logo_vectorize_bg_color.borrow().0;
+                let logo_bg_transparent = *s.logo_bg_transparent.borrow();
                 let logo_clear_area = *s.logo_clear_area.borrow();
                 let logo_clear_padding = *s.logo_clear_padding.borrow();
                 let logo_outer_radius = *s.logo_outer_radius.borrow();
@@ -5048,6 +5396,7 @@ pub fn build_ui(app: &Application) {
                     logo_vectorize_bg_color[2] as f32 / 255.0,
                     logo_vectorize_bg_color[3] as f32 / 255.0,
                 ));
+                logo_bg_transparent_check.set_active(logo_bg_transparent);
                 logo_clear_area_check.set_active(logo_clear_area);
                 logo_clear_padding_spin.set_value(logo_clear_padding);
                 logo_outer_radius_scale.set_value(logo_outer_radius);
@@ -5108,6 +5457,7 @@ pub fn build_ui(app: &Application) {
                     let logo_border_color = s.logo_border_color.borrow().0;
                     let logo_vectorize = *s.logo_vectorize.borrow();
                     let logo_vectorize_bg_color = s.logo_vectorize_bg_color.borrow().0;
+                    let logo_bg_transparent = *s.logo_bg_transparent.borrow();
                     let logo_clear_area = *s.logo_clear_area.borrow();
                     let logo_clear_padding = *s.logo_clear_padding.borrow();
                     let logo_outer_radius = *s.logo_outer_radius.borrow();
@@ -5218,6 +5568,7 @@ pub fn build_ui(app: &Application) {
                         logo_vectorize_bg_color[2] as f32 / 255.0,
                         logo_vectorize_bg_color[3] as f32 / 255.0,
                     ));
+                    logo_bg_transparent_check.set_active(logo_bg_transparent);
                     logo_clear_area_check.set_active(logo_clear_area);
                     logo_clear_padding_spin.set_value(logo_clear_padding);
                     logo_outer_radius_scale.set_value(logo_outer_radius);
@@ -5268,6 +5619,7 @@ pub fn build_ui(app: &Application) {
         let logo_border_color_btn = logo_border_color_btn.clone();
         let logo_vectorize_check = logo_vectorize_check.clone();
         let logo_vectorize_bg_color_btn = logo_vectorize_bg_color_btn.clone();
+        let logo_bg_transparent_check = logo_bg_transparent_check.clone();
         let logo_clear_area_check = logo_clear_area_check.clone();
         let logo_clear_padding_spin = logo_clear_padding_spin.clone();
         let logo_outer_radius_scale = logo_outer_radius_scale.clone();
@@ -5308,6 +5660,7 @@ pub fn build_ui(app: &Application) {
                 l_bc,
                 l_vec,
                 l_vbg,
+                l_bg_tr,
                 l_ca,
                 l_cp,
                 l_or,
@@ -5344,6 +5697,7 @@ pub fn build_ui(app: &Application) {
                     *s.logo_border_color.borrow(),
                     *s.logo_vectorize.borrow(),
                     *s.logo_vectorize_bg_color.borrow(),
+                    *s.logo_bg_transparent.borrow(),
                     *s.logo_clear_area.borrow(),
                     *s.logo_clear_padding.borrow(),
                     *s.logo_outer_radius.borrow(),
@@ -5430,6 +5784,7 @@ pub fn build_ui(app: &Application) {
             gradient_check.set_active(g_en);
             shadow_check.set_active(sh_en);
             logo_vectorize_check.set_active(l_vec);
+            logo_bg_transparent_check.set_active(l_bg_tr);
             logo_clear_area_check.set_active(l_ca);
             logo_radius_sync_btn.set_active((l_or - l_ir).abs() < 0.001);
 
@@ -5509,9 +5864,9 @@ pub fn build_ui(app: &Application) {
                     let provider = gdk::ContentProvider::for_bytes("image/svg+xml", &bytes);
                     let _ = clipboard.set_content(Some(&provider));
                 }
-                s.update_status("SVG in Zwischenablage kopiert");
+                s.update_status_typed(&s.i18n.borrow().t("status_copied_svg"), ToastType::Success);
             } else {
-                s.update_status("Fehler: QR-Code konnte nicht gerendert werden");
+                s.update_status_typed(&s.i18n.borrow().t("status_render_error"), ToastType::Error);
             }
         });
     }
@@ -5553,9 +5908,9 @@ pub fn build_ui(app: &Application) {
                 if let Some(cb) = clipboard {
                     cb.set_texture(&texture);
                 }
-                s.update_status("In Zwischenablage kopiert");
+                s.update_status_typed(&s.i18n.borrow().t("status_copied"), ToastType::Success);
             } else {
-                s.update_status("Fehler: QR-Code konnte nicht gerendert werden");
+                s.update_status_typed(&s.i18n.borrow().t("status_render_error"), ToastType::Error);
             }
         });
     }
@@ -5564,15 +5919,19 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         save_png_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Als PNG speichern"),
+                Some(&i18n.t("dlg_save_png")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Save,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Speichern", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_save"), gtk4::ResponseType::Accept),
                 ],
             );
+            drop(i18n);
+            drop(state_ref);
             dialog.set_current_name("qrcode.png");
             let state = state.clone();
             dialog.connect_response(move |dlg, resp| {
@@ -5582,7 +5941,10 @@ pub fn build_ui(app: &Application) {
                             let s = state.borrow();
                             if let Some(img) = render_qr_from_state(&s) {
                                 let _ = img.save(&path);
-                                s.update_status("PNG gespeichert");
+                                s.update_status_typed(
+                                    &s.i18n.borrow().t("status_png_saved"),
+                                    ToastType::Success,
+                                );
                             }
                         }
                     }
@@ -5597,15 +5959,19 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         save_svg_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Als SVG speichern"),
+                Some(&i18n.t("dlg_save_svg")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Save,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Speichern", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_save"), gtk4::ResponseType::Accept),
                 ],
             );
+            drop(i18n);
+            drop(state_ref);
             dialog.set_current_name("qrcode.svg");
             let state = state.clone();
             dialog.connect_response(move |dlg, resp| {
@@ -5615,7 +5981,10 @@ pub fn build_ui(app: &Application) {
                             let s = state.borrow();
                             if let Some(svg) = render_svg_from_state(&s) {
                                 let _ = std::fs::write(path, svg);
-                                s.update_status("SVG gespeichert");
+                                s.update_status_typed(
+                                    &s.i18n.borrow().t("status_svg_saved"),
+                                    ToastType::Success,
+                                );
                             }
                         }
                     }
@@ -5630,15 +5999,19 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         save_gif_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = FileChooserDialog::new(
-                Some("Als GIF speichern"),
+                Some(&i18n.t("dlg_save_gif")),
                 None::<&gtk4::Window>,
                 gtk4::FileChooserAction::Save,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Speichern", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_save"), gtk4::ResponseType::Accept),
                 ],
             );
+            drop(i18n);
+            drop(state_ref);
             dialog.set_current_name("qrcode.gif");
             let state = state.clone();
             dialog.connect_response(move |dlg, resp| {
@@ -5648,9 +6021,15 @@ pub fn build_ui(app: &Application) {
                             let s = state.borrow();
                             if let Some(gif_data) = render_gif_from_state(&s) {
                                 let _ = std::fs::write(path, gif_data);
-                                s.update_status("GIF gespeichert");
+                                s.update_status_typed(
+                                    &s.i18n.borrow().t("status_gif_saved"),
+                                    ToastType::Success,
+                                );
                             } else {
-                                s.update_status("GIF nur mit Farbverlauf verfügbar");
+                                s.update_status_typed(
+                                    &s.i18n.borrow().t("status_gif_gradient_only"),
+                                    ToastType::Error,
+                                );
                             }
                         }
                     }
@@ -5665,13 +6044,15 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         batch_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
             let dialog = gtk4::Dialog::with_buttons(
-                Some("Batch-Export"),
+                Some(&i18n.t("dlg_batch_export")),
                 None::<&gtk4::Window>,
                 gtk4::DialogFlags::MODAL,
                 &[
-                    ("Abbrechen", gtk4::ResponseType::Cancel),
-                    ("Exportieren", gtk4::ResponseType::Accept),
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_export"), gtk4::ResponseType::Accept),
                 ],
             );
             dialog.set_default_size(400, 350);
@@ -5682,7 +6063,7 @@ pub fn build_ui(app: &Application) {
             box_v.set_margin_top(12);
             box_v.set_margin_bottom(12);
 
-            let info_label = Label::new(Some("QR-Daten (eine pro Zeile):"));
+            let info_label = Label::new(Some(&i18n.t("batch_data_label")));
             box_v.append(&info_label);
 
             let batch_buffer = TextBuffer::new(None::<&gtk4::TextTagTable>);
@@ -5694,24 +6075,26 @@ pub fn build_ui(app: &Application) {
             box_v.append(&batch_scroll);
 
             // --- CSV Import ---
-            let csv_btn = make_icon_btn("text-x-csv-symbolic", "CSV importieren");
-            let csv_hint = Label::new(Some(
-                "(Erste Spalte wird als QR-Daten verwendet, Kopfzeile übersprungen)",
-            ));
+            let csv_btn = make_icon_btn("text-x-csv-symbolic", &i18n.t("btn_import_style_short"));
+            let csv_hint = Label::new(Some(&i18n.t("batch_csv_hint")));
             csv_hint.add_css_class("dim-label");
             let csv_batch_buffer = batch_buffer.clone();
+            let i18n_for_csv = state.borrow().i18n.borrow().t("dlg_select_csv").to_string();
+            let i18n_btn_cancel_csv = state.borrow().i18n.borrow().t("btn_cancel").to_string();
+            let i18n_btn_open_csv = state.borrow().i18n.borrow().t("btn_open").to_string();
+            let i18n_filter_csv = state.borrow().i18n.borrow().t("filter_csv_txt").to_string();
             csv_btn.connect_clicked(move |_| {
                 let filter = FileFilter::new();
                 filter.add_pattern("*.csv");
                 filter.add_pattern("*.txt");
-                filter.set_name(Some("CSV/TXT"));
+                filter.set_name(Some(&i18n_filter_csv));
                 let dlg = FileChooserDialog::new(
-                    Some("CSV-Datei auswählen"),
+                    Some(&i18n_for_csv),
                     None::<&gtk4::Window>,
                     gtk4::FileChooserAction::Open,
                     &[
-                        ("Abbrechen", gtk4::ResponseType::Cancel),
-                        ("Öffnen", gtk4::ResponseType::Accept),
+                        (&i18n_btn_cancel_csv, gtk4::ResponseType::Cancel),
+                        (&i18n_btn_open_csv, gtk4::ResponseType::Accept),
                     ],
                 );
                 dlg.set_filter(&filter);
@@ -5749,7 +6132,7 @@ pub fn build_ui(app: &Application) {
             box_v.append(&csv_btn);
             box_v.append(&csv_hint);
 
-            let fmt_label = Label::new(Some("Format:"));
+            let fmt_label = Label::new(Some(&i18n.t("batch_format")));
             box_v.append(&fmt_label);
             let fmt_list = StringList::new(&["PNG", "SVG", "GIF"]);
             let fmt_dd = DropDown::new(
@@ -5758,30 +6141,47 @@ pub fn build_ui(app: &Application) {
             );
             box_v.append(&fmt_dd);
 
-            let folder_label = Label::new(Some("Ordner:"));
+            let folder_label = Label::new(Some(&i18n.t("batch_folder_label")));
             box_v.append(&folder_label);
-            let folder_btn = make_icon_btn("folder-open-symbolic", "Ordner auswählen");
+            let folder_btn = make_icon_btn("folder-open-symbolic", &i18n.t("dlg_select_folder"));
             let folder_path: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
             let folder_path_clone = folder_path.clone();
             let folder_label_clone = folder_label.clone();
+            let i18n_folder_selected = state
+                .borrow()
+                .i18n
+                .borrow()
+                .t("batch_folder_selected")
+                .to_string();
+            let i18n_dlg_select_folder = state
+                .borrow()
+                .i18n
+                .borrow()
+                .t("dlg_select_folder")
+                .to_string();
+            let i18n_btn_cancel_folder = state.borrow().i18n.borrow().t("btn_cancel").to_string();
+            let i18n_btn_select_folder = state.borrow().i18n.borrow().t("btn_select").to_string();
             folder_btn.connect_clicked(move |_| {
                 let dialog = FileChooserDialog::new(
-                    Some("Ordner auswählen"),
+                    Some(&i18n_dlg_select_folder),
                     None::<&gtk4::Window>,
                     gtk4::FileChooserAction::SelectFolder,
                     &[
-                        ("Abbrechen", gtk4::ResponseType::Cancel),
-                        ("Auswählen", gtk4::ResponseType::Accept),
+                        (&i18n_btn_cancel_folder, gtk4::ResponseType::Cancel),
+                        (&i18n_btn_select_folder, gtk4::ResponseType::Accept),
                     ],
                 );
                 let folder_path = folder_path_clone.clone();
                 let folder_label = folder_label_clone.clone();
+                let i18n_folder_fmt = i18n_folder_selected.clone();
                 dialog.connect_response(move |dlg, resp| {
                     if resp == gtk4::ResponseType::Accept {
                         if let Some(file) = dlg.file() {
                             if let Some(path) = file.path() {
                                 folder_path.replace(Some(path.clone()));
-                                folder_label.set_text(&format!("Ordner: {}", path.display()));
+                                folder_label.set_text(
+                                    &i18n_folder_fmt.replace("{}", &path.display().to_string()),
+                                );
                             }
                         }
                     }
@@ -5790,6 +6190,8 @@ pub fn build_ui(app: &Application) {
                 dialog.show();
             });
             box_v.append(&folder_btn);
+            drop(i18n);
+            drop(state_ref);
 
             content.append(&box_v);
 
@@ -5839,7 +6241,13 @@ pub fn build_ui(app: &Application) {
                                 }
                             }
                         }
-                        s.update_status(&format!("{} QR-Codes exportiert", lines.len()));
+                        s.update_status_typed(
+                            &s.i18n
+                                .borrow()
+                                .t("status_batch_exported")
+                                .replace("{}", &lines.len().to_string()),
+                            ToastType::Success,
+                        );
                     }
                 }
                 dlg.close();
@@ -5886,7 +6294,7 @@ pub fn build_ui(app: &Application) {
                         }
                         schedule_preview(&state);
                         let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status(&msg);
+                        state.borrow().update_status_typed(&msg, ToastType::Success);
                         // Animation 8: Logo drop bounce
                         {
                             let pic = state.borrow().preview_picture.clone();
@@ -5922,7 +6330,7 @@ pub fn build_ui(app: &Application) {
                         }
                         schedule_preview(&state);
                         let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status(&msg);
+                        state.borrow().update_status_typed(&msg, ToastType::Success);
                         // Animation 8: Logo drop bounce
                         {
                             let pic = state.borrow().preview_picture.clone();
@@ -5978,7 +6386,7 @@ pub fn build_ui(app: &Application) {
                         }
                         schedule_preview(&state);
                         let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status(&msg);
+                        state.borrow().update_status_typed(&msg, ToastType::Success);
                         // Animation 8: Logo drop bounce
                         {
                             let pic = state.borrow().preview_picture.clone();
@@ -6014,7 +6422,7 @@ pub fn build_ui(app: &Application) {
                         }
                         schedule_preview(&state);
                         let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status(&msg);
+                        state.borrow().update_status_typed(&msg, ToastType::Success);
                         // Animation 8: Logo drop bounce
                         {
                             let pic = state.borrow().preview_picture.clone();
@@ -6127,7 +6535,13 @@ pub fn build_ui(app: &Application) {
                 let s = state.borrow();
                 if let Some(img) = render_qr_from_state(&s) {
                     let _ = img.save("qrcode.png");
-                    s.update_status("Als qrcode.png gespeichert");
+                    s.update_status_typed(
+                        &s.i18n
+                            .borrow()
+                            .t("status_saved_as")
+                            .replace("{}", "qrcode.png"),
+                        ToastType::Success,
+                    );
                 }
                 glib::Propagation::Proceed
             }
@@ -6141,7 +6555,13 @@ pub fn build_ui(app: &Application) {
                 let s = state.borrow();
                 if let Some(svg) = render_svg_from_state(&s) {
                     let _ = std::fs::write("qrcode.svg", svg);
-                    s.update_status("Als qrcode.svg gespeichert");
+                    s.update_status_typed(
+                        &s.i18n
+                            .borrow()
+                            .t("status_saved_as")
+                            .replace("{}", "qrcode.svg"),
+                        ToastType::Success,
+                    );
                 }
                 glib::Propagation::Proceed
             }
@@ -6192,6 +6612,105 @@ pub fn build_ui(app: &Application) {
     // INITIAL PREVIEW
     // ============================================================
     update_preview(&state);
+
+    // ============================================================
+    // KEYBOARD SHORTCUTS
+    // ============================================================
+    {
+        let sc = ShortcutController::new();
+        sc.set_scope(gtk4::ShortcutScope::Global);
+
+        // Ctrl+Z → Undo
+        let state_undo = state.clone();
+        let sync_undo = sync_widgets.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control>z").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                if let Some(prev) = state_undo.borrow().undo_stack.borrow_mut().pop() {
+                    let current = current_style_settings(&state_undo.borrow());
+                    state_undo.borrow().redo_stack.borrow_mut().push(current);
+                    apply_style_to_state(&state_undo.borrow(), &prev);
+                    sync_undo();
+                    update_preview(&state_undo);
+                }
+                glib::Propagation::Proceed
+            })),
+        ));
+
+        // Ctrl+Shift+Z / Ctrl+Y → Redo
+        let state_redo = state.clone();
+        let sync_redo = sync_widgets.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control><Shift>z").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                if let Some(next) = state_redo.borrow().redo_stack.borrow_mut().pop() {
+                    let current = current_style_settings(&state_redo.borrow());
+                    state_redo.borrow().undo_stack.borrow_mut().push(current);
+                    apply_style_to_state(&state_redo.borrow(), &next);
+                    sync_redo();
+                    update_preview(&state_redo);
+                }
+                glib::Propagation::Proceed
+            })),
+        ));
+        let state_redo_y = state.clone();
+        let sync_redo_y = sync_widgets.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control>y").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                if let Some(next) = state_redo_y.borrow().redo_stack.borrow_mut().pop() {
+                    let current = current_style_settings(&state_redo_y.borrow());
+                    state_redo_y.borrow().undo_stack.borrow_mut().push(current);
+                    apply_style_to_state(&state_redo_y.borrow(), &next);
+                    sync_redo_y();
+                    update_preview(&state_redo_y);
+                }
+                glib::Propagation::Proceed
+            })),
+        ));
+
+        // Ctrl+S → Save PNG
+        let save_png = save_png_btn.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control>s").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                save_png.emit_clicked();
+                glib::Propagation::Proceed
+            })),
+        ));
+
+        // Ctrl+Shift+S → Save SVG
+        let save_svg = save_svg_btn.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control><Shift>s").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                save_svg.emit_clicked();
+                glib::Propagation::Proceed
+            })),
+        ));
+
+        // Ctrl+C → Copy PNG to clipboard
+        let copy_png = copy_btn.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control>c").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                copy_png.emit_clicked();
+                glib::Propagation::Proceed
+            })),
+        ));
+
+        // Ctrl+Shift+C → Copy SVG to clipboard
+        let copy_svg = copy_svg_btn.clone();
+        sc.add_shortcut(Shortcut::new(
+            Some(ShortcutTrigger::parse_string("<Control><Shift>c").unwrap()),
+            Some(CallbackAction::new(move |_, _| {
+                copy_svg.emit_clicked();
+                glib::Propagation::Proceed
+            })),
+        ));
+
+        window.add_controller(sc);
+    }
 
     window.present();
 }

@@ -1,6 +1,7 @@
 mod country_codes;
 mod helpers;
 mod i18n;
+mod map_styles;
 mod render;
 mod svg;
 mod types;
@@ -13,6 +14,9 @@ fn main() {
         .application_id("com.example.qr_studio")
         .build();
     app.connect_activate(|app| {
+        // Pre-fetch OpenFreeMap TileJSON in background so style switching is instant
+        map_styles::prefetch_tilejson();
+
         let provider = gtk4::CssProvider::new();
         provider.load_from_data(
             /* ---- text-input-frame ---- */
@@ -224,12 +228,10 @@ fn main() {
                 padding: 6px 10px;
             }
             .navigation-sidebar row:hover {
-                background: alpha(@accent_color, 0.06);
-                box-shadow: inset 2px 0 6px alpha(@accent_color, 0.12);
+                background: alpha(@window_fg_color, 0.06);
             }
             .navigation-sidebar row:selected {
-                background: alpha(@accent_color, 0.1);
-                box-shadow: inset 3px 0 8px alpha(@accent_color, 0.18);
+                background: alpha(@window_fg_color, 0.1);
                 font-weight: 600;
             }
 

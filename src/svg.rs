@@ -470,6 +470,7 @@ pub fn render_vector_svg(
     bg_image_path: Option<&PathBuf>,
     logo_vectorize: bool,
     logo_vectorize_bg_color: Rgba<u8>,
+    logo_bg_transparent: bool,
     logo_clear_area: bool,
     logo_clear_padding: f64,
     logo_outer_radius: f64,
@@ -631,7 +632,7 @@ pub fn render_vector_svg(
             let ig = logo_color.0[1] as f64 / 255.0 * tint_a;
             let ib = logo_color.0[2] as f64 / 255.0 * tint_a;
             svg.push_str(&format!(
-                "<filter id=\"logo-tint\"><feComponentTransfer><feFuncR type=\"linear\" slope=\"{:.3}\" intercept=\"{:.3}\"/><feFuncG type=\"linear\" slope=\"{:.3}\" intercept=\"{:.3}\"/><feFuncB type=\"linear\" slope=\"{:.3}\" intercept=\"{:.3}\"/></feComponentTransfer></filter>\n",
+                "<filter id=\"logo-tint\" color-interpolation-filters=\"sRGB\"><feComponentTransfer><feFuncR type=\"linear\" slope=\"{:.3}\" intercept=\"{:.3}\"/><feFuncG type=\"linear\" slope=\"{:.3}\" intercept=\"{:.3}\"/><feFuncB type=\"linear\" slope=\"{:.3}\" intercept=\"{:.3}\"/></feComponentTransfer></filter>\n",
                 slope, ir, slope, ig, slope, ib
             ));
         }
@@ -906,28 +907,34 @@ pub fn render_vector_svg(
         let px = *sx as f64 + m;
         let py = *sy as f64 + m;
         match corner_square_style {
+            // All non-Dot styles use compound path with evenodd:
+            // outer shape minus inner shape → transparent center, no bg fill needed
             CornerSquareStyle::Square => {
-                for dy in 0..7usize {
-                    for dx in 0..7usize {
-                        if dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4 {
-                            continue;
-                        }
-                        let qx = sx + dx;
-                        let qy = sy + dy;
-                        if qr[(qx, qy)] == qrcode::types::Color::Dark {
-                            svg.push_str(&format!(
-                                "<rect x=\"{:.2}\" y=\"{:.2}\" width=\"1\" height=\"1\" fill=\"{}\"/>\n",
-                                px + dx as f64, py + dy as f64, corner_fill
-                            ));
-                        }
-                    }
-                }
+                // Sharp rect outer (7×7, radius 0) + inner (5×5 at +1, radius 0)
+                let outer_path =
+                    svg_selective_rounded_rect_path(px, py, 7.0, 7.0, 0.0, true, true, true, true);
+                let inner_path = svg_selective_rounded_rect_path(
+                    px + 1.0,
+                    py + 1.0,
+                    5.0,
+                    5.0,
+                    0.0,
+                    true,
+                    true,
+                    true,
+                    true,
+                );
+                svg.push_str(&format!(
+                    "<path d=\"{} {}\" fill=\"{}\" fill-rule=\"evenodd\"/>\n",
+                    outer_path, inner_path, corner_fill
+                ));
             }
             CornerSquareStyle::ExtraRounded => {
+                // Rounded rect outer (7×7, radius 2.0) + inner (5×5 at +1, radius 1.0)
+                // Inner radius = outer_radius(2.0) - offset(1.0) = 1.0
+                // → concentric arcs, constant line thickness everywhere
                 let outer_path =
                     svg_selective_rounded_rect_path(px, py, 7.0, 7.0, 2.0, true, true, true, true);
-                // Inner radius = outer_radius(2.0) - offset(1.0) = 1.0
-                // This keeps arcs concentric → constant line thickness everywhere
                 let inner_path = svg_selective_rounded_rect_path(
                     px + 1.0,
                     py + 1.0,
@@ -939,25 +946,13 @@ pub fn render_vector_svg(
                     true,
                     true,
                 );
-                if transparent_bg {
-                    // Use compound path with fill-rule="evenodd" to create a true transparent hole
-                    svg.push_str(&format!(
-                        "<path d=\"{} {}\" fill=\"{}\" fill-rule=\"evenodd\"/>\n",
-                        outer_path, inner_path, corner_fill
-                    ));
-                } else {
-                    svg.push_str(&format!(
-                        "<path d=\"{}\" fill=\"{}\"/>\n",
-                        outer_path, corner_fill
-                    ));
-                    svg.push_str(&format!(
-                        "<path d=\"{}\" fill=\"{}\"/>\n",
-                        inner_path,
-                        rgba_to_svg(bg_color)
-                    ));
-                }
+                svg.push_str(&format!(
+                    "<path d=\"{} {}\" fill=\"{}\" fill-rule=\"evenodd\"/>\n",
+                    outer_path, inner_path, corner_fill
+                ));
             }
             CornerSquareStyle::Dot => {
+                // Per-module rendering — individual circles create the dotted look
                 for dy in 0..7usize {
                     for dx in 0..7usize {
                         if dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4 {
@@ -977,7 +972,17 @@ pub fn render_vector_svg(
                 }
             }
             CornerSquareStyle::Circle => {
-                svg.push_str(&format!("<circle cx=\"{:.2}\" cy=\"{:.2}\" r=\"3.0\" fill=\"none\" stroke=\"{}\" stroke-width=\"1.0\"/>\n", px + 3.5, py + 3.5, corner_fill));
+                // Circle outer (r=3.0) + inner (r=2.0) → ring via evenodd
+                let cx = px + 3.5;
+                let cy = py + 3.5;
+                svg.push_str(&format!(
+                    "<path d=\"M{cx:.2} {cy:.2}m-3.0 0a3.0 3.0 0 1 0 6.0 0a3.0 3.0 0 1 0-6.0 0Z \
+                     M{cx:.2} {cy:.2}m-2.0 0a2.0 2.0 0 1 0 4.0 0a2.0 2.0 0 1 0-4.0 0Z\" \
+                     fill=\"{}\" fill-rule=\"evenodd\"/>\n",
+                    corner_fill,
+                    cx = cx,
+                    cy = cy
+                ));
             }
         }
     }
@@ -1174,18 +1179,46 @@ pub fn render_vector_svg(
                 let by = cy - border_size / 2.0;
                 match logo_shape {
                     LogoShape::Rectangle => {
+                        // Compound path: outer rect - inner rect → ring with transparent center
+                        let outer_path = svg_selective_rounded_rect_path(
+                            bx,
+                            by,
+                            border_size,
+                            border_size,
+                            0.0,
+                            true,
+                            true,
+                            true,
+                            true,
+                        );
+                        let inner_path = svg_selective_rounded_rect_path(
+                            cx - logo_modules / 2.0,
+                            cy - logo_modules / 2.0,
+                            logo_modules,
+                            logo_modules,
+                            0.0,
+                            true,
+                            true,
+                            true,
+                            true,
+                        );
                         svg.push_str(&format!(
-                            "<rect x=\"{:.3}\" y=\"{:.3}\" width=\"{:.3}\" height=\"{:.3}\" fill=\"{}\"/>\n",
-                            bx, by, border_size, border_size, border_color
+                            "<path d=\"{} {}\" fill-rule=\"evenodd\" fill=\"{}\"/>\n",
+                            outer_path, inner_path, border_color
                         ));
                     }
                     LogoShape::Circle => {
+                        // Compound path: outer circle - inner circle → ring with transparent center
+                        let r_outer = border_size / 2.0;
+                        let r_inner = logo_modules / 2.0;
                         svg.push_str(&format!(
-                            "<circle cx=\"{:.3}\" cy=\"{:.3}\" r=\"{:.3}\" fill=\"{}\"/>\n",
-                            cx,
-                            cy,
-                            border_size / 2.0,
-                            border_color
+                            "<path d=\"M{cx:.3} {cy:.3}m-{ro:.3} 0a{ro:.3} {ro:.3} 0 1 0 {ro2:.3} 0a{ro:.3} {ro:.3} 0 1 0-{ro2:.3} 0Z \
+                             M{cx:.3} {cy:.3}m-{ri:.3} 0a{ri:.3} {ri:.3} 0 1 0 {ri2:.3} 0a{ri:.3} {ri:.3} 0 1 0-{ri2:.3} 0Z\" \
+                             fill-rule=\"evenodd\" fill=\"{}\"/>\n",
+                            border_color,
+                            cx = cx, cy = cy,
+                            ro = r_outer, ro2 = r_outer * 2.0,
+                            ri = r_inner, ri2 = r_inner * 2.0,
                         ));
                     }
                     LogoShape::RoundedRect => {
@@ -1230,13 +1263,19 @@ pub fn render_vector_svg(
             let bg_y = cy - bg_size / 2.0;
             svg.push_str("<g clip-path=\"url(#logo-clip)\">\n");
             // Determine effective background fill for the logo area:
-            // If logo_vectorize_bg_color is set, use it; otherwise use QR code's bg_fill
-            let logo_area_bg = if logo_vectorize_bg_color.0 != [0, 0, 0, 0] {
+            // 1. If logo_bg_transparent is checked → always transparent
+            // 2. If logo_vectorize_bg_color is set → use it
+            // 3. Otherwise transparent when QR bg is transparent
+            let logo_area_bg = if logo_bg_transparent {
+                "none".to_string()
+            } else if logo_vectorize_bg_color.0 != [0, 0, 0, 0] {
                 if logo_vectorize_bg_color.0[3] == 0 {
                     "none".to_string()
                 } else {
                     rgba_to_svg(logo_vectorize_bg_color)
                 }
+            } else if transparent_bg {
+                "none".to_string()
             } else {
                 bg_fill.clone()
             };

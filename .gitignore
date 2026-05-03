@@ -31,3 +31,5 @@ desktop.ini
 *.so
 *.dll
 *.dylib
+preview/
+qrcode.svg

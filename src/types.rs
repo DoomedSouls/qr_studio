@@ -124,6 +124,7 @@ pub struct StyleSettings {
     pub logo_border_color: [u8; 4],
     pub logo_vectorize: bool,
     pub logo_vectorize_bg_color: [u8; 4],
+    pub logo_bg_transparent: bool,
     pub logo_clear_area: bool,
     pub logo_clear_padding: f64,
     pub logo_outer_radius: f64,
@@ -186,6 +187,7 @@ pub struct AppState {
     pub logo_border_color: RefCell<Rgba<u8>>,
     pub logo_vectorize: RefCell<bool>,
     pub logo_vectorize_bg_color: RefCell<Rgba<u8>>,
+    pub logo_bg_transparent: RefCell<bool>,
     pub logo_clear_area: RefCell<bool>,
     pub logo_clear_padding: RefCell<f64>,
     pub logo_outer_radius: RefCell<f64>,
@@ -268,10 +270,5 @@ impl AppState {
         let title = format!("{}{}", prefix, msg);
         let toast = adw::Toast::builder().title(&title).timeout(3).build();
         self.toast_overlay.add_toast(toast);
-    }
-
-    /// Convenience: show an info toast (blue accent).
-    pub fn update_status(&self, msg: &str) {
-        self.update_status_typed(msg, ToastType::Info);
     }
 }

@@ -93,21 +93,11 @@ pub fn parse_content_type(s: &str) -> ContentType {
     match s {
         "Text" => ContentType::Text,
         "WiFi" => ContentType::Wifi,
-        "vCard/Kontakt" | "vCard/Contact" => ContentType::Vcard,
-        "Kalenderereignis" | "Calendar Event" => ContentType::Calendar,
-        "GPS-Standort" | "GPS Location" => ContentType::Gps,
+        "vCard" | "vCard/Kontakt" | "vCard/Contact" => ContentType::Vcard,
+        "Kalender" | "Kalenderereignis" | "Calendar Event" => ContentType::Calendar,
+        "GPS" | "GPS-Standort" | "GPS Location" => ContentType::Gps,
         "SMS" => ContentType::Sms,
         _ => ContentType::Text,
-    }
-}
-
-pub fn parse_module_size(s: &str) -> u32 {
-    match s {
-        "Klein (16px)" | "Small (16px)" => 16,
-        "Mittel (32px)" | "Medium (32px)" => 32,
-        "Groß (64px)" | "Large (64px)" => 64,
-        "Druck (128px)" | "Print (128px)" => 128,
-        _ => 32,
     }
 }
 
@@ -537,6 +527,7 @@ pub fn current_style_settings(state: &AppState) -> StyleSettings {
         logo_border_color: s.logo_border_color.borrow().0,
         logo_vectorize: *s.logo_vectorize.borrow(),
         logo_vectorize_bg_color: s.logo_vectorize_bg_color.borrow().0,
+        logo_bg_transparent: *s.logo_bg_transparent.borrow(),
         logo_clear_area: *s.logo_clear_area.borrow(),
         logo_clear_padding: *s.logo_clear_padding.borrow(),
         logo_outer_radius: *s.logo_outer_radius.borrow(),
@@ -575,6 +566,7 @@ pub fn apply_style_to_state(state: &AppState, settings: &StyleSettings) {
     *state.logo_border_color.borrow_mut() = Rgba(settings.logo_border_color);
     *state.logo_vectorize.borrow_mut() = settings.logo_vectorize;
     *state.logo_vectorize_bg_color.borrow_mut() = Rgba(settings.logo_vectorize_bg_color);
+    *state.logo_bg_transparent.borrow_mut() = settings.logo_bg_transparent;
     *state.logo_clear_area.borrow_mut() = settings.logo_clear_area;
     *state.logo_clear_padding.borrow_mut() = settings.logo_clear_padding;
     *state.logo_outer_radius.borrow_mut() = settings.logo_outer_radius;
