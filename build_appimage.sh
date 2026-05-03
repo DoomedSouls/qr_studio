@@ -15,7 +15,7 @@ set -euo pipefail
 APP_NAME="QR_Studio"
 APP_ID="com.example.qr_studio"
 BINARY="qr_studio"
-VERSION="0.2.4"
+VERSION="0.2.5"
 ARCH="x86_64"
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -59,6 +59,12 @@ cp "${BUILD_DIR}/${BINARY}" "${APPDIR}/usr/bin/"
 chmod +x "${APPDIR}/usr/bin/${BINARY}"
 strip --strip-unneeded "${APPDIR}/usr/bin/${BINARY}" 2>/dev/null || true
 ok "binary  →  $(du -h "${APPDIR}/usr/bin/${BINARY}" | cut -f1)"
+
+# Flags (country flag SVGs for phone/vCard dropdowns)
+if [ -d "${PROJECT_DIR}/flags" ]; then
+    cp -r "${PROJECT_DIR}/flags" "${APPDIR}/usr/bin/flags"
+    ok "flags   →  $(ls "${APPDIR}/usr/bin/flags"/*.svg 2>/dev/null | wc -l) SVGs"
+fi
 
 # .desktop file (must live in AppDir root for appimagetool)
 DESKTOP_SRC="${HOME}/.local/share/applications/${APP_ID}.desktop"
