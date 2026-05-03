@@ -85,29 +85,50 @@ jobs:
           DEPS_FILE=$(mktemp /tmp/qr_studio_deps.XXXXXX)
           ldd "${BINARY}" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
 
-          # librsvg — dynamically loaded by gdk-pixbuf
-          if [ -f "${LIB_DIR}/librsvg-2.so.2" ]; then
-            echo "${LIB_DIR}/librsvg-2.so.2" >> "$DEPS_FILE"
-            ldd "${LIB_DIR}/librsvg-2.so.2" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
-          fi
+          # Note: librsvg and gdk-pixbuf loaders are NOT bundled because
+          # the entire GTK4 rendering stack comes from the host system.
 
-          # gdk-pixbuf external loaders (dlopen'd at runtime)
-          LOADERS_SRC="${LIB_DIR}/gdk-pixbuf-2.0/2.10.0/loaders"
-          if [ -d "$LOADERS_SRC" ]; then
-            for loader in "${LOADERS_SRC}"/*.so; do
-              [ -f "$loader" ] || continue
-              echo "$loader" >> "$DEPS_FILE"
-              ldd "$loader" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
-            done
-          fi
+          # ═══════════════════════════════════════════════════════════
+          # Exclude libraries that must come from the host system.
+          #
+          # GTK4/libadwaita and their entire rendering dependency tree
+          # are tightly coupled with the host's GPU/display compositor.
+          # Bundling Ubuntu 24.04 versions causes EGL/Vulkan init
+          # failures, broken text rendering, missing icons/flags, and
+          # CSS parse errors on other distros (Arch, Fedora, etc.).
+          #
+          # Strategy: only bundle portable utility libs (compression,
+          # crypto, image formats). Let the host provide GTK4 and its
+          # entire dependency chain (pango, cairo, harfbuzz, etc.).
+          # ═══════════════════════════════════════════════════════════
 
-          # Exclude glibc core AND GPU/Mesa/graphics libraries (must come from host system)
-          # libepoxy: GL function loader — if bundled from Ubuntu, it fails to init EGL on other distros
-          EXCLUDE_GPU='libEGL|libGL|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libepoxy'
+          # GTK4/libadwaita core (must match host display compositor)
+          EXCLUDE_GTK='libgtk-4|libadwaita-1|libshumate'
+
+          # Rendering pipeline (must match host GPU drivers)
+          EXCLUDE_RENDER='libgraphene-1|libepoxy|libcairo|libpixman-1'
+
+          # Text/font rendering (must match host Pango/Harfbuzz)
+          EXCLUDE_TEXT='libpango|libharfbuzz|libfribidi|libthai|libdatrie|libfreetype|libfontconfig|libgraphite2'
+
+          # Image/SVG loading (must match host GTK4's gdk-pixbuf/librsvg)
+          EXCLUDE_IMAGE='libgdk_pixbuf|librsvg|libtiff|libjpeg|libpng|libjbig|libsharpyuv|libwebp'
+
+          # Network/data (dependencies of libshumate etc.)
+          EXCLUDE_NET='libsoup-3|libjson-glib|libprotobuf-c|libsqlite3|libxml2|libxmlb'
+
+          # GPU/display (must come from host system drivers)
+          EXCLUDE_GPU='libEGL|libGL|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libwayland-client|libwayland-cursor'
+
+          # X11/Wayland display
+          EXCLUDE_DISPLAY='libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfixes|libXinerama|libXi|libxkbcommon|libXrandr|libXrender'
+
+          # Combine all exclusions
+          EXCLUDE_ALL="${EXCLUDE_GTK}|${EXCLUDE_RENDER}|${EXCLUDE_TEXT}|${EXCLUDE_IMAGE}|${EXCLUDE_NET}|${EXCLUDE_GPU}|${EXCLUDE_DISPLAY}"
 
           sort -u "$DEPS_FILE" \
             | grep -vE 'ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss' \
-            | grep -vE "${EXCLUDE_GPU}" \
+            | grep -vE "${EXCLUDE_ALL}" \
             | while IFS= read -r lib; do
                   [ -f "$lib" ] && cp -Ln "$lib" "${APPDIR}/usr/lib/" 2>/dev/null || true
               done
@@ -124,26 +145,20 @@ jobs:
           glib-compile-schemas "$SCHEMA_DST" 2>/dev/null || true
 
           # ── gdk-pixbuf loaders ──
-          LOADERS_DST="${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-          if [ -d "$LOADERS_SRC" ] && ls "${LOADERS_SRC}"/*.so &>/dev/null; then
-            cp -Ln "${LOADERS_SRC}"/*.so "$LOADERS_DST/" 2>/dev/null || true
-            GDK_PIXBUF_MODULEDIR="$LOADERS_DST" gdk-pixbuf-query-loaders 2>/dev/null \
-              > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" || true
-          else
-            : > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-          fi
+          # Since we exclude libgdk_pixbuf from bundling (host provides it),
+          # we also don't bundle loaders — they must match the host's pixbuf version.
+          # The host's GDK_PIXBUF_MODULEDIR and loaders.cache are used automatically.
+          mkdir -p "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+          : > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
 
           # ── AppRun entry point ──
-          cat > "${APPDIR}/AppRun" << 'APPRUN'
+          cat > "${APPDIR}/AppRun" << 'APPRUN
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
 
           export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-          export GDK_PIXBUF_MODULEDIR="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-          export GDK_PIXBUF_MODULE_FILE="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
           export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
           export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
-          export GTK_PATH="${HERE}/usr/lib/gtk-4.0${GTK_PATH:+:${GTK_PATH}}"
 
           exec "${HERE}/usr/bin/qr_studio" "$@"
           APPRUN
