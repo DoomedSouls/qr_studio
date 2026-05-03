@@ -15,7 +15,7 @@ set -euo pipefail
 APP_NAME="QR_Studio"
 APP_ID="com.example.qr_studio"
 BINARY="qr_studio"
-VERSION="0.2.1"
+VERSION="0.2.2"
 ARCH="x86_64"
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -26,7 +26,7 @@ OUTPUT="${WORK_DIR}/${APP_NAME}-${VERSION}-${ARCH}.AppImage"
 
 # System/glibc libraries to EXCLUDE from bundling
 # (these must come from the host system to avoid ABI conflicts)
-EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss'
+EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss|libEGL|libGL[._]|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl'
 
 STEP=0
 step()  { STEP=$((STEP + 1)); printf '\n▸ [%d/8] %s\n' "$STEP" "$1"; }

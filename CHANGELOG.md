@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] — 2025-05-03
+
+### Fixed
+- **Linux AppImage: GPU rendering broken on non-Ubuntu systems** — Excluded Mesa/EGL/Vulkan/DRM/GBM libraries from bundling. The bundled Ubuntu 24.04 GPU libraries caused EGL/Vulkan initialization failures on other distros (Arch, Fedora, etc.). GPU libraries now come from the host system.
+
 ## [0.2.1] — 2025-05-03
 
 ### Fixed
