@@ -60,6 +60,10 @@ jobs:
             mingw-w64-x86_64-protobuf-c
             mingw-w64-x86_64-sqlite3
             mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-appstream
+            mingw-w64-x86_64-gstreamer
+            mingw-w64-x86_64-gst-plugins-good
+            mingw-w64-x86_64-gst-plugins-bad
 
       - name: Configure cargo linker flags for Windows
         shell: msys2 {0}
@@ -85,6 +89,11 @@ jobs:
           export PATH="/c/Users/${USER}/.cargo/bin:${PATH}"
           cargo build --release --target x86_64-pc-windows-gnu
 
+      - name: Install ntldd for dependency scanning
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm mingw-w64-x86_64-ntldd
+
       - name: Package distribution
         shell: msys2 {0}
         run: |
@@ -97,72 +106,44 @@ jobs:
           # Copy binary
           cp target/x86_64-pc-windows-gnu/release/qr_studio.exe "${DIST}/"
 
-          # Copy required DLLs from MSYS2
-          for dll in \
-            libgtk-4-1.dll \
-            libadwaita-1-0.dll \
-            libshumate-1.0-1.dll \
-            libgdk_pixbuf-2.0-0.dll \
-            libglib-2.0-0.dll \
-            libgobject-2.0-0.dll \
-            libgio-2.0-0.dll \
-            libcairo-2.dll \
-            libcairo-gobject-2.dll \
-            libcairo-script-interpreter-2.dll \
-            libpango-1.0-0.dll \
-            libpangocairo-1.0-0.dll \
-            libpangoft2-1.0-0.dll \
-            libpangowin32-1.0-0.dll \
-            libgraphene-1.0-0.dll \
-            libharfbuzz.dll \
-            libharfbuzz-subset.dll \
-            libfreetype-6.dll \
-            libfontconfig-1.dll \
-            libintl-8.dll \
-            libiconv-2.dll \
-            libpcre2-8-0.dll \
-            libpixman-1-0.dll \
-            libpng16-16.dll \
-            libjpeg-8.dll \
-            libtiff-6.dll \
-            librsvg-2-2.dll \
-            libxml2-2.dll \
-            libcroco-0.6-3.dll \
-            liblzma-5.dll \
-            libzstd.dll \
-            libbz2-1.dll \
-            libexpat-1.dll \
-            libssp-0.dll \
-            libwinpthread-1.dll \
-            libgcc_s_seh-1.dll \
-            libgraphite2.dll \
-            libfribidi-0.dll \
-            libdatrie-1.dll \
-            libthai-0.dll \
-            libepoxy-0.dll \
-            libstdc++-6.dll \
-            zlib1.dll \
-            libdeflate.dll \
-            libjbig-0.dll \
-            libwebp-7.dll \
-            libsharpyuv-0.dll \
-            libsoup-3.0-0.dll \
-            libjson-glib-1.0-0.dll \
-            libprotobuf-c-1.dll \
-            libsqlite3-0.dll \
-            libnghttp2-14.dll \
-            libpsl-5.dll \
-            libbrotlidec.dll \
-            libbrotlicommon.dll \
-            libidn2-0.dll \
-            libunistring-5.dll \
-            libssl-3-x64.dll \
-            libcrypto-3-x64.dll \
-            glib-compile-schemas.exe \
-            gdk-pixbuf-query-loaders.exe \
-            gdbus.exe; do
-            if [ -f "${MINGW}/bin/${dll}" ]; then
-              cp "${MINGW}/bin/${dll}" "${DIST}/"
+          # Copy build tools needed for packaging (removed later)
+          cp "${MINGW}/bin/glib-compile-schemas.exe" "${DIST}/"
+          cp "${MINGW}/bin/gdk-pixbuf-query-loaders.exe" "${DIST}/"
+          cp "${MINGW}/bin/gdbus.exe" "${DIST}/" 2>/dev/null || true
+
+          # Recursively find all DLL dependencies using ntldd
+          # ntldd resolves DLLs from the MSYS2/mingw64 search path
+          collect_deps() {
+            local bin="$1"
+            # ntldd outputs lines like: "  libfoo.dll => /mingw64/bin/libfoo.dll"
+            ntldd -R "${bin}" 2>/dev/null \
+              | grep -E '=>' \
+              | grep -v 'not found' \
+              | sed -n 's|.*=>\s*\(.*\)|\1|p' \
+              | grep -E '^/mingw64/bin/' \
+              | sort -u
+          }
+
+          # Collect all deps from the exe and build tools
+          ALL_DEPS=$(
+            collect_deps "${DIST}/qr_studio.exe"
+            collect_deps "${DIST}/glib-compile-schemas.exe" 2>/dev/null
+            collect_deps "${DIST}/gdk-pixbuf-query-loaders.exe" 2>/dev/null
+            collect_deps "${DIST}/gdbus.exe" 2>/dev/null
+          | sort -u)
+
+          echo "=== Found DLL dependencies: ==="
+          echo "${ALL_DEPS}"
+          echo "================================"
+          echo "Total: $(echo "${ALL_DEPS}" | wc -l) DLLs"
+
+          # Copy all found DLLs
+          for dll in ${ALL_DEPS}; do
+            if [ -f "${dll}" ]; then
+              cp "${dll}" "${DIST}/"
+              echo "  Copied: $(basename ${dll})"
+            else
+              echo "  WARNING: not found: ${dll}"
             fi
           done
 
@@ -192,6 +173,22 @@ jobs:
           mkdir -p "${DIST}/share/icons"
           cp -r "${MINGW}/share/icons/Adwaita" "${DIST}/share/icons/" 2>/dev/null || true
           cp -r "${MINGW}/share/icons/hicolor" "${DIST}/share/icons/" 2>/dev/null || true
+
+          # Copy GStreamer plugins (needed by GTK4 media support)
+          mkdir -p "${DIST}/lib/gstreamer-1.0"
+          for plugin in "${MINGW}/lib/gstreamer-1.0/"*.dll; do
+            if [ -f "${plugin}" ]; then
+              cp "${plugin}" "${DIST}/lib/gstreamer-1.0/"
+            fi
+          done
+
+          # Copy libsoup3 and libshumate GI typelibs (for libshumate runtime)
+          mkdir -p "${DIST}/lib/girepository-1.0"
+          for typelib in Shumate-1.0.typelib Soup-3.0.typelib; do
+            if [ -f "${MINGW}/lib/girepository-1.0/${typelib}" ]; then
+              cp "${MINGW}/lib/girepository-1.0/${typelib}" "${DIST}/lib/girepository-1.0/"
+            fi
+          done 2>/dev/null || true
 
           # Copy GTK4 settings
           mkdir -p "${DIST}/share/gtk-4.0"
