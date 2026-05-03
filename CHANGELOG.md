@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] — 2025-05-03
+
+### Fixed
+- **Windows build completely broken** — Replaced hardcoded DLL list with automatic copy of all DLLs from mingw64/bin. The old list had wrong DLL names (libharfbuzz.dll vs libharfbuzz-0.dll) and was missing many dependencies (zlib1.dll, libffi-8.dll, libgmodule-2.0-0.dll, libappstream-5.dll, libLerc.dll, GStreamer libs, etc.), making the Windows build fail to start at all.
+- Added MSYS2 packages: appstream, gstreamer, gst-plugins-good, gst-plugins-bad
+- Added GStreamer plugin DLLs and GI typelibs to packaging
+
 ## [0.2.0] — 2025-05-03
 
 ### Added
