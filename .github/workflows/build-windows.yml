@@ -107,16 +107,16 @@ jobs:
           cp "${MINGW}/bin/gdbus.exe" "${DIST}/" 2>/dev/null || true
 
           # Copy ALL DLLs from mingw64/bin to ensure no dependencies are missed.
-          # This is the most reliable approach — the extra size (~30MB) is acceptable
-          # compared to the alternative of missing DLLs at runtime.
+          # Using a for-loop instead of glob on cp to avoid shell quoting issues.
           echo "=== Copying all DLLs from ${MINGW}/bin ==="
-          cp "${MINGW}/bin/"lib*.dll "${DIST}/" 2>/dev/null || true
-          echo "Copied $(ls "${DIST}/"lib*.dll 2>/dev/null | wc -l) DLLs"
-          # Also copy gcc runtime DLLs (libgcc, libstdc++, libwinpthread, libssp)
-          cp "${MINGW}/bin/"libgcc*.dll "${DIST}/" 2>/dev/null || true
-          cp "${MINGW}/bin/"libstdc*.dll "${DIST}/" 2>/dev/null || true
-          cp "${MINGW}/bin/"libwinpthread*.dll "${DIST}/" 2>/dev/null || true
-          cp "${MINGW}/bin/"libssp*.dll "${DIST}/" 2>/dev/null || true
+          DLL_COUNT=0
+          for f in "${MINGW}/bin/"*.dll; do
+            if [ -f "$f" ]; then
+              cp "$f" "${DIST}/"
+              DLL_COUNT=$((DLL_COUNT + 1))
+            fi
+          done
+          echo "Copied ${DLL_COUNT} DLLs"
 
           # Copy GTK schemas
           mkdir -p "${DIST}/share/glib-2.0/schemas"
