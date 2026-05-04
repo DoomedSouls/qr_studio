@@ -120,12 +120,11 @@ jobs:
           # Save thumbprint for later signing step
           echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
 
-      - name: Prepare MSIX layout
+      - name: Extract version from Cargo.toml
         shell: msys2 {0}
         run: |
-          VERSION="${GITHUB_REF_NAME:-0.1.0}"
-          # Strip leading 'v' if present
-          VERSION="${VERSION#v}"
+          # Read version from Cargo.toml (reliable for both tag push and workflow_dispatch)
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*=.*"\(.*\)".*/\1/')
           # Convert to 4-part version (e.g. 0.2.5 -> 0.2.5.0)
           PARTS=$(echo "$VERSION" | tr '.' '\n' | wc -l)
           if [ "$PARTS" -eq 3 ]; then
@@ -134,6 +133,10 @@ jobs:
 
           echo "Package version: ${VERSION}"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Prepare MSIX layout
+        shell: msys2 {0}
+        run: |
 
           MINGW="/mingw64"
           LAYOUT="msix-layout"
@@ -262,8 +265,9 @@ jobs:
         shell: powershell
         run: |
           # Find MakeAppx from Windows SDK
+          # Path is like: C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\MakeAppx.exe
           $makeAppx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\MakeAppx.exe" |
-            Sort-Object { [version]($_.Directory.Name) } -Descending |
+            Sort-Object { [version]($_.Directory.Parent.Name) } -Descending |
             Select-Object -First 1
 
           if (-not $makeAppx) {
@@ -285,8 +289,9 @@ jobs:
         shell: powershell
         run: |
           # Find SignTool from Windows SDK
+          # Path is like: C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe
           $signTool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" |
-            Sort-Object { [version]($_.Directory.Name) } -Descending |
+            Sort-Object { [version]($_.Directory.Parent.Name) } -Descending |
             Select-Object -First 1
 
           if (-not $signTool) {
@@ -305,7 +310,7 @@ jobs:
       - name: Create also ZIP distribution (portable)
         shell: msys2 {0}
         run: |
-          VERSION="${GITHUB_REF_NAME:-0.1.0}"
+          VERSION="${VERSION}"
           cd msix-layout
           # Remove AppxManifest.xml and Assets — only needed for MSIX
           rm -f AppxManifest.xml
