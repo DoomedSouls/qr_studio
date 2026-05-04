@@ -316,6 +316,7 @@ jobs:
           rm -f AppxManifest.xml
           rm -rf Assets
           cd ..
+          mkdir -p dist
           cd dist
           tar -a -c -f "qr-studio-${VERSION}-windows-x86_64.zip" -C .. "msix-layout"
           cd ..
