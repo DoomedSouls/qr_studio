@@ -35,10 +35,7 @@
         Description="Create and customize QR codes with various content types"
         BackgroundColor="#3584e4"
         Square44x44Logo="Assets\Square44x44Logo.png"
-        Square150x150Logo="Assets\Square150x150Logo.png"
-        Wide310x150Logo="Assets\Wide310x150Logo.png"
-        Square310x310Logo="Assets\Square310x310Logo.png"
-        StoreLogo="Assets\StoreLogo.png">
+        Square150x150Logo="Assets\Square150x150Logo.png">
         <uap:DefaultTile
           Wide310x150Logo="Assets\Wide310x150Logo.png"
           Square310x310Logo="Assets\Square310x310Logo.png"
