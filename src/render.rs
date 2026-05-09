@@ -6,6 +6,7 @@ use rayon::prelude::*;
 use std::path::PathBuf;
 
 /// Vector-first QR render: generates SVG then rasterizes to pixels
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub fn render_vector_qr(
     data: &str,
     dot_style: DotStyle,
@@ -84,6 +85,7 @@ pub fn render_vector_qr(
         logo_border_width,
         logo_border_color,
         bg_image_path,
+        None,
         logo_vectorize,
         logo_vectorize_bg_color,
         logo_bg_transparent,
@@ -132,6 +134,18 @@ pub fn render_vector_qr(
 }
 
 /// Vector-first animated GIF: SVG frames rasterized individually
+///
+/// Two-phase architecture for optimal memory usage:
+///   Phase 1 — Parallel SVG generation (rayon): small SVG strings, ~10-100 KB each
+///   Phase 2 — Sequential rasterize + encode: reuses a single RGBA buffer across frames
+///
+/// The `gif` crate's `Frame::from_rgba_speed` takes `&mut [u8]` and `write_frame`
+/// takes `&Frame`, so the rasterization buffer is never consumed — only the first
+/// call allocates ~18 MB, subsequent frames reuse the capacity.
+///
+/// Peak memory: 1 × raster_buf (~18 MB) + N × SVG string (~1 MB total)
+///   vs. old: N × RgbaImage (~18 MB each = ~216 MB for 12 frames)
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub fn render_vector_gif(
     data: &str,
     dot_style: DotStyle,
@@ -194,8 +208,10 @@ pub fn render_vector_gif(
     let pixel_w = (full_w * module_size as f64) as u32;
     let pixel_h = (full_h * module_size as f64) as u32;
 
-    // Generate all frames in parallel using rayon (4-8x faster on multi-core CPUs)
-    let frames: Vec<(usize, RgbaImage)> = (0..num_frames)
+    // ── Phase 1: Generate SVG strings in parallel (small, ~10-100 KB each) ──
+    // SVG generation is CPU-bound (QR layout + string building),
+    // so rayon parallelism provides 4-8× speedup on multi-core CPUs.
+    let mut svgs: Vec<(usize, String)> = (0..num_frames)
         .into_par_iter()
         .filter_map(|i| {
             let phase = i as f64 / num_frames as f64;
@@ -232,6 +248,7 @@ pub fn render_vector_gif(
                 logo_border_width,
                 logo_border_color,
                 bg_image_path,
+                None,
                 logo_vectorize,
                 logo_vectorize_bg_color,
                 logo_bg_transparent,
@@ -244,32 +261,41 @@ pub fn render_vector_gif(
                 "sans-serif",
                 14,
             )?;
-            let img = rasterize_svg(&svg, pixel_w.max(1), pixel_h.max(1))?;
-            Some((i as usize, img))
+            Some((i as usize, svg))
         })
         .collect();
 
-    // Verify all frames were generated successfully
-    if frames.len() != num_frames as usize {
+    if svgs.len() != num_frames as usize {
         return None;
     }
+    svgs.sort_by_key(|(i, _)| *i);
 
-    // Sort by frame index and encode into GIF sequentially
-    let mut frames = frames;
-    frames.sort_by_key(|(i, _)| *i);
-
-    let mut buf = Vec::new();
+    // ── Phase 2: Sequential rasterize + encode with buffer reuse ──
+    // Uses the `gif` crate directly (instead of `image::codecs::gif::GifEncoder`)
+    // because gif::Frame::from_rgba_speed takes &mut [u8] and write_frame takes
+    // &Frame — neither consumes the pixel buffer. This allows reusing a single
+    // raster_buf across all frames, eliminating ~18 MB allocation per frame.
+    let mut output = Vec::new();
     {
-        let mut encoder = image::codecs::gif::GifEncoder::new(&mut buf);
-        for (_, img) in frames {
-            let delay = image::Delay::from_numer_denom_ms(100, 1);
-            let frame = image::Frame::from_parts(img, 0, 0, delay);
-            if encoder.encode_frame(frame).is_err() {
-                return None;
-            }
+        let mut encoder =
+            gif::Encoder::new(&mut output, pixel_w as u16, pixel_h as u16, &[]).ok()?;
+        encoder.set_repeat(gif::Repeat::Infinite).ok()?;
+
+        let mut raster_buf = Vec::new();
+        for (_, svg) in &svgs {
+            let (w, h) = rasterize_svg_into(svg, pixel_w.max(1), pixel_h.max(1), &mut raster_buf)?;
+
+            // gif::Frame::from_rgba_speed quantizes colors and creates an owned index
+            // buffer — it mutates the RGBA data in-place (normalizes alpha to 0xFF)
+            // but does NOT take ownership. raster_buf remains valid for next frame.
+            let mut frame = gif::Frame::from_rgba_speed(w as u16, h as u16, &mut raster_buf, 10);
+            frame.delay = 10; // 10 × 10ms = 100ms per frame
+
+            encoder.write_frame(&frame).ok()?;
         }
-    }
-    Some(buf)
+    } // encoder dropped, releases borrow on output
+
+    Some(output)
 }
 
 /// Renders QR from AppState for export (PNG via SVG rasterization)
@@ -428,6 +454,7 @@ pub fn render_svg_from_state(state: &AppState) -> Option<String> {
         *state.logo_border_width.borrow(),
         *state.logo_border_color.borrow(),
         None,
+        None,
         logo_vectorize,
         logo_vectorize_bg_color,
         logo_bg_transparent,
@@ -515,6 +542,7 @@ pub fn render_gif_from_state(state: &AppState) -> Option<Vec<u8>> {
 }
 
 /// Renders PDF from AppState for export (vector PDF with embedded SVG)
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub fn render_pdf_from_state(state: &AppState) -> Option<Vec<u8>> {
     use printpdf::*;
 
@@ -619,6 +647,7 @@ pub fn render_pdf_from_state(state: &AppState) -> Option<Vec<u8>> {
 /// - `rows`: number of rows (1–15)
 /// - `margin_mm`: margin from page edges in mm
 /// - `spacing_mm`: spacing between cells in mm
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub fn render_label_sheet(
     state: &AppState,
     cols: u32,

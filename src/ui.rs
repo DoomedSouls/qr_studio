@@ -37,6 +37,7 @@ use std::time::Duration;
 struct ContentSnapshot {
     text: String,
     content_type_idx: u32,
+    url_content: String,
     wifi_ssid: String,
     wifi_password: String,
     wifi_enc_idx: u32,
@@ -76,15 +77,16 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
     // Phase 1: Collect all rendering parameters from state (fast, main thread)
     let s = state.borrow();
 
-    let data = match get_qr_data(&s) {
+    let (data, is_placeholder) = match get_qr_data(&s) {
         Some(d) => {
             *s.cached_qr_data.borrow_mut() = Some(d.clone());
-            d
+            (d, false)
         }
         None => {
+            // Render a placeholder QR so style changes are visible even with empty content
             *s.cached_qr_data.borrow_mut() = None;
             s.scan_verify_btn.set_visible(false);
-            return;
+            ("QR Studio".to_string(), true)
         }
     };
 
@@ -170,8 +172,61 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
         .preview_picture
         .add_css_class("preview-morphing");
 
-    // Phase 2: Spawn background thread for SVG generation + rasterization
+    // Phase 2: Spawn background thread for SVG generation + rasterization ONLY.
+    // Scan verification runs separately after preview is displayed,
+    // so the preview appears immediately without waiting for ~170ms of verify.
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
+
+    // Clone variables needed for scan verification before they're moved into the render closure
+    let is_placeholder_for_scan = is_placeholder;
+    let data_for_scan = data.clone();
+    let fg_for_scan = fg;
+    let bg_for_scan = bg;
+    let ec_level_for_scan = ec_level;
+    let logo_path_for_scan = logo_path.clone();
+    let logo_size_for_scan = logo_size;
+    let module_gap_for_scan = module_gap;
+    let corner_sq_for_scan = corner_sq;
+    let dot_style_for_scan = dot_style;
+
+    // Prepare cached background image data if available.
+    // This avoids re-reading, re-decoding, re-encoding, and re-base64ing
+    // the background image on every render (saves ~10s for large images).
+    let bg_image_data: Option<(String, String)> = {
+        let s = state.borrow();
+        let cached = s.cached_bg_image_data.borrow();
+        match cached.as_ref() {
+            Some((path, mime, b64)) if Some(path) == bg_image_path.as_ref() => {
+                // Cache hit — same path, reuse pre-processed data
+                Some((mime.clone(), b64.clone()))
+            }
+            _ => {
+                // Cache miss or no background image — prepare and cache
+                drop(cached);
+                if let Some(ref path) = bg_image_path {
+                    if let Some(data) = prepare_bg_image_data(path) {
+                        *s.cached_bg_image_data.borrow_mut() =
+                            Some((path.clone(), data.0.clone(), data.1.clone()));
+                        Some(data)
+                    } else {
+                        *s.cached_bg_image_data.borrow_mut() = None;
+                        None
+                    }
+                } else {
+                    *s.cached_bg_image_data.borrow_mut() = None;
+                    None
+                }
+            }
+        }
+    };
+
+    // Take the reusable raster buffer from AppState (capacity preserved from
+    // previous calls, eliminating ~18 MB heap allocation per render).
+    let mut raster_buf = {
+        let s = state.borrow();
+        let mut buf = s.raster_buf.borrow_mut();
+        std::mem::take(&mut *buf)
+    };
 
     std::thread::spawn(move || {
         let svg = render_vector_svg(
@@ -207,6 +262,7 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
             logo_border_width,
             logo_border_color,
             bg_image_path.as_ref(),
+            bg_image_data.as_ref(),
             logo_vectorize,
             logo_vectorize_bg_color,
             logo_bg_transparent,
@@ -220,6 +276,8 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
             outer_text_font_size,
         );
 
+        // Channel payload: (svg_opt, dims_opt, raster_buf)
+        // The buffer always returns to the main thread for reuse, even on error.
         let result = match svg {
             Some(svg_string) => {
                 let (pixel_w, pixel_h) = parse_svg_viewbox(&svg_string)
@@ -230,21 +288,29 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
                         )
                     })
                     .unwrap_or((500, 500));
-                let img = rasterize_svg(&svg_string, pixel_w.max(1), pixel_h.max(1));
-                (Some(svg_string), img)
+                let dims = rasterize_svg_into(
+                    &svg_string,
+                    pixel_w.max(1),
+                    pixel_h.max(1),
+                    &mut raster_buf,
+                );
+                (Some(svg_string), dims, raster_buf)
             }
-            None => (None, None),
+            None => (None, None, raster_buf),
         };
         let _ = tx.send(result);
     });
 
     // Phase 3: Poll for result on main thread (lightweight channel check every 5ms)
     let state_clone = state.clone();
+
     glib::timeout_add_local(Duration::from_millis(5), move || {
         match rx.try_recv() {
-            Ok((svg_opt, img_opt)) => {
+            Ok((svg_opt, dims_opt, raster_buf)) => {
                 // Discard stale results from previous renders
                 if *state_clone.borrow().preview_generation.borrow() != preview_gen {
+                    // Return buffer even for stale results to avoid leaking capacity
+                    *state_clone.borrow_mut().raster_buf.borrow_mut() = raster_buf;
                     state_clone
                         .borrow()
                         .preview_picture
@@ -260,16 +326,60 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
                     return glib::ControlFlow::Break;
                 }
 
+                // Prepare small grayscale for scan verify — filled inside match below
+                let mut gray_for_scan_result: Option<image::GrayImage> = None;
+
                 match svg_opt {
                     Some(svg_string) => {
                         *state_clone.borrow().cached_svg.borrow_mut() = Some(svg_string);
-                        match img_opt {
-                            Some(img) => {
-                                let w = img.width();
-                                let h = img.height();
-                                *state_clone.borrow().cached_rgba.borrow_mut() = Some(img.clone());
+                        match dims_opt {
+                            Some((w, h)) => {
+                                // ── Prepare small grayscale for scan verify BEFORE consuming buf ──
+                                // Downscale + convert to grayscale in one pass (~2ms).
+                                // This eliminates ~20ms re-rasterization in the verify thread.
+                                // Reads directly from the raw RGBA buffer (no RgbaImage needed).
+                                gray_for_scan_result = Some({
+                                    // Max 400px for scan verify — rqrr scales quadratically
+                                    // with image size. The old approach rasterized at
+                                    // viewBox×10 ≈ 250-400px, which was fast enough.
+                                    // 800px causes 4× slower rqrr decode.
+                                    let max_dim = 400u32;
+                                    let stride = w as usize * 4;
+                                    if w > max_dim || h > max_dim {
+                                        let scale = (w.max(h) as f64 / max_dim as f64).max(1.0);
+                                        let nw = (w as f64 / scale) as u32;
+                                        let nh = (h as f64 / scale) as u32;
+                                        image::GrayImage::from_fn(nw, nh, |x, y| {
+                                            let sx = ((x as f64 * scale) as u32).min(w - 1);
+                                            let sy = ((y as f64 * scale) as u32).min(h - 1);
+                                            let offset = (sy as usize * stride) + (sx as usize * 4);
+                                            let r = raster_buf[offset];
+                                            let g = raster_buf[offset + 1];
+                                            let b = raster_buf[offset + 2];
+                                            image::Luma([(0.299 * r as f32
+                                                + 0.587 * g as f32
+                                                + 0.114 * b as f32)
+                                                as u8])
+                                        })
+                                    } else {
+                                        image::GrayImage::from_fn(w, h, |x, y| {
+                                            let offset = (y as usize * stride) + (x as usize * 4);
+                                            let r = raster_buf[offset];
+                                            let g = raster_buf[offset + 1];
+                                            let b = raster_buf[offset + 2];
+                                            image::Luma([(0.299 * r as f32
+                                                + 0.587 * g as f32
+                                                + 0.114 * b as f32)
+                                                as u8])
+                                        })
+                                    }
+                                });
+
+                                // Create texture from the reusable RGBA buffer.
+                                // glib::Bytes copies the data, but we keep raster_buf
+                                // for reuse on the next render — avoiding ~18 MB allocation.
                                 let stride = (w as usize) * 4;
-                                let bytes = glib::Bytes::from(&img.into_raw());
+                                let bytes = glib::Bytes::from(&raster_buf[..]);
                                 let texture = gdk::MemoryTexture::new(
                                     w as i32,
                                     h as i32,
@@ -291,6 +401,10 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
                         state_clone.borrow().scan_verify_btn.set_visible(false);
                     }
                 }
+
+                // Return buffer to AppState for reuse on next render.
+                // Capacity is preserved — next call reuses the same heap allocation.
+                *state_clone.borrow_mut().raster_buf.borrow_mut() = raster_buf;
                 state_clone
                     .borrow()
                     .preview_picture
@@ -315,119 +429,114 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
                         glib::ControlFlow::Break
                     });
                 }
-                // Auto-verify scan quality after render
-                {
-                    let state_v = state_clone.clone();
-                    {
-                        let s = state_clone.borrow();
-                        s.scan_verify_btn.set_visible(true);
-                        s.scan_verify_btn
-                            .set_label(&s.i18n.borrow().t("btn_verify_scan"));
-                        s.scan_verify_btn.remove_css_class("scan-good");
-                        s.scan_verify_btn.remove_css_class("scan-limited");
-                        s.scan_verify_btn.remove_css_class("scan-bad");
-                    }
-                    glib::timeout_add_local(Duration::from_millis(100), move || {
-                        let (
-                            img,
-                            data,
-                            fg,
-                            bg,
-                            ec_level,
-                            logo_path,
-                            logo_size,
-                            module_gap,
-                            corner_sq,
-                            dot_st,
-                            has_data,
-                        ) = {
-                            let s = state_v.borrow();
-                            let img = s.cached_rgba.borrow().clone();
-                            let data = s.cached_qr_data.borrow().clone();
-                            let has = img.is_some() && data.is_some();
-                            (
-                                img,
-                                data,
-                                *s.fg_color.borrow(),
-                                *s.bg_color.borrow(),
-                                *s.ec_level.borrow(),
-                                s.logo_path.borrow().clone(),
-                                *s.logo_size.borrow(),
-                                *s.module_gap.borrow(),
-                                *s.corner_square_style.borrow(),
-                                *s.dot_style.borrow(),
-                                has,
-                            )
-                        };
 
-                        if !has_data {
-                            state_v.borrow().scan_verify_btn.set_visible(false);
-                            return glib::ControlFlow::Break;
-                        }
-
-                        let result = verify_qr_scanability(
-                            &img.unwrap(),
-                            &data.unwrap(),
-                            fg,
-                            bg,
-                            ec_level,
-                            logo_path.as_ref(),
-                            logo_size,
-                            module_gap,
-                            corner_sq,
-                            dot_st,
+                // Phase 4: Run scan verification asynchronously AFTER preview is displayed.
+                // For styled QR codes: skips rqrr decode entirely, only does static checks (~1ms).
+                // For plain QR codes: rqrr decode at 400px grayscale (~15ms).
+                if is_placeholder_for_scan {
+                    state_clone.borrow().scan_verify_btn.set_visible(false);
+                } else if let Some(ref gray) = gray_for_scan_result {
+                    let (scan_tx, scan_rx) = std::sync::mpsc::sync_channel::<ScanResult>(1);
+                    let data_s = data_for_scan.clone();
+                    let logo_path_s = logo_path_for_scan.clone();
+                    let gray_send = gray.clone();
+                    std::thread::spawn(move || {
+                        let result = verify_qr_scanability_from_gray(
+                            &gray_send,
+                            &data_s,
+                            fg_for_scan,
+                            bg_for_scan,
+                            ec_level_for_scan,
+                            logo_path_s.as_ref(),
+                            logo_size_for_scan,
+                            module_gap_for_scan,
+                            corner_sq_for_scan,
+                            dot_style_for_scan,
                         );
+                        let _ = scan_tx.send(result);
+                    });
 
-                        let s = state_v.borrow();
-                        let btn = &s.scan_verify_btn;
-                        btn.remove_css_class("scan-good");
-                        btn.remove_css_class("scan-limited");
-                        btn.remove_css_class("scan-bad");
-
-                        match result.quality {
-                            ScanQuality::Good => {
-                                btn.set_label(&s.i18n.borrow().t("scan_status_good"));
-                                btn.add_css_class("scan-good");
-                                if result.styled_corners_fallback {
-                                    btn.set_tooltip_text(Some(
-                                        &s.i18n.borrow().t("scan_detail_styled_corners"),
-                                    ));
-                                } else {
-                                    btn.set_tooltip_text(None);
+                    // Poll for scan result on main thread
+                    let state_scan = state_clone.clone();
+                    let scan_gen = preview_gen;
+                    glib::timeout_add_local(Duration::from_millis(10), move || {
+                        match scan_rx.try_recv() {
+                            Ok(result) => {
+                                // Discard stale scan results
+                                if scan_gen != *state_scan.borrow().preview_generation.borrow() {
+                                    return glib::ControlFlow::Break;
                                 }
+                                let s = state_scan.borrow();
+                                let btn = &s.scan_verify_btn;
+                                btn.remove_css_class("scan-good");
+                                btn.remove_css_class("scan-limited");
+                                btn.remove_css_class("scan-bad");
+                                btn.set_visible(true);
+                                match result.quality {
+                                    ScanQuality::Good => {
+                                        btn.set_label(&s.i18n.borrow().t("scan_status_good"));
+                                        btn.add_css_class("scan-good");
+                                        if result.styled_corners_fallback {
+                                            btn.set_tooltip_text(Some(
+                                                &s.i18n.borrow().t("scan_detail_styled_corners"),
+                                            ));
+                                        } else {
+                                            btn.set_tooltip_text(None);
+                                        }
+                                    }
+                                    ScanQuality::Limited => {
+                                        btn.set_label(&s.i18n.borrow().t("scan_status_limited"));
+                                        btn.add_css_class("scan-limited");
+                                        let mut tips = Vec::new();
+                                        if let Some(ratio) = result.contrast_ratio {
+                                            let tmpl =
+                                                s.i18n.borrow().t("scan_detail_low_contrast");
+                                            tips.push(
+                                                tmpl.replace("{:.1}:1", &format!("{:.1}:1", ratio)),
+                                            );
+                                        }
+                                        if result.logo_ec_warning {
+                                            tips.push(
+                                                s.i18n
+                                                    .borrow()
+                                                    .t("scan_detail_logo_ec")
+                                                    .to_string(),
+                                            );
+                                        }
+                                        if result.gap_warning {
+                                            tips.push(
+                                                s.i18n
+                                                    .borrow()
+                                                    .t("scan_detail_large_gap")
+                                                    .to_string(),
+                                            );
+                                        }
+                                        if result.styled_corners_fallback {
+                                            tips.push(
+                                                s.i18n
+                                                    .borrow()
+                                                    .t("scan_detail_styled_corners")
+                                                    .to_string(),
+                                            );
+                                        }
+                                        btn.set_tooltip_text(Some(&tips.join("\n")));
+                                    }
+                                    ScanQuality::Bad => {
+                                        btn.set_label(&s.i18n.borrow().t("scan_status_bad"));
+                                        btn.add_css_class("scan-bad");
+                                        btn.set_tooltip_text(None);
+                                    }
+                                }
+                                glib::ControlFlow::Break
                             }
-                            ScanQuality::Limited => {
-                                btn.set_label(&s.i18n.borrow().t("scan_status_limited"));
-                                btn.add_css_class("scan-limited");
-                                let mut tips = Vec::new();
-                                if let Some(ratio) = result.contrast_ratio {
-                                    let tmpl = s.i18n.borrow().t("scan_detail_low_contrast");
-                                    tips.push(tmpl.replace("{:.1}:1", &format!("{:.1}:1", ratio)));
-                                }
-                                if result.logo_ec_warning {
-                                    tips.push(s.i18n.borrow().t("scan_detail_logo_ec").to_string());
-                                }
-                                if result.gap_warning {
-                                    tips.push(
-                                        s.i18n.borrow().t("scan_detail_large_gap").to_string(),
-                                    );
-                                }
-                                if result.styled_corners_fallback {
-                                    tips.push(
-                                        s.i18n.borrow().t("scan_detail_styled_corners").to_string(),
-                                    );
-                                }
-                                btn.set_tooltip_text(Some(&tips.join("\n")));
+                            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                                glib::ControlFlow::Continue
                             }
-                            ScanQuality::Bad => {
-                                btn.set_label(&s.i18n.borrow().t("scan_status_bad"));
-                                btn.add_css_class("scan-bad");
-                                btn.set_tooltip_text(None);
-                            }
+                            Err(_) => glib::ControlFlow::Break,
                         }
-                        glib::ControlFlow::Break
                     });
                 }
+
                 glib::ControlFlow::Break // Stop polling — result received
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue, // Keep polling
@@ -437,8 +546,30 @@ pub fn update_preview(state: &Rc<RefCell<AppState>>) {
 }
 
 pub fn schedule_preview(state: &Rc<RefCell<AppState>>) {
-    update_qr_info(&state.borrow());
-    update_preview(state);
+    // Skip during restore (session/template load) — prevents double rendering
+    // where the first render uses incomplete style settings.
+    // The final update_preview is called after all UI widgets are updated.
+    if *state.borrow().is_restoring.borrow() {
+        return;
+    }
+
+    // Debounce: cancel any pending preview render and schedule a new one.
+    // This coalesces rapid UI changes (typing, slider dragging) into a
+    // single render after the user pauses, instead of spawning a render
+    // thread for every keystroke/widget change.
+    if let Some(old_id) = state.borrow().preview_debounce_id.borrow_mut().take() {
+        old_id.remove();
+    }
+
+    let state_clone = state.clone();
+    let debounce_id = glib::timeout_add_local(Duration::from_millis(50), move || {
+        // Clear the stored source ID since this timer has now fired
+        state_clone.borrow().preview_debounce_id.borrow_mut().take();
+        update_qr_info(&state_clone.borrow());
+        update_preview(&state_clone);
+        glib::ControlFlow::Break
+    });
+    *state.borrow().preview_debounce_id.borrow_mut() = Some(debounce_id);
 }
 
 // ============================================================
@@ -449,9 +580,53 @@ pub fn save_undo_state(state: &AppState) {
     if *state.is_restoring.borrow() {
         return;
     }
-    let current = current_style_settings(state);
-    state.undo_stack.borrow_mut().push(current);
+    let current = current_template_settings(state);
+    {
+        let mut stack = state.undo_stack.borrow_mut();
+        stack.push(current);
+        // Enforce stack limit
+        let excess = stack.len().saturating_sub(MAX_UNDO_STACK);
+        if excess > 0 {
+            stack.drain(0..excess);
+        }
+    }
     state.redo_stack.borrow_mut().clear();
+    // Update button sensitivity
+    state.undo_btn.set_sensitive(true);
+    state.redo_btn.set_sensitive(false);
+}
+
+/// Save an undo snapshot after a short debounce (1 s).
+/// Used for text entry `connect_changed` handlers to avoid
+/// creating an undo entry on every keystroke.
+pub fn save_content_undo_debounced(state: Rc<RefCell<AppState>>) {
+    if *state.borrow().is_restoring.borrow() {
+        return;
+    }
+    // Cancel any pending debounce
+    if let Some(id) = state.borrow().content_undo_debounce_id.borrow_mut().take() {
+        id.remove();
+    }
+    let state_for_closure = state.clone();
+    let id = glib::timeout_add_local(Duration::from_millis(1000), move || {
+        save_undo_state(&state_for_closure.borrow());
+        state_for_closure
+            .borrow()
+            .content_undo_debounce_id
+            .borrow_mut()
+            .take();
+        glib::ControlFlow::Break
+    });
+    *state.borrow().content_undo_debounce_id.borrow_mut() = Some(id);
+}
+
+/// Update the sensitivity (greyed-out state) of undo/redo buttons
+/// based on whether their respective stacks are non-empty.
+pub fn update_undo_redo_sensitivity(state: &AppState, undo_btn: &Button, redo_btn: &Button) {
+    let has_undo = !state.undo_stack.borrow().is_empty();
+    let has_redo = !state.redo_stack.borrow().is_empty();
+    undo_btn.set_sensitive(has_undo);
+    redo_btn.set_sensitive(has_redo);
 }
 
 fn rgba_to_gdk(c: &Rgba<u8>) -> gdk::RGBA {
@@ -666,24 +841,116 @@ pub fn build_ui(app: &Application) {
     let undo_btn = Button::new();
     undo_btn.set_child(Some(&Image::from_icon_name("edit-undo-symbolic")));
     undo_btn.set_tooltip_text(Some(&i18n.t("tooltip_undo")));
+    undo_btn.set_sensitive(false);
     let redo_btn = Button::new();
     redo_btn.set_child(Some(&Image::from_icon_name("edit-redo-symbolic")));
     redo_btn.set_tooltip_text(Some(&i18n.t("tooltip_redo")));
+    redo_btn.set_sensitive(false);
     let sidebar_toggle_btn = Button::new();
     sidebar_toggle_btn.set_icon_name("sidebar-show-symbolic");
     sidebar_toggle_btn.set_tooltip_text(Some(&i18n.t("tooltip_sidebar_toggle")));
+    // ? button to show keyboard shortcuts overlay
+    let shortcuts_btn = Button::new();
+    shortcuts_btn.set_icon_name("dialog-question-symbolic");
+    shortcuts_btn.set_tooltip_text(Some(&i18n.t("tooltip_shortcuts")));
+    shortcuts_btn.set_action_name(Some("win.show-help-overlay"));
     header.pack_start(&undo_btn);
     header.pack_start(&redo_btn);
+    // pack_end adds right-to-left: shortcuts first, then sidebar toggle,
+    // so the order from left→right is: [sidebar_toggle] [?] ... [undo] [redo]
     header.pack_end(&sidebar_toggle_btn);
+    header.pack_end(&shortcuts_btn);
     main_box.append(&header);
 
-    // Paned layout
+    // Paned layout (normal content, always present as Overlay base)
     let paned = Paned::new(Orientation::Horizontal);
     paned.set_position(420);
     paned.set_shrink_start_child(false);
     paned.set_resize_end_child(true);
     paned.set_shrink_end_child(false);
-    main_box.append(&paned);
+    paned.set_vexpand(true);
+
+    // ── DnD drop zone overlay (shown on top when dragging image files) ──
+    let drop_zone_left = Box::new(Orientation::Vertical, 12);
+    drop_zone_left.set_hexpand(true);
+    drop_zone_left.set_vexpand(true);
+    drop_zone_left.set_halign(Align::Fill);
+    drop_zone_left.set_valign(Align::Center);
+    drop_zone_left.add_css_class("drop-zone");
+    {
+        let icon = Image::from_icon_name("image-x-generic-symbolic");
+        icon.set_pixel_size(48);
+        icon.add_css_class("drop-zone-icon");
+        drop_zone_left.append(&icon);
+        let lbl = Label::new(Some(&i18n.t("dnd_as_logo")));
+        lbl.add_css_class("drop-zone-label");
+        drop_zone_left.append(&lbl);
+    }
+
+    let drop_zone_right = Box::new(Orientation::Vertical, 12);
+    drop_zone_right.set_hexpand(true);
+    drop_zone_right.set_vexpand(true);
+    drop_zone_right.set_halign(Align::Fill);
+    drop_zone_right.set_valign(Align::Center);
+    drop_zone_right.add_css_class("drop-zone");
+    {
+        let icon = Image::from_icon_name("preferences-desktop-wallpaper-symbolic");
+        icon.set_pixel_size(48);
+        icon.add_css_class("drop-zone-icon");
+        drop_zone_right.append(&icon);
+        let lbl = Label::new(Some(&i18n.t("dnd_as_background")));
+        lbl.add_css_class("drop-zone-label");
+        drop_zone_right.append(&lbl);
+    }
+
+    let drop_zone_view = Box::new(Orientation::Horizontal, 0);
+    drop_zone_view.set_hexpand(true);
+    drop_zone_view.set_vexpand(true);
+    drop_zone_view.set_halign(Align::Fill);
+    drop_zone_view.set_valign(Align::Fill);
+    drop_zone_view.add_css_class("drop-zone-container");
+    drop_zone_view.append(&drop_zone_left);
+    drop_zone_view.append(&drop_zone_right);
+    drop_zone_view.set_visible(false); // hidden until drag enters
+
+    // Content overlay: paned (base) + drop-zone view (overlay, hidden by default)
+    let content_overlay = Overlay::new();
+    content_overlay.set_child(Some(&paned));
+    content_overlay.add_overlay(&drop_zone_view);
+    content_overlay.set_vexpand(true);
+    main_box.append(&content_overlay);
+
+    // ── GSettings: restore persistent window geometry and sidebar width ──
+    let gsettings = gtk4::gio::Settings::new("io.github.SlobCoder.qr_studio");
+    {
+        let w = gsettings.int("window-width");
+        let h = gsettings.int("window-height");
+        if w > 0 && h > 0 {
+            window.set_default_size(w, h);
+        }
+        if gsettings.boolean("window-maximized") {
+            window.maximize();
+        }
+        let pos = gsettings.int("sidebar-width");
+        if pos > 0 {
+            paned.set_position(pos);
+        }
+    }
+    // Save GSettings on window close
+    {
+        let gsettings = gsettings.clone();
+        let paned_save = paned.clone();
+        let win = window.clone();
+        window.connect_close_request(move |_| {
+            let w = win.width();
+            let h = win.height();
+            let _ = gsettings.set_int("window-width", w);
+            let _ = gsettings.set_int("window-height", h);
+            let _ = gsettings.set_boolean("window-maximized", win.is_maximized());
+            let _ = gsettings.set_int("sidebar-width", paned_save.position());
+            gtk4::glib::Propagation::Proceed
+        });
+    }
 
     // ============================================================
     // SIDEBAR (LEFT) — Tabbed: Inhalt | Stil | Export
@@ -757,6 +1024,18 @@ pub fn build_ui(app: &Application) {
             gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
     }
+    {
+        let pipette_css = gtk4::CssProvider::new();
+        pipette_css.load_from_data(
+            ".pipette-btn { padding: 2px 4px; min-width: 28px; min-height: 28px; border-radius: 6px; }
+             .pipette-btn:hover { background: alpha(@accent_bg_color, 0.15); }",
+        );
+        gtk4::style_context_add_provider_for_display(
+            &gtk4::gdk::Display::default().unwrap(),
+            &pipette_css,
+            gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
     left_box.add_css_class("sidebar-panel");
 
     {
@@ -825,6 +1104,20 @@ pub fn build_ui(app: &Application) {
     lang_box.append(&lang_dd);
     tab_content_box.append(&lang_box);
 
+    // Content action row: Import QR + Clear All
+    let content_action_row = Box::new(Orientation::Horizontal, 6);
+    content_action_row.set_hexpand(true);
+
+    // Import QR Code button
+    let import_qr_btn = Button::new();
+    let import_qr_inner = Box::new(Orientation::Horizontal, 4);
+    import_qr_inner.append(&Image::from_icon_name("insert-image-symbolic"));
+    import_qr_inner.append(&Label::new(Some(&i18n.t("btn_import_qr"))));
+    import_qr_btn.set_child(Some(&import_qr_inner));
+    import_qr_btn.set_tooltip_text(Some(&i18n.t("tooltip_import_qr")));
+    import_qr_btn.add_css_class("flat");
+    content_action_row.append(&import_qr_btn);
+
     // Clear All button — resets every content input field
     let clear_all_btn = Button::new();
     let clear_all_inner = Box::new(Orientation::Horizontal, 4);
@@ -833,9 +1126,12 @@ pub fn build_ui(app: &Application) {
     clear_all_btn.set_child(Some(&clear_all_inner));
     clear_all_btn.set_tooltip_text(Some(&i18n.t("tooltip_clear_all")));
     clear_all_btn.set_halign(Align::End);
+    clear_all_btn.set_hexpand(true);
     clear_all_btn.add_css_class("flat");
     clear_all_btn.add_css_class("clear-all-btn");
-    tab_content_box.append(&clear_all_btn);
+    content_action_row.append(&clear_all_btn);
+
+    tab_content_box.append(&content_action_row);
 
     // ============================================================
     // SECTION: Inhalt (Content)
@@ -848,6 +1144,7 @@ pub fn build_ui(app: &Application) {
 
     let content_types = StringList::new(&[]);
     content_types.append(&i18n.t("dd_content_text"));
+    content_types.append(&i18n.t("dd_content_url"));
     content_types.append(&i18n.t("dd_content_wifi"));
     content_types.append(&i18n.t("dd_content_vcard"));
     content_types.append(&i18n.t("dd_content_calendar"));
@@ -884,6 +1181,14 @@ pub fn build_ui(app: &Application) {
     text_scroll.add_css_class("text-input-frame");
     text_scroll.set_child(Some(&text_view));
     content_stack.add_named(&text_scroll, Some("text"));
+
+    // URL box
+    let url_box = Box::new(Orientation::Vertical, 4);
+    let url_entry = Entry::new();
+    url_entry.set_placeholder_text(Some(&i18n.t("placeholder_url")));
+    url_entry.set_tooltip_text(Some(&i18n.t("tooltip_url")));
+    url_box.append(&url_entry);
+    content_stack.add_named(&url_box, Some("url"));
 
     // WiFi box
     let wifi_box = Box::new(Orientation::Vertical, 4);
@@ -1501,8 +1806,14 @@ pub fn build_ui(app: &Application) {
     ));
     fg_color_btn.set_tooltip_text(Some(&i18n.t("color_fg")));
     fg_color_btn.add_css_class("color-btn-hover");
+    let fg_pipette_btn = Button::new();
+    fg_pipette_btn.set_icon_name("color-select-symbolic");
+    fg_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    fg_pipette_btn.add_css_class("pipette-btn");
+    fg_pipette_btn.set_valign(Align::Center);
     fg_color_row.append(&fg_color_label);
     fg_color_row.append(&fg_color_btn);
+    fg_color_row.append(&fg_pipette_btn);
     colors_box.append(&fg_color_row);
 
     // --- Farbharmonien ---
@@ -1541,8 +1852,14 @@ pub fn build_ui(app: &Application) {
     let bg_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(1.0, 1.0, 1.0, 1.0));
     bg_color_btn.set_tooltip_text(Some(&i18n.t("color_bg")));
     bg_color_btn.add_css_class("color-btn-hover");
+    let bg_pipette_btn = Button::new();
+    bg_pipette_btn.set_icon_name("color-select-symbolic");
+    bg_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    bg_pipette_btn.add_css_class("pipette-btn");
+    bg_pipette_btn.set_valign(Align::Center);
     bg_color_row.append(&bg_color_label);
     bg_color_row.append(&bg_color_btn);
+    bg_color_row.append(&bg_pipette_btn);
     colors_box.append(&bg_color_row);
 
     let corner_color_row = Box::new(Orientation::Horizontal, 6);
@@ -1558,8 +1875,14 @@ pub fn build_ui(app: &Application) {
     ));
     corner_color_btn.set_tooltip_text(Some(&i18n.t("color_corner")));
     corner_color_btn.add_css_class("color-btn-hover");
+    let corner_pipette_btn = Button::new();
+    corner_pipette_btn.set_icon_name("color-select-symbolic");
+    corner_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    corner_pipette_btn.add_css_class("pipette-btn");
+    corner_pipette_btn.set_valign(Align::Center);
     corner_color_row.append(&corner_color_label);
     corner_color_row.append(&corner_color_btn);
+    corner_color_row.append(&corner_pipette_btn);
     colors_box.append(&corner_color_row);
 
     let transparent_bg_check = CheckButton::with_label(&i18n.t("check_transparent_bg"));
@@ -1583,8 +1906,14 @@ pub fn build_ui(app: &Application) {
     ));
     grad_color_btn.set_tooltip_text(Some(&i18n.t("color_gradient")));
     grad_color_btn.add_css_class("color-btn-hover");
+    let grad_pipette_btn = Button::new();
+    grad_pipette_btn.set_icon_name("color-select-symbolic");
+    grad_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    grad_pipette_btn.add_css_class("pipette-btn");
+    grad_pipette_btn.set_valign(Align::Center);
     grad_color_row.append(&grad_color_label);
     grad_color_row.append(&grad_color_btn);
+    grad_color_row.append(&grad_pipette_btn);
     colors_box.append(&grad_color_row);
 
     let grad_dirs = StringList::new(&[]);
@@ -1794,7 +2123,14 @@ pub fn build_ui(app: &Application) {
 
     let logo_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
     logo_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_color")));
-    logo_box.append(&logo_color_btn);
+    let logo_color_pipette = Button::new();
+    logo_color_pipette.set_icon_name("color-select-symbolic");
+    logo_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    logo_color_pipette.add_css_class("pipette-btn");
+    let logo_color_row = Box::new(Orientation::Horizontal, 4);
+    logo_color_row.append(&logo_color_btn);
+    logo_color_row.append(&logo_color_pipette);
+    logo_box.append(&logo_color_row);
 
     let logo_border_width_label = Label::new(Some(&i18n.t("label_logo_border_width")));
     logo_box.append(&logo_border_width_label);
@@ -1808,7 +2144,14 @@ pub fn build_ui(app: &Application) {
 
     let logo_border_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(1.0, 1.0, 1.0, 1.0));
     logo_border_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_border_color")));
-    logo_box.append(&logo_border_color_btn);
+    let logo_border_color_pipette = Button::new();
+    logo_border_color_pipette.set_icon_name("color-select-symbolic");
+    logo_border_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    logo_border_color_pipette.add_css_class("pipette-btn");
+    let logo_border_color_row = Box::new(Orientation::Horizontal, 4);
+    logo_border_color_row.append(&logo_border_color_btn);
+    logo_border_color_row.append(&logo_border_color_pipette);
+    logo_box.append(&logo_border_color_row);
 
     let logo_vectorize_check = CheckButton::with_label(&i18n.t("check_logo_vectorize"));
     logo_vectorize_check.set_tooltip_text(Some(&i18n.t("tooltip_logo_vectorize")));
@@ -1818,7 +2161,14 @@ pub fn build_ui(app: &Application) {
     let logo_vectorize_bg_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
     logo_vectorize_bg_color_btn.set_use_alpha(true);
     logo_vectorize_bg_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_vectorize_bg")));
-    logo_box.append(&logo_vectorize_bg_color_btn);
+    let logo_vecbg_pipette = Button::new();
+    logo_vecbg_pipette.set_icon_name("color-select-symbolic");
+    logo_vecbg_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    logo_vecbg_pipette.add_css_class("pipette-btn");
+    let logo_vecbg_row = Box::new(Orientation::Horizontal, 4);
+    logo_vecbg_row.append(&logo_vectorize_bg_color_btn);
+    logo_vecbg_row.append(&logo_vecbg_pipette);
+    logo_box.append(&logo_vecbg_row);
 
     let logo_bg_transparent_check = CheckButton::with_label(&i18n.t("check_logo_bg_transparent"));
     logo_bg_transparent_check.set_tooltip_text(Some(&i18n.t("tooltip_logo_bg_transparent")));
@@ -1863,7 +2213,14 @@ pub fn build_ui(app: &Application) {
 
     let text_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0));
     text_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_text_color")));
-    text_outer_box.append(&text_color_btn);
+    let text_color_pipette = Button::new();
+    text_color_pipette.set_icon_name("color-select-symbolic");
+    text_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    text_color_pipette.add_css_class("pipette-btn");
+    let text_color_row = Box::new(Orientation::Horizontal, 4);
+    text_color_row.append(&text_color_btn);
+    text_color_row.append(&text_color_pipette);
+    text_outer_box.append(&text_color_row);
 
     // Font family dropdown
     let font_row = Box::new(Orientation::Horizontal, 6);
@@ -1944,7 +2301,14 @@ pub fn build_ui(app: &Application) {
 
     let frame_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0));
     frame_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_frame_color")));
-    frame_box.append(&frame_color_btn);
+    let frame_color_pipette = Button::new();
+    frame_color_pipette.set_icon_name("color-select-symbolic");
+    frame_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
+    frame_color_pipette.add_css_class("pipette-btn");
+    let frame_color_row = Box::new(Orientation::Horizontal, 4);
+    frame_color_row.append(&frame_color_btn);
+    frame_color_row.append(&frame_color_pipette);
+    frame_box.append(&frame_color_row);
 
     let frame_width_label = Label::new(Some(&i18n.t("label_frame_width")));
     frame_box.append(&frame_width_label);
@@ -2227,6 +2591,7 @@ pub fn build_ui(app: &Application) {
         gradient_color: RefCell::new(Rgba([102, 51, 204, 255])),
         gradient_direction: RefCell::new(GradientDirection::Horizontal),
         content_type: RefCell::new(ContentType::Text),
+        url_content: RefCell::new(String::new()),
         wifi_ssid: RefCell::new(String::new()),
         wifi_password: RefCell::new(String::new()),
         wifi_encryption: RefCell::new(WifiEncryption::Wpa),
@@ -2253,6 +2618,8 @@ pub fn build_ui(app: &Application) {
         sms_country_code: RefCell::new("+49".to_string()),
         sms_message: RefCell::new(String::new()),
         preview_generation: RefCell::new(0),
+        preview_debounce_id: RefCell::new(None),
+        cached_bg_image_data: RefCell::new(None),
         cached_svg: RefCell::new(None),
         cached_rgba: RefCell::new(None),
         cached_qr_data: RefCell::new(None),
@@ -2269,12 +2636,63 @@ pub fn build_ui(app: &Application) {
         undo_stack: RefCell::new(Vec::new()),
         redo_stack: RefCell::new(Vec::new()),
         is_restoring: RefCell::new(false),
+        content_undo_debounce_id: RefCell::new(None),
+        undo_btn: undo_btn.clone(),
+        redo_btn: redo_btn.clone(),
         custom_dot_path: RefCell::new(String::new()),
         outer_text_font: RefCell::new("Sans".to_string()),
         outer_text_font_size: RefCell::new(14),
         contrast_warning_label: contrast_warning_label.clone(),
+        raster_buf: RefCell::new(Vec::new()),
         i18n: RefCell::new(i18n),
     }));
+
+    // ============================================================
+    // PIPETTE (COLOR PICKER) SIGNAL CONNECTIONS
+    // Connect each pipette button to pick_screen_color() and apply
+    // the result to the adjacent ColorButton.
+    // ============================================================
+    {
+        // Helper closure to connect a pipette button to a color button
+        let connect_pipette =
+            |pipette: &Button, color_btn: &ColorButton, st: &Rc<RefCell<AppState>>| {
+                let cb = color_btn.clone();
+                let st = st.clone();
+                pipette.connect_clicked(move |_| match pick_screen_color() {
+                    Ok(rgba) => {
+                        cb.set_rgba(&rgba);
+                        save_undo_state(&*st.borrow());
+                        cb.add_css_class("color-btn-pop");
+                        let b = cb.clone();
+                        glib::timeout_add_local(Duration::from_millis(220), move || {
+                            b.remove_css_class("color-btn-pop");
+                            glib::ControlFlow::Break
+                        });
+                        st.borrow().update_status_typed(
+                            &st.borrow().i18n.borrow().t("status_color_picked"),
+                            ToastType::Success,
+                        );
+                        schedule_preview(&st);
+                    }
+                    Err(_) => {
+                        st.borrow().update_status_typed(
+                            &st.borrow().i18n.borrow().t("status_color_pick_error"),
+                            ToastType::Error,
+                        );
+                    }
+                });
+            };
+
+        connect_pipette(&fg_pipette_btn, &fg_color_btn, &state);
+        connect_pipette(&bg_pipette_btn, &bg_color_btn, &state);
+        connect_pipette(&corner_pipette_btn, &corner_color_btn, &state);
+        connect_pipette(&grad_pipette_btn, &grad_color_btn, &state);
+        connect_pipette(&logo_color_pipette, &logo_color_btn, &state);
+        connect_pipette(&logo_border_color_pipette, &logo_border_color_btn, &state);
+        connect_pipette(&logo_vecbg_pipette, &logo_vectorize_bg_color_btn, &state);
+        connect_pipette(&text_color_pipette, &text_color_btn, &state);
+        connect_pipette(&frame_color_pipette, &frame_color_btn, &state);
+    }
 
     // ============================================================
     // LANGUAGE CHANGE HANDLER — save content, rebuild UI with crossfade
@@ -2283,6 +2701,7 @@ pub fn build_ui(app: &Application) {
         let app_clone = app.clone();
         let tb = text_buffer.clone();
         let ct_dd = content_type_dd.clone();
+        let ue = url_entry.clone();
         let ws = wifi_ssid_entry.clone();
         let wp = wifi_password_entry.clone();
         let we = wifi_enc_dd.clone();
@@ -2314,6 +2733,7 @@ pub fn build_ui(app: &Application) {
                 *snap.borrow_mut() = Some(ContentSnapshot {
                     text: tb.text(&start, &end, false).to_string(),
                     content_type_idx: ct_dd.selected(),
+                    url_content: ue.text().to_string(),
                     wifi_ssid: ws.text().to_string(),
                     wifi_password: wp.text().to_string(),
                     wifi_enc_idx: we.selected(),
@@ -2358,9 +2778,174 @@ pub fn build_ui(app: &Application) {
     // SIGNAL HANDLERS
     // ============================================================
 
+    // Import QR Code from image file
+    {
+        let state = state.clone();
+        let text_buffer = text_buffer.clone();
+        let url_entry = url_entry.clone();
+        let wifi_ssid_entry = wifi_ssid_entry.clone();
+        let wifi_password_entry = wifi_password_entry.clone();
+        let vcard_name_entry = vcard_name_entry.clone();
+        let vcard_phone_entry = vcard_phone_entry.clone();
+        let vcard_email_entry = vcard_email_entry.clone();
+        let vcard_org_entry = vcard_org_entry.clone();
+        let vcard_url_entry = vcard_url_entry.clone();
+        let cal_title_entry = cal_title_entry.clone();
+        let cal_location_entry = cal_location_entry.clone();
+        let gps_lat_entry = gps_lat_entry.clone();
+        let gps_lon_entry = gps_lon_entry.clone();
+        let sms_phone_entry = sms_phone_entry.clone();
+        let sms_message_entry = sms_message_entry.clone();
+        let content_type_dd = content_type_dd.clone();
+        let content_stack = content_stack.clone();
+        let wifi_enc_dd = wifi_enc_dd.clone();
+        import_qr_btn.connect_clicked(move |_| {
+            let state_ref = state.borrow();
+            let i18n = state_ref.i18n.borrow();
+            let dialog = FileChooserDialog::new(
+                Some(&i18n.t("dlg_import_qr")),
+                None::<&gtk4::Window>,
+                gtk4::FileChooserAction::Open,
+                &[
+                    (&i18n.t("btn_cancel"), gtk4::ResponseType::Cancel),
+                    (&i18n.t("btn_open"), gtk4::ResponseType::Accept),
+                ],
+            );
+            let filter = FileFilter::new();
+            filter.add_mime_type("image/*");
+            filter.set_name(Some(&i18n.t("filter_images")));
+            drop(i18n);
+            drop(state_ref);
+            dialog.set_filter(&filter);
+            let state = state.clone();
+            let text_buffer = text_buffer.clone();
+            let url_entry = url_entry.clone();
+            let wifi_ssid_entry = wifi_ssid_entry.clone();
+            let wifi_password_entry = wifi_password_entry.clone();
+            let vcard_name_entry = vcard_name_entry.clone();
+            let vcard_phone_entry = vcard_phone_entry.clone();
+            let vcard_email_entry = vcard_email_entry.clone();
+            let vcard_org_entry = vcard_org_entry.clone();
+            let vcard_url_entry = vcard_url_entry.clone();
+            let cal_title_entry = cal_title_entry.clone();
+            let cal_location_entry = cal_location_entry.clone();
+            let gps_lat_entry = gps_lat_entry.clone();
+            let gps_lon_entry = gps_lon_entry.clone();
+            let sms_phone_entry = sms_phone_entry.clone();
+            let sms_message_entry = sms_message_entry.clone();
+            let content_type_dd = content_type_dd.clone();
+            let content_stack = content_stack.clone();
+            let wifi_enc_dd = wifi_enc_dd.clone();
+            dialog.connect_response(move |dlg, resp| {
+                if resp == gtk4::ResponseType::Accept {
+                    if let Some(file) = dlg.file() {
+                        if let Some(path) = file.path() {
+                            match decode_qr_image(&path) {
+                                Ok(decoded) => {
+                                    let detected = detect_content_type(&decoded);
+                                    save_undo_state(&state.borrow());
+
+                                    // Apply detected content type
+                                    let ct = detected.content_type;
+                                    *state.borrow().content_type.borrow_mut() = ct;
+                                    content_type_dd.set_selected(match ct {
+                                        ContentType::Text => 0,
+                                        ContentType::Url => 1,
+                                        ContentType::Wifi => 2,
+                                        ContentType::Vcard => 3,
+                                        ContentType::Calendar => 4,
+                                        ContentType::Gps => 5,
+                                        ContentType::Sms => 6,
+                                    });
+                                    content_stack.set_visible_child_name(match ct {
+                                        ContentType::Text => "text",
+                                        ContentType::Url => "url",
+                                        ContentType::Wifi => "wifi",
+                                        ContentType::Vcard => "vcard",
+                                        ContentType::Calendar => "calendar",
+                                        ContentType::Gps => "gps",
+                                        ContentType::Sms => "sms",
+                                    });
+
+                                    // Fill in the fields
+                                    text_buffer.set_text(&detected.text);
+                                    url_entry.set_text(&detected.url_content);
+                                    wifi_ssid_entry.set_text(&detected.wifi_ssid);
+                                    wifi_password_entry.set_text(&detected.wifi_password);
+                                    wifi_enc_dd.set_selected(match detected.wifi_encryption {
+                                        WifiEncryption::Wpa => 0,
+                                        WifiEncryption::Wep => 1,
+                                        WifiEncryption::None => 2,
+                                    });
+                                    vcard_name_entry.set_text(&detected.vcard_name);
+                                    vcard_phone_entry.set_text(&detected.vcard_phone);
+                                    vcard_email_entry.set_text(&detected.vcard_email);
+                                    vcard_org_entry.set_text(&detected.vcard_org);
+                                    vcard_url_entry.set_text(&detected.vcard_url);
+                                    cal_title_entry.set_text(&detected.calendar_title);
+                                    cal_location_entry.set_text(&detected.calendar_location);
+                                    gps_lat_entry.set_text(&detected.gps_lat);
+                                    gps_lon_entry.set_text(&detected.gps_lon);
+                                    sms_phone_entry.set_text(&detected.sms_phone);
+                                    sms_message_entry.set_text(&detected.sms_message);
+
+                                    // Apply detected fields to AppState
+                                    *state.borrow().url_content.borrow_mut() =
+                                        detected.url_content.clone();
+                                    *state.borrow().wifi_ssid.borrow_mut() =
+                                        detected.wifi_ssid.clone();
+                                    *state.borrow().wifi_password.borrow_mut() =
+                                        detected.wifi_password.clone();
+                                    *state.borrow().wifi_encryption.borrow_mut() =
+                                        detected.wifi_encryption;
+                                    *state.borrow().vcard_name.borrow_mut() =
+                                        detected.vcard_name.clone();
+                                    *state.borrow().vcard_phone.borrow_mut() =
+                                        detected.vcard_phone.clone();
+                                    *state.borrow().vcard_email.borrow_mut() =
+                                        detected.vcard_email.clone();
+                                    *state.borrow().vcard_org.borrow_mut() =
+                                        detected.vcard_org.clone();
+                                    *state.borrow().vcard_url.borrow_mut() =
+                                        detected.vcard_url.clone();
+                                    *state.borrow().calendar_title.borrow_mut() =
+                                        detected.calendar_title.clone();
+                                    *state.borrow().calendar_location.borrow_mut() =
+                                        detected.calendar_location.clone();
+                                    *state.borrow().calendar_start.borrow_mut() =
+                                        detected.calendar_start.clone();
+                                    *state.borrow().calendar_end.borrow_mut() =
+                                        detected.calendar_end.clone();
+                                    *state.borrow().gps_lat.borrow_mut() = detected.gps_lat.clone();
+                                    *state.borrow().gps_lon.borrow_mut() = detected.gps_lon.clone();
+                                    *state.borrow().sms_phone.borrow_mut() =
+                                        detected.sms_phone.clone();
+                                    *state.borrow().sms_message.borrow_mut() =
+                                        detected.sms_message.clone();
+
+                                    schedule_preview(&state);
+                                    state.borrow().update_status_typed(
+                                        &state.borrow().i18n.borrow().t("status_qr_imported"),
+                                        ToastType::Success,
+                                    );
+                                }
+                                Err(e) => {
+                                    state.borrow().update_status_typed(&e, ToastType::Error);
+                                }
+                            }
+                        }
+                    }
+                }
+                dlg.close();
+            });
+            dialog.show();
+        });
+    }
+
     // Clear All — reset every content input field
     {
         let text_buffer = text_buffer.clone();
+        let url_entry = url_entry.clone();
         let wifi_ssid_entry = wifi_ssid_entry.clone();
         let wifi_password_entry = wifi_password_entry.clone();
         let vcard_name_entry = vcard_name_entry.clone();
@@ -2388,6 +2973,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         clear_all_btn.connect_clicked(move |_| {
             text_buffer.set_text("");
+            url_entry.set_text("");
             wifi_ssid_entry.set_text("");
             wifi_password_entry.set_text("");
             vcard_name_entry.set_text("");
@@ -2423,13 +3009,15 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         let content_stack = content_stack.clone();
         content_type_dd.connect_selected_notify(move |dd| {
+            save_undo_state(&state.borrow());
             let ct = match dd.selected() {
                 0 => ContentType::Text,
-                1 => ContentType::Wifi,
-                2 => ContentType::Vcard,
-                3 => ContentType::Calendar,
-                4 => ContentType::Gps,
-                5 => ContentType::Sms,
+                1 => ContentType::Url,
+                2 => ContentType::Wifi,
+                3 => ContentType::Vcard,
+                4 => ContentType::Calendar,
+                5 => ContentType::Gps,
+                6 => ContentType::Sms,
                 _ => ContentType::Text,
             };
             {
@@ -2438,6 +3026,7 @@ pub fn build_ui(app: &Application) {
             }
             content_stack.set_visible_child_name(match ct {
                 ContentType::Text => "text",
+                ContentType::Url => "url",
                 ContentType::Wifi => "wifi",
                 ContentType::Vcard => "vcard",
                 ContentType::Calendar => "calendar",
@@ -2452,6 +3041,17 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         text_buffer.connect_changed(move |_| {
+            save_content_undo_debounced(state.clone());
+            schedule_preview(&state);
+        });
+    }
+
+    // URL entry changed
+    {
+        let state = state.clone();
+        url_entry.connect_changed(move |e| {
+            state.borrow().url_content.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2461,6 +3061,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         wifi_ssid_entry.connect_changed(move |e| {
             state.borrow().wifi_ssid.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2470,6 +3071,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         wifi_password_entry.connect_changed(move |e| {
             state.borrow().wifi_password.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2478,6 +3080,7 @@ pub fn build_ui(app: &Application) {
     {
         let state = state.clone();
         wifi_enc_dd.connect_selected_notify(move |dd| {
+            save_undo_state(&state.borrow());
             let enc = match dd.selected() {
                 0 => WifiEncryption::Wpa,
                 1 => WifiEncryption::Wep,
@@ -2494,6 +3097,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         vcard_name_entry.connect_changed(move |e| {
             state.borrow().vcard_name.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2505,6 +3109,7 @@ pub fn build_ui(app: &Application) {
             let idx = dd.selected() as usize;
             let c_list = countries();
             if let Some(c) = c_list.get(idx) {
+                save_undo_state(&state.borrow());
                 state
                     .borrow()
                     .vcard_country_code
@@ -2519,6 +3124,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         vcard_phone_entry.connect_changed(move |e| {
             state.borrow().vcard_phone.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2530,6 +3136,7 @@ pub fn build_ui(app: &Application) {
         vcard_email_entry.connect_changed(move |e| {
             let text = e.text().to_string();
             state.borrow().vcard_email.replace(text.clone());
+            save_content_undo_debounced(state.clone());
             if !text.is_empty() && !text.contains('@') {
                 e.add_css_class("input-error");
                 trigger_shake(e);
@@ -2548,6 +3155,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         vcard_org_entry.connect_changed(move |e| {
             state.borrow().vcard_org.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2557,6 +3165,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         vcard_url_entry.connect_changed(move |e| {
             state.borrow().vcard_url.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2566,6 +3175,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         cal_title_entry.connect_changed(move |e| {
             state.borrow().calendar_title.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2577,6 +3187,7 @@ pub fn build_ui(app: &Application) {
         let cal_start_hour = cal_start_hour.clone();
         let cal_start_minute = cal_start_minute.clone();
         cal_start_calendar.connect_day_selected(move |cal| {
+            save_undo_state(&state.borrow());
             let s = format!(
                 "{:04}{:02}{:02}T{:02}{:02}00",
                 cal.date().year(),
@@ -2595,6 +3206,7 @@ pub fn build_ui(app: &Application) {
         let cal_start_calendar = cal_start_calendar.clone();
         let cal_start_minute = cal_start_minute.clone();
         cal_start_hour.connect_value_changed(move |h| {
+            save_undo_state(&state.borrow());
             let dt = cal_start_calendar.date();
             let s = format!(
                 "{:04}{:02}{:02}T{:02}{:02}00",
@@ -2613,6 +3225,7 @@ pub fn build_ui(app: &Application) {
         let cal_start_calendar = cal_start_calendar.clone();
         let cal_start_hour = cal_start_hour.clone();
         cal_start_minute.connect_value_changed(move |m| {
+            save_undo_state(&state.borrow());
             let dt = cal_start_calendar.date();
             let s = format!(
                 "{:04}{:02}{:02}T{:02}{:02}00",
@@ -2634,6 +3247,7 @@ pub fn build_ui(app: &Application) {
         let cal_end_hour = cal_end_hour.clone();
         let cal_end_minute = cal_end_minute.clone();
         cal_end_calendar.connect_day_selected(move |cal| {
+            save_undo_state(&state.borrow());
             let s = format!(
                 "{:04}{:02}{:02}T{:02}{:02}00",
                 cal.date().year(),
@@ -2652,6 +3266,7 @@ pub fn build_ui(app: &Application) {
         let cal_end_calendar = cal_end_calendar.clone();
         let cal_end_minute = cal_end_minute.clone();
         cal_end_hour.connect_value_changed(move |h| {
+            save_undo_state(&state.borrow());
             let dt = cal_end_calendar.date();
             let s = format!(
                 "{:04}{:02}{:02}T{:02}{:02}00",
@@ -2670,6 +3285,7 @@ pub fn build_ui(app: &Application) {
         let cal_end_calendar = cal_end_calendar.clone();
         let cal_end_hour = cal_end_hour.clone();
         cal_end_minute.connect_value_changed(move |m| {
+            save_undo_state(&state.borrow());
             let dt = cal_end_calendar.date();
             let s = format!(
                 "{:04}{:02}{:02}T{:02}{:02}00",
@@ -2692,6 +3308,7 @@ pub fn build_ui(app: &Application) {
                 .borrow()
                 .calendar_location
                 .replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -2702,6 +3319,7 @@ pub fn build_ui(app: &Application) {
         let hint = gps_lat_hint.clone();
         let mm = gps_marker.clone();
         gps_lat_entry.connect_changed(move |e| {
+            save_content_undo_debounced(state.clone());
             let text = e.text().to_string();
             state.borrow().gps_lat.replace(text.clone());
             if let Ok(val) = text.parse::<f64>() {
@@ -2743,6 +3361,7 @@ pub fn build_ui(app: &Application) {
         let hint = gps_lon_hint.clone();
         let mm = gps_marker.clone();
         gps_lon_entry.connect_changed(move |e| {
+            save_content_undo_debounced(state.clone());
             let text = e.text().to_string();
             state.borrow().gps_lon.replace(text.clone());
             if let Ok(val) = text.parse::<f64>() {
@@ -2998,6 +3617,7 @@ pub fn build_ui(app: &Application) {
             let idx = dd.selected() as usize;
             let c_list = countries();
             if let Some(c) = c_list.get(idx) {
+                save_undo_state(&state.borrow());
                 state
                     .borrow()
                     .sms_country_code
@@ -3014,6 +3634,7 @@ pub fn build_ui(app: &Application) {
         sms_phone_entry.connect_changed(move |e| {
             let text = e.text().to_string();
             state.borrow().sms_phone.replace(text.clone());
+            save_content_undo_debounced(state.clone());
             let digits: String = text.chars().filter(|c| c.is_ascii_digit()).collect();
             if !text.is_empty() && digits.len() < 3 {
                 e.add_css_class("input-error");
@@ -3033,6 +3654,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         sms_message_entry.connect_changed(move |e| {
             state.borrow().sms_message.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -3327,6 +3949,7 @@ pub fn build_ui(app: &Application) {
         custom_dot_entry.connect_changed(move |e| {
             let path = e.text().to_string();
             *state.borrow().custom_dot_path.borrow_mut() = path;
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -3725,6 +4348,7 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         top_text_entry.connect_changed(move |e| {
             state.borrow().outer_text_top.replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -3737,6 +4361,7 @@ pub fn build_ui(app: &Application) {
                 .borrow()
                 .outer_text_bottom
                 .replace(e.text().to_string());
+            save_content_undo_debounced(state.clone());
             schedule_preview(&state);
         });
     }
@@ -4626,6 +5251,7 @@ pub fn build_ui(app: &Application) {
         let content_type_dd = content_type_dd.clone();
         let content_stack = content_stack.clone();
 
+        let url_entry = url_entry.clone();
         let wifi_ssid_entry = wifi_ssid_entry.clone();
         let wifi_password_entry = wifi_password_entry.clone();
         let wifi_enc_dd = wifi_enc_dd.clone();
@@ -4674,20 +5300,24 @@ pub fn build_ui(app: &Application) {
                         let ct = *state.borrow().content_type.borrow();
                         content_type_dd.set_selected(match ct {
                             ContentType::Text => 0,
-                            ContentType::Wifi => 1,
-                            ContentType::Vcard => 2,
-                            ContentType::Calendar => 3,
-                            ContentType::Gps => 4,
-                            ContentType::Sms => 5,
+                            ContentType::Url => 1,
+                            ContentType::Wifi => 2,
+                            ContentType::Vcard => 3,
+                            ContentType::Calendar => 4,
+                            ContentType::Gps => 5,
+                            ContentType::Sms => 6,
                         });
                         content_stack.set_visible_child_name(match ct {
                             ContentType::Text => "text",
+                            ContentType::Url => "url",
                             ContentType::Wifi => "wifi",
                             ContentType::Vcard => "vcard",
                             ContentType::Calendar => "calendar",
                             ContentType::Gps => "gps",
                             ContentType::Sms => "sms",
                         });
+                        let uc = state.borrow().url_content.borrow().clone();
+                        url_entry.set_text(&uc);
                         let ws = state.borrow().wifi_ssid.borrow().clone();
                         let wp = state.borrow().wifi_password.borrow().clone();
                         wifi_ssid_entry.set_text(&ws);
@@ -5151,6 +5781,7 @@ pub fn build_ui(app: &Application) {
 
     // Auto-load session (style + content) on startup
     // Try new session format first, fall back to legacy style-only format
+    *state.borrow().is_restoring.borrow_mut() = true;
     let session_loaded = if let Some(path) = get_session_path() {
         if let Ok(data) = std::fs::read_to_string(&path) {
             if let Ok(tmpl) = serde_json::from_str::<TemplateSettings>(&data) {
@@ -5160,20 +5791,24 @@ pub fn build_ui(app: &Application) {
                 let content_stack = content_stack.clone();
                 content_type_dd.set_selected(match ct {
                     ContentType::Text => 0,
-                    ContentType::Wifi => 1,
-                    ContentType::Vcard => 2,
-                    ContentType::Calendar => 3,
-                    ContentType::Gps => 4,
-                    ContentType::Sms => 5,
+                    ContentType::Url => 1,
+                    ContentType::Wifi => 2,
+                    ContentType::Vcard => 3,
+                    ContentType::Calendar => 4,
+                    ContentType::Gps => 5,
+                    ContentType::Sms => 6,
                 });
                 content_stack.set_visible_child_name(match ct {
                     ContentType::Text => "text",
+                    ContentType::Url => "url",
                     ContentType::Wifi => "wifi",
                     ContentType::Vcard => "vcard",
                     ContentType::Calendar => "calendar",
                     ContentType::Gps => "gps",
                     ContentType::Sms => "sms",
                 });
+                let uc = state.borrow().url_content.borrow().clone();
+                url_entry.set_text(&uc);
                 let ws = state.borrow().wifi_ssid.borrow().clone();
                 let wp = state.borrow().wifi_password.borrow().clone();
                 wifi_ssid_entry.set_text(&ws);
@@ -5255,6 +5890,7 @@ pub fn build_ui(app: &Application) {
                 let shadow_enabled = *s.shadow_enabled.borrow();
                 let shadow_offset = *s.shadow_offset.borrow();
                 let logo_shape = *s.logo_shape.borrow();
+                let logo_size = *s.logo_size.borrow();
                 let logo_color = s.logo_color.borrow().0;
                 let logo_border_width = *s.logo_border_width.borrow();
                 let logo_border_color = s.logo_border_color.borrow().0;
@@ -5394,6 +6030,7 @@ pub fn build_ui(app: &Application) {
                     FrameStyle::Banner => 3,
                 });
                 frame_width_scale.set_value(frame_width as f64);
+                logo_size_scale.set_value(logo_size.clamp(0.1, 0.6));
                 set_dropdown_by_string(&font_dd, &outer_text_font);
                 font_size_spin.set_value(outer_text_font_size as f64);
                 update_preview(&state);
@@ -5409,6 +6046,7 @@ pub fn build_ui(app: &Application) {
     };
 
     // Fallback: load legacy style-only settings
+    // (also needs is_restoring=true to prevent double render)
     if !session_loaded {
         if let Some(path) = get_settings_path() {
             if let Ok(data) = std::fs::read_to_string(&path) {
@@ -5574,6 +6212,9 @@ pub fn build_ui(app: &Application) {
         }
     }
 
+    // All loading done — re-enable schedule_preview
+    *state.borrow().is_restoring.borrow_mut() = false;
+
     // Helper closure to sync all widgets to current state (shared by undo/redo)
     let sync_widgets = Rc::new({
         let state = state.clone();
@@ -5615,8 +6256,41 @@ pub fn build_ui(app: &Application) {
         let preset_dd = preset_dd.clone();
         let palette_dd = palette_dd.clone();
         let custom_dot_box = custom_dot_box.clone();
+        // Undo/redo button sensitivity
+        let undo_btn_sync = undo_btn.clone();
+        let redo_btn_sync = redo_btn.clone();
+        // Content widgets (for full undo/redo)
+        let content_type_dd_sync = content_type_dd.clone();
+        let content_stack_sync = content_stack.clone();
+        let text_buffer_sync = text_buffer.clone();
+        let url_entry_sync = url_entry.clone();
+        let wifi_ssid_entry_sync = wifi_ssid_entry.clone();
+        let wifi_password_entry_sync = wifi_password_entry.clone();
+        let wifi_enc_dd_sync = wifi_enc_dd.clone();
+        let vcard_name_entry_sync = vcard_name_entry.clone();
+        let vcard_phone_entry_sync = vcard_phone_entry.clone();
+        let vcard_email_entry_sync = vcard_email_entry.clone();
+        let vcard_org_entry_sync = vcard_org_entry.clone();
+        let vcard_url_entry_sync = vcard_url_entry.clone();
+        let vcard_country_dd_sync = vcard_country_dd.clone();
+        let cal_title_entry_sync = cal_title_entry.clone();
+        let cal_location_entry_sync = cal_location_entry.clone();
+        let cal_start_calendar_sync = cal_start_calendar.clone();
+        let cal_end_calendar_sync = cal_end_calendar.clone();
+        let cal_start_hour_sync = cal_start_hour.clone();
+        let cal_start_minute_sync = cal_start_minute.clone();
+        let gps_lat_entry_sync = gps_lat_entry.clone();
+        let gps_lon_entry_sync = gps_lon_entry.clone();
+        let sms_phone_entry_sync = sms_phone_entry.clone();
+        let sms_message_entry_sync = sms_message_entry.clone();
+        let sms_country_dd_sync = sms_country_dd.clone();
+        // New style widgets previously missing from sync
+        let top_text_entry_sync = top_text_entry.clone();
+        let bottom_text_entry_sync = bottom_text_entry.clone();
+        let text_color_btn_sync = text_color_btn.clone();
+        let custom_dot_entry_sync = custom_dot_entry.clone();
         move || {
-            // Read all style values from state (single borrow, then drop)
+            // Read all style + content values from state (single borrow, then drop)
             let (
                 ds,
                 cs,
@@ -5652,6 +6326,33 @@ pub fn build_ui(app: &Application) {
                 f_or,
                 o_text_font,
                 o_text_font_size,
+                // New style fields
+                o_text_top,
+                o_text_bottom,
+                o_text_color,
+                c_dot_path,
+                // Content fields
+                ct,
+                url_content,
+                wifi_ssid,
+                wifi_password,
+                wifi_enc,
+                vcard_name,
+                vcard_phone,
+                vcard_country_code,
+                vcard_email,
+                vcard_org,
+                vcard_url,
+                cal_title,
+                cal_start,
+                cal_end,
+                cal_location,
+                gps_lat,
+                gps_lon,
+                sms_phone,
+                sms_country_code,
+                sms_message,
+                text_content,
             ) = {
                 let s = state.borrow();
                 let x = (
@@ -5689,6 +6390,39 @@ pub fn build_ui(app: &Application) {
                     *s.frame_outer_radius.borrow(),
                     s.outer_text_font.borrow().clone(),
                     *s.outer_text_font_size.borrow(),
+                    // New style fields
+                    s.outer_text_top.borrow().clone(),
+                    s.outer_text_bottom.borrow().clone(),
+                    *s.outer_text_color.borrow(),
+                    s.custom_dot_path.borrow().clone(),
+                    // Content fields
+                    *s.content_type.borrow(),
+                    s.url_content.borrow().clone(),
+                    s.wifi_ssid.borrow().clone(),
+                    s.wifi_password.borrow().clone(),
+                    *s.wifi_encryption.borrow(),
+                    s.vcard_name.borrow().clone(),
+                    s.vcard_phone.borrow().clone(),
+                    s.vcard_country_code.borrow().clone(),
+                    s.vcard_email.borrow().clone(),
+                    s.vcard_org.borrow().clone(),
+                    s.vcard_url.borrow().clone(),
+                    s.calendar_title.borrow().clone(),
+                    s.calendar_start.borrow().clone(),
+                    s.calendar_end.borrow().clone(),
+                    s.calendar_location.borrow().clone(),
+                    s.gps_lat.borrow().clone(),
+                    s.gps_lon.borrow().clone(),
+                    s.sms_phone.borrow().clone(),
+                    s.sms_country_code.borrow().clone(),
+                    s.sms_message.borrow().clone(),
+                    s.text_buffer
+                        .text(
+                            &s.text_buffer.start_iter(),
+                            &s.text_buffer.end_iter(),
+                            false,
+                        )
+                        .to_string(),
                 );
                 x
             };
@@ -5783,6 +6517,69 @@ pub fn build_ui(app: &Application) {
             set_dropdown_by_string(&font_dd, &o_text_font);
             font_size_spin.set_value(o_text_font_size as f64);
 
+            // --- New style widgets previously missing from sync ---
+            top_text_entry_sync.set_text(&o_text_top);
+            bottom_text_entry_sync.set_text(&o_text_bottom);
+            text_color_btn_sync.set_rgba(&rgba_to_gdk(&o_text_color));
+            custom_dot_entry_sync.set_text(&c_dot_path);
+
+            // --- Content widgets ---
+            content_type_dd_sync.set_selected(match ct {
+                ContentType::Text => 0,
+                ContentType::Url => 1,
+                ContentType::Wifi => 2,
+                ContentType::Vcard => 3,
+                ContentType::Calendar => 4,
+                ContentType::Gps => 5,
+                ContentType::Sms => 6,
+            });
+            content_stack_sync.set_visible_child_name(match ct {
+                ContentType::Text => "text",
+                ContentType::Url => "url",
+                ContentType::Wifi => "wifi",
+                ContentType::Vcard => "vcard",
+                ContentType::Calendar => "calendar",
+                ContentType::Gps => "gps",
+                ContentType::Sms => "sms",
+            });
+            text_buffer_sync.set_text(&text_content);
+            url_entry_sync.set_text(&url_content);
+            wifi_ssid_entry_sync.set_text(&wifi_ssid);
+            wifi_password_entry_sync.set_text(&wifi_password);
+            wifi_enc_dd_sync.set_selected(match wifi_enc {
+                WifiEncryption::Wpa => 0,
+                WifiEncryption::Wep => 1,
+                WifiEncryption::None => 2,
+            });
+            vcard_name_entry_sync.set_text(&vcard_name);
+            vcard_phone_entry_sync.set_text(&vcard_phone);
+            vcard_email_entry_sync.set_text(&vcard_email);
+            vcard_org_entry_sync.set_text(&vcard_org);
+            vcard_url_entry_sync.set_text(&vcard_url);
+            vcard_country_dd_sync.set_selected(country_index_by_code(&vcard_country_code));
+            cal_title_entry_sync.set_text(&cal_title);
+            cal_location_entry_sync.set_text(&cal_location);
+            // Calendar dates are stored as strings (YYYY-MM-DD or ISO 8601)
+            if let Ok(d) = glib::DateTime::from_iso8601(&cal_start, None) {
+                cal_start_calendar_sync.select_day(&d);
+            }
+            if let Ok(d) = glib::DateTime::from_iso8601(&cal_end, None) {
+                cal_end_calendar_sync.select_day(&d);
+            }
+            // Calendar hours/minutes are embedded in the ISO string; parse if possible
+            if let Ok(d) = glib::DateTime::from_iso8601(&cal_start, None) {
+                cal_start_hour_sync.set_value(d.hour() as f64);
+                cal_start_minute_sync.set_value(d.minute() as f64);
+            }
+            gps_lat_entry_sync.set_text(&gps_lat);
+            gps_lon_entry_sync.set_text(&gps_lon);
+            sms_phone_entry_sync.set_text(&sms_phone);
+            sms_message_entry_sync.set_text(&sms_message);
+            sms_country_dd_sync.set_selected(country_index_by_code(&sms_country_code));
+
+            // --- Undo/redo button sensitivity ---
+            update_undo_redo_sensitivity(&state.borrow(), &undo_btn_sync, &redo_btn_sync);
+
             *state.borrow().is_restoring.borrow_mut() = false;
         }
     });
@@ -5792,10 +6589,17 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         let sync_widgets = sync_widgets.clone();
         undo_btn.connect_clicked(move |_| {
-            if let Some(prev) = state.borrow().undo_stack.borrow_mut().pop() {
-                let current = current_style_settings(&state.borrow());
+            // Pop in a separate block so RefCell borrows are dropped
+            // before sync_widgets() tries to borrow them again.
+            let prev = {
+                let s = state.borrow();
+                let mut stack = s.undo_stack.borrow_mut();
+                stack.pop()
+            };
+            if let Some(prev) = prev {
+                let current = current_template_settings(&state.borrow());
                 state.borrow().redo_stack.borrow_mut().push(current);
-                apply_style_to_state(&state.borrow(), &prev);
+                apply_template_to_state(&state.borrow(), &prev);
                 sync_widgets();
                 update_preview(&state);
                 // Animation 3: Undo pulse
@@ -5814,10 +6618,17 @@ pub fn build_ui(app: &Application) {
         let state = state.clone();
         let sync_widgets = sync_widgets.clone();
         redo_btn.connect_clicked(move |_| {
-            if let Some(next) = state.borrow().redo_stack.borrow_mut().pop() {
-                let current = current_style_settings(&state.borrow());
+            // Pop in a separate block so RefCell borrows are dropped
+            // before sync_widgets() tries to borrow them again.
+            let next = {
+                let s = state.borrow();
+                let mut stack = s.redo_stack.borrow_mut();
+                stack.pop()
+            };
+            if let Some(next) = next {
+                let current = current_template_settings(&state.borrow());
                 state.borrow().undo_stack.borrow_mut().push(current);
-                apply_style_to_state(&state.borrow(), &next);
+                apply_template_to_state(&state.borrow(), &next);
                 sync_widgets();
                 update_preview(&state);
                 // Animation 3: Redo pulse
@@ -6238,325 +7049,189 @@ pub fn build_ui(app: &Application) {
     }
 
     // ============================================================
-    // DRAG & DROP on preview (logo import)
+    // DRAG & DROP — window-wide, with split drop-zone overlay
     // ============================================================
+    // Uses gtk4::DropTargetAsync (not DropTarget) so that drag events
+    // are received even over child widgets (Entry/TextView have their
+    // own DropTargets for STRING that would steal the drag).
+    // Content is read via gdk::Drop::read_value_async().
     {
-        let target = gtk4::DropTarget::new(glib::Type::STRING, gdk::DragAction::COPY);
-        target.set_types(&[glib::Type::STRING, gtk4::gio::File::static_type()]);
-        preview_picture.add_controller(target.clone());
+        let formats = gdk::ContentFormats::new(&["text/uri-list"]);
+        let dnd_target = gtk4::DropTargetAsync::new(Some(formats), gdk::DragAction::COPY);
+        main_box.add_controller(dnd_target.clone());
 
-        // DnD zone highlight: glow when dragging over preview
-        {
-            let pic = preview_picture.clone();
-            target.connect_enter(move |_, _, _| {
-                pic.add_css_class("drop-active");
-                gdk::DragAction::COPY
-            });
-            let pic = preview_picture.clone();
-            target.connect_leave(move |_| {
-                pic.remove_css_class("drop-active");
-            });
-        }
+        // ── drag_enter: show drop-zone overlay, dim normal content ──
+        let dzv_enter = drop_zone_view.clone();
+        let paned_enter = paned.clone();
+        dnd_target.connect_drag_enter(move |_tgt, _drop, _x, _y| {
+            dzv_enter.set_visible(true);
+            paned_enter.add_css_class("dnd-dim");
+            gdk::DragAction::COPY
+        });
 
+        // ── drag_motion: highlight zone under cursor ──
+        let dzl = drop_zone_left.clone();
+        let dzr = drop_zone_right.clone();
+        dnd_target.connect_drag_motion(move |_tgt, _drop, x, _y| {
+            let w = _tgt.widget().map_or(1.0_f64, |w| w.width() as f64);
+            if x < w / 2.0 {
+                dzl.add_css_class("drop-zone-hover");
+                dzr.remove_css_class("drop-zone-hover");
+            } else {
+                dzr.add_css_class("drop-zone-hover");
+                dzl.remove_css_class("drop-zone-hover");
+            }
+            gdk::DragAction::COPY
+        });
+
+        // ── drag_leave: hide overlay, restore normal content ──
+        let dzv_leave = drop_zone_view.clone();
+        let paned_leave = paned.clone();
+        let dzl_leave = drop_zone_left.clone();
+        let dzr_leave = drop_zone_right.clone();
+        dnd_target.connect_drag_leave(move |_tgt, _drop| {
+            dzv_leave.set_visible(false);
+            paned_leave.remove_css_class("dnd-dim");
+            dzl_leave.remove_css_class("drop-zone-hover");
+            dzr_leave.remove_css_class("drop-zone-hover");
+        });
+
+        // ── accept: only accept drops that contain file URIs ──
+        dnd_target
+            .connect_accept(move |_tgt, drop| drop.formats().contain_mime_type("text/uri-list"));
+
+        // ── drop: read URI list async, then apply logo or background ──
         let state = state.clone();
         let ec_level_dd = ec_level_dd.clone();
-        target.connect_drop(move |_tgt, val, _x, _y| {
-            if let Ok(file) = val.get::<gtk4::gio::File>() {
-                if let Some(path) = file.path() {
-                    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                    let is_image =
-                        matches!(ext, "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp");
-                    if is_image && path.exists() {
-                        save_undo_state(&state.borrow());
-                        state.borrow().logo_path.replace(Some(path));
-                        if *state.borrow().ec_level.borrow() != ErrorCorrectionLevel::High {
-                            *state.borrow().ec_level.borrow_mut() = ErrorCorrectionLevel::High;
-                            ec_level_dd.set_selected(3);
+        let dzv_drop = drop_zone_view.clone();
+        let paned_drop = paned.clone();
+        let dzl_drop = drop_zone_left.clone();
+        let dzr_drop = drop_zone_right.clone();
+        let main_box_drop = main_box.clone();
+        dnd_target.connect_drop(move |_tgt, drop, x, _y| {
+            // Hide overlay immediately
+            dzv_drop.set_visible(false);
+            paned_drop.remove_css_class("dnd-dim");
+            dzl_drop.remove_css_class("drop-zone-hover");
+            dzr_drop.remove_css_class("drop-zone-hover");
+
+            // Determine zone (logo vs background) from x coordinate
+            let is_logo =
+                { main_box_drop.width() as f64 > 0.0 && x < main_box_drop.width() as f64 / 2.0 };
+
+            // Read the dropped content as STRING (text/uri-list)
+            let state = state.clone();
+            let ec_level_dd = ec_level_dd.clone();
+            let drop_clone = drop.clone();
+            drop.read_value_async(
+                glib::Type::STRING,
+                glib::Priority::DEFAULT,
+                None::<&gtk4::gio::Cancellable>,
+                move |result| {
+                    // Finish the drop to satisfy GDK state machine
+                    // (prevents gdk_drop_finalize runtime warning)
+                    drop_clone.finish(gdk::DragAction::COPY);
+                    if let Ok(value) = result {
+                        if let Ok(uri_list) = value.get::<String>() {
+                            // Parse first file:// URI from the list
+                            let path = uri_list
+                                .lines()
+                                .filter(|l| !l.is_empty())
+                                .filter_map(|l| {
+                                    let l = l.trim();
+                                    if l.starts_with("file://") {
+                                        // Decode file:// URI to path
+                                        let without_scheme = &l[7..]; // strip "file://"
+                                        // Handle host: skip if localhost or empty
+                                        let path_part = if without_scheme.starts_with('/') {
+                                            without_scheme // no host
+                                        } else if let Some(slash) = without_scheme.find('/') {
+                                            &without_scheme[slash..] // skip host
+                                        } else {
+                                            return None;
+                                        };
+                                        Some(PathBuf::from(path_part))
+                                    } else if l.starts_with('/') {
+                                        Some(PathBuf::from(l))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .next();
+
+                            if let Some(path) = path {
+                                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                                let is_image = matches!(
+                                    ext,
+                                    "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp"
+                                );
+                                if is_image && path.exists() {
+                                    if is_logo {
+                                        // Insert as Logo
+                                        save_undo_state(&state.borrow());
+                                        state.borrow().logo_path.replace(Some(path));
+                                        if *state.borrow().ec_level.borrow()
+                                            != ErrorCorrectionLevel::High
+                                        {
+                                            *state.borrow().ec_level.borrow_mut() =
+                                                ErrorCorrectionLevel::High;
+                                            ec_level_dd.set_selected(3);
+                                        }
+                                        schedule_preview(&state);
+                                        let msg =
+                                            state.borrow().i18n.borrow().t("dnd_logo_imported");
+                                        state
+                                            .borrow()
+                                            .update_status_typed(&msg, ToastType::Success);
+                                        // Animation 8: Logo drop bounce
+                                        {
+                                            let pic = state.borrow().preview_picture.clone();
+                                            pic.add_css_class("preview-bounce");
+                                            glib::timeout_add_local(
+                                                Duration::from_millis(450),
+                                                move || {
+                                                    pic.remove_css_class("preview-bounce");
+                                                    glib::ControlFlow::Break
+                                                },
+                                            );
+                                        }
+                                    } else {
+                                        // Insert as Background
+                                        save_undo_state(&state.borrow());
+                                        state.borrow().bg_image_path.replace(Some(path));
+                                        schedule_preview(&state);
+                                        let msg = state.borrow().i18n.borrow().t("dnd_bg_imported");
+                                        state
+                                            .borrow()
+                                            .update_status_typed(&msg, ToastType::Success);
+                                    }
+                                }
+                            }
                         }
-                        schedule_preview(&state);
-                        let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status_typed(&msg, ToastType::Success);
-                        // Animation 8: Logo drop bounce
-                        {
-                            let pic = state.borrow().preview_picture.clone();
-                            pic.add_css_class("preview-bounce");
-                            glib::timeout_add_local(Duration::from_millis(450), move || {
-                                pic.remove_css_class("preview-bounce");
-                                glib::ControlFlow::Break
-                            });
-                        }
-                        return true;
                     }
-                }
-            }
-            if let Ok(uri) = val.get::<String>() {
-                let path_str = uri.trim();
-                let path = if path_str.starts_with("file://") {
-                    PathBuf::from(path_str.trim_start_matches("file://"))
-                } else if path_str.starts_with('/') {
-                    PathBuf::from(path_str)
-                } else {
-                    return false;
-                };
-                if path.exists() {
-                    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                    let is_image =
-                        matches!(ext, "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp");
-                    if is_image {
-                        save_undo_state(&state.borrow());
-                        state.borrow().logo_path.replace(Some(path));
-                        if *state.borrow().ec_level.borrow() != ErrorCorrectionLevel::High {
-                            *state.borrow().ec_level.borrow_mut() = ErrorCorrectionLevel::High;
-                            ec_level_dd.set_selected(3);
-                        }
-                        schedule_preview(&state);
-                        let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status_typed(&msg, ToastType::Success);
-                        // Animation 8: Logo drop bounce
-                        {
-                            let pic = state.borrow().preview_picture.clone();
-                            pic.add_css_class("preview-bounce");
-                            glib::timeout_add_local(Duration::from_millis(450), move || {
-                                pic.remove_css_class("preview-bounce");
-                                glib::ControlFlow::Break
-                            });
-                        }
-                        return true;
-                    }
-                }
-            }
-            false
+                },
+            );
+
+            true // we accepted the drop
         });
     }
 
     // ============================================================
-    // DRAG & DROP on logo area (direct logo import)
+    // KEYBOARD SHORTCUTS OVERLAY — press Ctrl+? to show
     // ============================================================
+    // The help-overlay.ui resource is compiled into the binary via
+    // build.rs (glib_build_tools::compile_resources) with the alias
+    // "gtk/help-overlay.ui". GTK automatically creates the
+    // win.show-help-overlay action and binds Ctrl+? to it.
     {
-        let logo_target = gtk4::DropTarget::new(glib::Type::STRING, gdk::DragAction::COPY);
-        logo_target.set_types(&[glib::Type::STRING, gtk4::gio::File::static_type()]);
-        style_split_pane.add_controller(logo_target.clone());
-
-        // DnD zone highlight: glow when dragging over style area
-        {
-            let pane = style_split_pane.clone();
-            logo_target.connect_enter(move |_, _, _| {
-                pane.add_css_class("drop-active");
-                gdk::DragAction::COPY
-            });
-            let pane = style_split_pane.clone();
-            logo_target.connect_leave(move |_| {
-                pane.remove_css_class("drop-active");
-            });
-        }
-
-        let state = state.clone();
-        let ec_level_dd = ec_level_dd.clone();
-        logo_target.connect_drop(move |_tgt, val, _x, _y| {
-            if let Ok(file) = val.get::<gtk4::gio::File>() {
-                if let Some(path) = file.path() {
-                    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                    let is_image =
-                        matches!(ext, "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp");
-                    if is_image && path.exists() {
-                        save_undo_state(&state.borrow());
-                        state.borrow().logo_path.replace(Some(path));
-                        if *state.borrow().ec_level.borrow() != ErrorCorrectionLevel::High {
-                            *state.borrow().ec_level.borrow_mut() = ErrorCorrectionLevel::High;
-                            ec_level_dd.set_selected(3);
-                        }
-                        schedule_preview(&state);
-                        let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status_typed(&msg, ToastType::Success);
-                        // Animation 8: Logo drop bounce
-                        {
-                            let pic = state.borrow().preview_picture.clone();
-                            pic.add_css_class("preview-bounce");
-                            glib::timeout_add_local(Duration::from_millis(450), move || {
-                                pic.remove_css_class("preview-bounce");
-                                glib::ControlFlow::Break
-                            });
-                        }
-                        return true;
-                    }
-                }
-            }
-            if let Ok(uri) = val.get::<String>() {
-                let path_str = uri.trim();
-                let path = if path_str.starts_with("file://") {
-                    PathBuf::from(path_str.trim_start_matches("file://"))
-                } else if path_str.starts_with('/') {
-                    PathBuf::from(path_str)
-                } else {
-                    return false;
-                };
-                if path.exists() {
-                    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                    let is_image =
-                        matches!(ext, "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp");
-                    if is_image {
-                        save_undo_state(&state.borrow());
-                        state.borrow().logo_path.replace(Some(path));
-                        if *state.borrow().ec_level.borrow() != ErrorCorrectionLevel::High {
-                            *state.borrow().ec_level.borrow_mut() = ErrorCorrectionLevel::High;
-                            ec_level_dd.set_selected(3);
-                        }
-                        schedule_preview(&state);
-                        let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
-                        state.borrow().update_status_typed(&msg, ToastType::Success);
-                        // Animation 8: Logo drop bounce
-                        {
-                            let pic = state.borrow().preview_picture.clone();
-                            pic.add_css_class("preview-bounce");
-                            glib::timeout_add_local(Duration::from_millis(450), move || {
-                                pic.remove_css_class("preview-bounce");
-                                glib::ControlFlow::Break
-                            });
-                        }
-                        return true;
-                    }
-                }
-            }
-            false
-        });
+        let help_overlay: gtk4::ShortcutsWindow =
+            gtk4::Builder::from_resource("/io/github/SlobCoder/qr_studio/gtk/help-overlay.ui")
+                .object("help_overlay")
+                .expect("Failed to load help-overlay.ui");
+        help_overlay.set_transient_for(Some(&window));
+        help_overlay.set_modal(true);
+        window.set_help_overlay(Some(&help_overlay));
     }
-
-    // ============================================================
-    // KEYBOARD SHORTCUTS
-    // ============================================================
-    let ctrl_z = gtk4::Shortcut::new(
-        Some(gtk4::ShortcutTrigger::parse_string("<Control>z").unwrap()),
-        Some(gtk4::CallbackAction::new({
-            let state = state.clone();
-            let sync_widgets = sync_widgets.clone();
-            move |_, _| {
-                let settings = {
-                    let s = state.borrow();
-                    let x = s.undo_stack.borrow_mut().pop();
-                    x
-                };
-                if let Some(prev) = settings {
-                    let current = current_style_settings(&state.borrow());
-                    state.borrow().redo_stack.borrow_mut().push(current);
-                    apply_style_to_state(&state.borrow(), &prev);
-                    sync_widgets();
-                    update_preview(&state);
-                    // Animation 3: Undo pulse
-                    state.borrow().preview_picture.add_css_class("undo-pulse");
-                    let pic = state.borrow().preview_picture.clone();
-                    glib::timeout_add_local(Duration::from_millis(500), move || {
-                        pic.remove_css_class("undo-pulse");
-                        glib::ControlFlow::Break
-                    });
-                }
-                glib::Propagation::Proceed
-            }
-        })),
-    );
-    let ctrl_y = gtk4::Shortcut::new(
-        Some(gtk4::ShortcutTrigger::parse_string("<Control>y").unwrap()),
-        Some(gtk4::CallbackAction::new({
-            let state = state.clone();
-            let sync_widgets = sync_widgets.clone();
-            move |_, _| {
-                let settings = {
-                    let s = state.borrow();
-                    let x = s.redo_stack.borrow_mut().pop();
-                    x
-                };
-                if let Some(next) = settings {
-                    let current = current_style_settings(&state.borrow());
-                    state.borrow().undo_stack.borrow_mut().push(current);
-                    apply_style_to_state(&state.borrow(), &next);
-                    sync_widgets();
-                    update_preview(&state);
-                    // Animation 3: Redo pulse
-                    state.borrow().preview_picture.add_css_class("undo-pulse");
-                    let pic = state.borrow().preview_picture.clone();
-                    glib::timeout_add_local(Duration::from_millis(500), move || {
-                        pic.remove_css_class("undo-pulse");
-                        glib::ControlFlow::Break
-                    });
-                }
-                glib::Propagation::Proceed
-            }
-        })),
-    );
-    let ctrl_c = gtk4::Shortcut::new(
-        Some(gtk4::ShortcutTrigger::parse_string("<Control>c").unwrap()),
-        Some(gtk4::CallbackAction::new({
-            let state = state.clone();
-            move |_, _| {
-                let s = state.borrow();
-                if let Some(img) = render_qr_from_state(&s) {
-                    let w = img.width();
-                    let h = img.height();
-                    let stride = (w as usize) * 4;
-                    let bytes = glib::Bytes::from(&img.into_raw());
-                    let texture = gdk::MemoryTexture::new(
-                        w as i32,
-                        h as i32,
-                        gdk::MemoryFormat::R8g8b8a8,
-                        &bytes,
-                        stride,
-                    );
-                    if let Some(display) = gdk::Display::default() {
-                        display.clipboard().set_texture(&texture);
-                    }
-                }
-                glib::Propagation::Proceed
-            }
-        })),
-    );
-    let ctrl_s = gtk4::Shortcut::new(
-        Some(gtk4::ShortcutTrigger::parse_string("<Control>s").unwrap()),
-        Some(gtk4::CallbackAction::new({
-            let state = state.clone();
-            move |_, _| {
-                let s = state.borrow();
-                if let Some(img) = render_qr_from_state(&s) {
-                    let _ = img.save("qrcode.png");
-                    s.update_status_typed(
-                        &s.i18n
-                            .borrow()
-                            .t("status_saved_as")
-                            .replace("{}", "qrcode.png"),
-                        ToastType::Success,
-                    );
-                }
-                glib::Propagation::Proceed
-            }
-        })),
-    );
-    let ctrl_shift_s = gtk4::Shortcut::new(
-        Some(gtk4::ShortcutTrigger::parse_string("<Control><Shift>s").unwrap()),
-        Some(gtk4::CallbackAction::new({
-            let state = state.clone();
-            move |_, _| {
-                let s = state.borrow();
-                if let Some(svg) = render_svg_from_state(&s) {
-                    let _ = std::fs::write("qrcode.svg", svg);
-                    s.update_status_typed(
-                        &s.i18n
-                            .borrow()
-                            .t("status_saved_as")
-                            .replace("{}", "qrcode.svg"),
-                        ToastType::Success,
-                    );
-                }
-                glib::Propagation::Proceed
-            }
-        })),
-    );
-
-    let shortcut_controller = gtk4::ShortcutController::new();
-    shortcut_controller.add_shortcut(ctrl_z);
-    shortcut_controller.add_shortcut(ctrl_y);
-    shortcut_controller.add_shortcut(ctrl_c);
-    shortcut_controller.add_shortcut(ctrl_s);
-    shortcut_controller.add_shortcut(ctrl_shift_s);
-    shortcut_controller.set_scope(gtk4::ShortcutScope::Global);
-    window.add_controller(shortcut_controller);
 
     // ============================================================
     // RESTORE CONTENT from snapshot (language switch preserves values)
@@ -6565,6 +7240,7 @@ pub fn build_ui(app: &Application) {
         if let Some(s) = snap.borrow_mut().take() {
             text_buffer.set_text(&s.text);
             content_type_dd.set_selected(s.content_type_idx);
+            url_entry.set_text(&s.url_content);
             wifi_ssid_entry.set_text(&s.wifi_ssid);
             wifi_password_entry.set_text(&s.wifi_password);
             wifi_enc_dd.set_selected(s.wifi_enc_idx);
@@ -6607,10 +7283,15 @@ pub fn build_ui(app: &Application) {
         sc.add_shortcut(Shortcut::new(
             Some(ShortcutTrigger::parse_string("<Control>z").unwrap()),
             Some(CallbackAction::new(move |_, _| {
-                if let Some(prev) = state_undo.borrow().undo_stack.borrow_mut().pop() {
-                    let current = current_style_settings(&state_undo.borrow());
+                let prev = {
+                    let s = state_undo.borrow();
+                    let mut stack = s.undo_stack.borrow_mut();
+                    stack.pop()
+                };
+                if let Some(prev) = prev {
+                    let current = current_template_settings(&state_undo.borrow());
                     state_undo.borrow().redo_stack.borrow_mut().push(current);
-                    apply_style_to_state(&state_undo.borrow(), &prev);
+                    apply_template_to_state(&state_undo.borrow(), &prev);
                     sync_undo();
                     update_preview(&state_undo);
                 }
@@ -6624,10 +7305,15 @@ pub fn build_ui(app: &Application) {
         sc.add_shortcut(Shortcut::new(
             Some(ShortcutTrigger::parse_string("<Control><Shift>z").unwrap()),
             Some(CallbackAction::new(move |_, _| {
-                if let Some(next) = state_redo.borrow().redo_stack.borrow_mut().pop() {
-                    let current = current_style_settings(&state_redo.borrow());
+                let next = {
+                    let s = state_redo.borrow();
+                    let mut stack = s.redo_stack.borrow_mut();
+                    stack.pop()
+                };
+                if let Some(next) = next {
+                    let current = current_template_settings(&state_redo.borrow());
                     state_redo.borrow().undo_stack.borrow_mut().push(current);
-                    apply_style_to_state(&state_redo.borrow(), &next);
+                    apply_template_to_state(&state_redo.borrow(), &next);
                     sync_redo();
                     update_preview(&state_redo);
                 }
@@ -6639,10 +7325,15 @@ pub fn build_ui(app: &Application) {
         sc.add_shortcut(Shortcut::new(
             Some(ShortcutTrigger::parse_string("<Control>y").unwrap()),
             Some(CallbackAction::new(move |_, _| {
-                if let Some(next) = state_redo_y.borrow().redo_stack.borrow_mut().pop() {
-                    let current = current_style_settings(&state_redo_y.borrow());
+                let next = {
+                    let s = state_redo_y.borrow();
+                    let mut stack = s.redo_stack.borrow_mut();
+                    stack.pop()
+                };
+                if let Some(next) = next {
+                    let current = current_template_settings(&state_redo_y.borrow());
                     state_redo_y.borrow().undo_stack.borrow_mut().push(current);
-                    apply_style_to_state(&state_redo_y.borrow(), &next);
+                    apply_template_to_state(&state_redo_y.borrow(), &next);
                     sync_redo_y();
                     update_preview(&state_redo_y);
                 }

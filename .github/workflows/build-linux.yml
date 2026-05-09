@@ -74,12 +74,18 @@ jobs:
           strip --strip-unneeded "${APPDIR}/usr/bin/qr_studio"
 
           # ── Desktop file (fix Exec for AppImage) ──
-          cp data/com.example.qr_studio.desktop "${APPDIR}/com.example.qr_studio.desktop"
-          sed -i 's|^Exec=.*|Exec=qr_studio|' "${APPDIR}/com.example.qr_studio.desktop"
+          cp data/io.github.SlobCoder.qr_studio.desktop "${APPDIR}/io.github.SlobCoder.qr_studio.desktop"
+          sed -i 's|^Exec=.*|Exec=qr_studio|' "${APPDIR}/io.github.SlobCoder.qr_studio.desktop"
+
+          # ── Country flag SVGs (for phone/vCard dropdowns) ──
+          if [ -d "flags" ]; then
+            cp -r flags "${APPDIR}/usr/bin/flags"
+            echo "Copied $(ls "${APPDIR}/usr/bin/flags/"*.svg 2>/dev/null | wc -l) flag SVGs"
+          fi
 
           # ── Icon ──
-          cp data/com.example.qr_studio.svg "${APPDIR}/com.example.qr_studio.svg"
-          cp data/com.example.qr_studio.svg "${APPDIR}/usr/share/icons/hicolor/scalable/apps/"
+          cp data/io.github.SlobCoder.qr_studio.svg "${APPDIR}/io.github.SlobCoder.qr_studio.svg"
+          cp data/io.github.SlobCoder.qr_studio.svg "${APPDIR}/usr/share/icons/hicolor/scalable/apps/"
 
           # ── Shared libraries (resolved via ldd) ──
           DEPS_FILE=$(mktemp /tmp/qr_studio_deps.XXXXXX)
@@ -142,6 +148,12 @@ jobs:
                    /usr/share/glib-2.0/schemas/org.gtk.Settings.*.gschema.xml; do
               [ -f "$f" ] && cp "$f" "$SCHEMA_DST/"
           done
+
+          # App's own GSettings schema
+          if [ -f "data/io.github.SlobCoder.qr_studio.gschema.xml" ]; then
+            cp "data/io.github.SlobCoder.qr_studio.gschema.xml" "$SCHEMA_DST/"
+          fi
+
           glib-compile-schemas "$SCHEMA_DST" 2>/dev/null || true
 
           # ── gdk-pixbuf loaders ──

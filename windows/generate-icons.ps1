@@ -3,7 +3,7 @@
 # Requires ImageMagick (magick command) installed.
 
 param(
-    [string]$SvgPath = "data\com.example.qr_studio.svg",
+    [string]$SvgPath = "data\io.github.SlobCoder.qr_studio.svg",
     [string]$OutputDir = "msix-layout\Assets"
 )
 

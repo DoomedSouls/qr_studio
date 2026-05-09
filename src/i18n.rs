@@ -17,7 +17,7 @@ pub enum Lang {
 pub struct I18n {
     #[allow(dead_code)]
     lang: Lang,
-    strings: HashMap<&'static str, &'static str>,
+    pub(crate) strings: HashMap<&'static str, &'static str>,
 }
 
 impl I18n {
@@ -118,7 +118,24 @@ impl I18n {
         m.insert("color_bg", "Hintergrundfarbe");
         m.insert("color_corner", "Eckfarbe");
         m.insert("color_gradient", "Farbverlauf-Ziel");
+        m.insert("tooltip_pick_color", "Farbe vom Bildschirm aufnehmen");
+        m.insert("status_color_picked", "Farb-Pipette: Farbe übernommen");
+        m.insert(
+            "status_color_pick_error",
+            "Farb-Pipette nicht verfügbar (Portal fehlt)",
+        );
         m.insert("dnd_logo_imported", "Logo per Drag & Drop importiert");
+        m.insert(
+            "dnd_bg_imported",
+            "Hintergrundbild per Drag & Drop importiert",
+        );
+        m.insert("dnd_image_title", "Bild einfügen");
+        m.insert(
+            "dnd_image_body",
+            "Soll das Bild als Logo oder als Hintergrundbild eingefügt werden?",
+        );
+        m.insert("dnd_as_logo", "Als Logo einfügen");
+        m.insert("dnd_as_background", "Als Hintergrundbild einfügen");
         // QR Info
         m.insert("qrinfo_version", "Version");
         m.insert("qrinfo_modules", "Module");
@@ -151,6 +168,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Text");
+        m.insert("dd_content_url", "Webseite");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/Kontakt");
         m.insert("dd_content_calendar", "Kalenderereignis");
@@ -215,7 +233,10 @@ impl I18n {
         m.insert("btn_print_calc", "Druckgrößenrechner");
         m.insert("dlg_print_calc", "Druckgrößenrechner");
         m.insert("btn_apply", "Anwenden");
-        m.insert("print_calc_result", "{} x {} Pixel (empfohlene Modulgröße: ~{}px)");
+        m.insert(
+            "print_calc_result",
+            "{} x {} Pixel (empfohlene Modulgröße: ~{}px)",
+        );
         m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Transparenter Hintergrund");
         m.insert("check_gradient", "Farbverlauf aktivieren");
@@ -250,6 +271,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "Längengrad (Longitude)");
         m.insert("tooltip_gps_search", "Ort eingeben und Enter drücken");
 
+        m.insert("tooltip_url", "URL für den QR-Code eingeben");
+        m.insert("placeholder_url", "https://example.com");
         m.insert("tooltip_sms_phone", "SMS Empfängernummer");
         m.insert("tooltip_sms_message", "SMS Nachrichtentext");
         m.insert("tooltip_preset_select", "Stil-Vorlage auswählen");
@@ -355,6 +378,7 @@ impl I18n {
         m.insert("tooltip_batch", "Mehrere QR-Codes gleichzeitig exportieren");
         m.insert("tooltip_export_more", "Weitere Export-Optionen");
         m.insert("tooltip_sidebar_toggle", "Seitenleiste ein-/ausblenden");
+        m.insert("tooltip_shortcuts", "Tastaturkürzel");
         // Feature 3: labels
         m.insert("label_start_date", "Startdatum");
         m.insert("label_end_date", "Enddatum");
@@ -413,6 +437,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "Stilisierte Ecken — Smartphone-Scanner erkennen dies zuverlässig",
         );
+        m.insert("btn_import_qr", "QR-Code importieren");
+        m.insert(
+            "tooltip_import_qr",
+            "QR-Code aus Bilddatei importieren und decodieren",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "Logo auswählen");
@@ -420,6 +449,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "Etiketten-Druckbogen speichern");
         m.insert("dlg_select_csv", "CSV-Datei auswählen");
         m.insert("dlg_select_folder", "Ordner auswählen");
+        m.insert("dlg_import_qr", "QR-Code-Bild auswählen");
 
         // Dialog buttons
         m.insert("btn_open", "Öffnen");
@@ -456,6 +486,11 @@ impl I18n {
         );
         m.insert("status_copied", "In Zwischenablage kopiert");
         m.insert("status_copied_svg", "SVG in Zwischenablage kopiert");
+        m.insert("status_qr_imported", "QR-Code importiert");
+        m.insert(
+            "status_qr_import_failed",
+            "QR-Code konnte nicht decodiert werden",
+        );
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "QR-Daten (eine pro Zeile):");
@@ -496,6 +531,17 @@ impl I18n {
         m.insert("dlg_export_style", "Stil exportieren");
         m.insert("dlg_batch_export", "Batch-Export");
         m.insert("dlg_label_sheet", "Etiketten-Druckbogen");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "Tastaturkürzel");
+        m.insert("shortcuts_general", "Allgemein");
+        m.insert("shortcuts_undo", "Rückgängig");
+        m.insert("shortcuts_redo", "Wiederholen");
+        m.insert("shortcuts_export", "Exportieren");
+        m.insert("shortcuts_copy_png", "PNG in Zwischenablage kopieren");
+        m.insert("shortcuts_copy_svg", "SVG in Zwischenablage kopieren");
+        m.insert("shortcuts_save_png", "Als PNG speichern");
+        m.insert("shortcuts_save_svg", "Als SVG speichern");
 
         m
     }
@@ -573,7 +619,24 @@ impl I18n {
         m.insert("color_bg", "Background");
         m.insert("color_corner", "Corner Color");
         m.insert("color_gradient", "Gradient Target");
+        m.insert("tooltip_pick_color", "Pick color from screen");
+        m.insert("status_color_picked", "Color picker: Color applied");
+        m.insert(
+            "status_color_pick_error",
+            "Color picker unavailable (portal missing)",
+        );
         m.insert("dnd_logo_imported", "Logo imported via Drag & Drop");
+        m.insert(
+            "dnd_bg_imported",
+            "Background image imported via Drag & Drop",
+        );
+        m.insert("dnd_image_title", "Insert Image");
+        m.insert(
+            "dnd_image_body",
+            "Should the image be inserted as a logo or as a background image?",
+        );
+        m.insert("dnd_as_logo", "Insert as Logo");
+        m.insert("dnd_as_background", "Insert as Background");
         // QR Info
         m.insert("qrinfo_version", "Version");
         m.insert("qrinfo_modules", "modules");
@@ -606,6 +669,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Text");
+        m.insert("dd_content_url", "Website");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/Contact");
         m.insert("dd_content_calendar", "Calendar Event");
@@ -670,7 +734,10 @@ impl I18n {
         m.insert("btn_print_calc", "Print Size Calculator");
         m.insert("dlg_print_calc", "Print Size Calculator");
         m.insert("btn_apply", "Apply");
-        m.insert("print_calc_result", "{} x {} pixels (recommended module size: ~{}px)");
+        m.insert(
+            "print_calc_result",
+            "{} x {} pixels (recommended module size: ~{}px)",
+        );
         m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Transparent Background");
         m.insert("check_gradient", "Enable Gradient");
@@ -705,6 +772,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "Longitude");
         m.insert("tooltip_gps_search", "Type a location and press Enter");
 
+        m.insert("tooltip_url", "Enter URL for the QR code");
+        m.insert("placeholder_url", "https://example.com");
         m.insert("tooltip_sms_phone", "SMS recipient number");
         m.insert("tooltip_sms_message", "SMS message text");
         m.insert("tooltip_preset_select", "Select style preset");
@@ -801,6 +870,7 @@ impl I18n {
         m.insert("tooltip_batch", "Export multiple QR codes at once");
         m.insert("tooltip_export_more", "More export options");
         m.insert("tooltip_sidebar_toggle", "Toggle sidebar");
+        m.insert("tooltip_shortcuts", "Keyboard Shortcuts");
         // Feature 3: labels
         m.insert("label_start_date", "Start date");
         m.insert("label_end_date", "End date");
@@ -859,6 +929,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "Styled corners — smartphone scanners handle these reliably",
         );
+        m.insert("btn_import_qr", "Import QR Code");
+        m.insert(
+            "tooltip_import_qr",
+            "Import and decode a QR code from an image file",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "Select Logo");
@@ -866,6 +941,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "Save Label Sheet");
         m.insert("dlg_select_csv", "Select CSV File");
         m.insert("dlg_select_folder", "Select Folder");
+        m.insert("dlg_import_qr", "Select QR Code Image");
 
         // Dialog buttons
         m.insert("btn_open", "Open");
@@ -899,6 +975,8 @@ impl I18n {
         );
         m.insert("status_copied", "Copied to clipboard");
         m.insert("status_copied_svg", "SVG copied to clipboard");
+        m.insert("status_qr_imported", "QR code imported");
+        m.insert("status_qr_import_failed", "Could not decode QR code");
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "QR Data (one per line):");
@@ -939,6 +1017,17 @@ impl I18n {
         m.insert("dlg_export_style", "Export Style");
         m.insert("dlg_batch_export", "Batch Export");
         m.insert("dlg_label_sheet", "Label Sheet");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "Keyboard Shortcuts");
+        m.insert("shortcuts_general", "General");
+        m.insert("shortcuts_undo", "Undo");
+        m.insert("shortcuts_redo", "Redo");
+        m.insert("shortcuts_export", "Export");
+        m.insert("shortcuts_copy_png", "Copy PNG to Clipboard");
+        m.insert("shortcuts_copy_svg", "Copy SVG to Clipboard");
+        m.insert("shortcuts_save_png", "Save as PNG");
+        m.insert("shortcuts_save_svg", "Save as SVG");
 
         m
     }
@@ -1019,10 +1108,27 @@ impl I18n {
         m.insert("color_bg", "Fondo");
         m.insert("color_corner", "Color de esquina");
         m.insert("color_gradient", "Destino de degradado");
+        m.insert("tooltip_pick_color", "Capturar color de la pantalla");
+        m.insert("status_color_picked", "Cuentagotas: Color aplicado");
+        m.insert(
+            "status_color_pick_error",
+            "Cuentagotas no disponible (falta portal)",
+        );
         m.insert(
             "dnd_logo_imported",
             "Logotipo importado mediante arrastrar y soltar",
         );
+        m.insert(
+            "dnd_bg_imported",
+            "Imagen de fondo importada mediante arrastrar y soltar",
+        );
+        m.insert("dnd_image_title", "Insertar imagen");
+        m.insert(
+            "dnd_image_body",
+            "¿Desea insertar la imagen como logotipo o como imagen de fondo?",
+        );
+        m.insert("dnd_as_logo", "Insertar como logotipo");
+        m.insert("dnd_as_background", "Insertar como imagen de fondo");
         // QR Info
         m.insert("qrinfo_version", "Versión");
         m.insert("qrinfo_modules", "módulos");
@@ -1058,6 +1164,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Texto");
+        m.insert("dd_content_url", "Sitio web");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/Contacto");
         m.insert("dd_content_calendar", "Evento de calendario");
@@ -1122,7 +1229,10 @@ impl I18n {
         m.insert("btn_print_calc", "Calculadora de tamaño de impresión");
         m.insert("dlg_print_calc", "Calculadora de tamaño de impresión");
         m.insert("btn_apply", "Aplicar");
-        m.insert("print_calc_result", "{} x {} píxeles (tamaño de módulo recomendado: ~{}px)");
+        m.insert(
+            "print_calc_result",
+            "{} x {} píxeles (tamaño de módulo recomendado: ~{}px)",
+        );
         m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Fondo transparente");
         m.insert("check_gradient", "Activar degradado");
@@ -1157,6 +1267,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "Longitud");
         m.insert("tooltip_gps_search", "Escriba una ubicación y pulse Enter");
 
+        m.insert("tooltip_url", "Ingrese la URL para el código QR");
+        m.insert("placeholder_url", "https://ejemplo.com");
         m.insert("tooltip_sms_phone", "Número de destinatario SMS");
         m.insert("tooltip_sms_message", "Texto del mensaje SMS");
         m.insert("tooltip_preset_select", "Seleccionar preajuste de estilo");
@@ -1277,6 +1389,7 @@ impl I18n {
         m.insert("tooltip_batch", "Exportar múltiples códigos QR a la vez");
         m.insert("tooltip_export_more", "Más opciones de exportación");
         m.insert("tooltip_sidebar_toggle", "Alternar barra lateral");
+        m.insert("tooltip_shortcuts", "Atajos de teclado");
         // Feature 3: labels
         m.insert("label_start_date", "Fecha de inicio");
         m.insert("label_end_date", "Fecha de fin");
@@ -1349,6 +1462,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "Esquinas con estilo — los escáneres de smartphone las manejan de forma fiable",
         );
+        m.insert("btn_import_qr", "Importar código QR");
+        m.insert(
+            "tooltip_import_qr",
+            "Importar y decodificar un código QR desde un archivo de imagen",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "Seleccionar logo");
@@ -1356,6 +1474,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "Guardar hoja de etiquetas");
         m.insert("dlg_select_csv", "Seleccionar archivo CSV");
         m.insert("dlg_select_folder", "Seleccionar carpeta");
+        m.insert("dlg_import_qr", "Seleccionar imagen de código QR");
 
         // Dialog buttons
         m.insert("btn_open", "Abrir");
@@ -1395,6 +1514,11 @@ impl I18n {
         );
         m.insert("status_copied", "Copiado al portapapeles");
         m.insert("status_copied_svg", "SVG copiado al portapapeles");
+        m.insert("status_qr_imported", "Código QR importado");
+        m.insert(
+            "status_qr_import_failed",
+            "No se pudo decodificar el código QR",
+        );
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "Datos QR (uno por línea):");
@@ -1435,6 +1559,17 @@ impl I18n {
         m.insert("dlg_export_style", "Exportar estilo");
         m.insert("dlg_batch_export", "Exportación por lotes");
         m.insert("dlg_label_sheet", "Hoja de etiquetas");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "Atajos de teclado");
+        m.insert("shortcuts_general", "General");
+        m.insert("shortcuts_undo", "Deshacer");
+        m.insert("shortcuts_redo", "Rehacer");
+        m.insert("shortcuts_export", "Exportar");
+        m.insert("shortcuts_copy_png", "Copiar PNG al portapapeles");
+        m.insert("shortcuts_copy_svg", "Copiar SVG al portapapeles");
+        m.insert("shortcuts_save_png", "Guardar como PNG");
+        m.insert("shortcuts_save_svg", "Guardar como SVG");
 
         m
     }
@@ -1515,7 +1650,24 @@ impl I18n {
         m.insert("color_bg", "Arrière-plan");
         m.insert("color_corner", "Couleur des angles");
         m.insert("color_gradient", "Cible du dégradé");
+        m.insert("tooltip_pick_color", "Prélever la couleur depuis l'écran");
+        m.insert("status_color_picked", "Pipette : Couleur appliquée");
+        m.insert(
+            "status_color_pick_error",
+            "Pipette indisponible (portail manquant)",
+        );
         m.insert("dnd_logo_imported", "Logo importé par glisser-déposer");
+        m.insert(
+            "dnd_bg_imported",
+            "Image d'arrière-plan importée par glisser-déposer",
+        );
+        m.insert("dnd_image_title", "Insérer une image");
+        m.insert(
+            "dnd_image_body",
+            "L'image doit-elle être insérée comme logo ou comme image d'arrière-plan ?",
+        );
+        m.insert("dnd_as_logo", "Insérer comme logo");
+        m.insert("dnd_as_background", "Insérer comme arrière-plan");
         // QR Info
         m.insert("qrinfo_version", "Version");
         m.insert("qrinfo_modules", "modules");
@@ -1554,6 +1706,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Texte");
+        m.insert("dd_content_url", "Site web");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/Contact");
         m.insert("dd_content_calendar", "Événement calendrier");
@@ -1618,7 +1771,10 @@ impl I18n {
         m.insert("btn_print_calc", "Calculateur de taille d'impression");
         m.insert("dlg_print_calc", "Calculateur de taille d'impression");
         m.insert("btn_apply", "Appliquer");
-        m.insert("print_calc_result", "{} x {} pixels (taille de module recommandée : ~{}px)");
+        m.insert(
+            "print_calc_result",
+            "{} x {} pixels (taille de module recommandée : ~{}px)",
+        );
         m.insert("label_dpi", "DPI :");
         m.insert("check_transparent_bg", "Arrière-plan transparent");
         m.insert("check_gradient", "Activer le dégradé");
@@ -1656,6 +1812,8 @@ impl I18n {
             "Saisissez un lieu et appuyez sur Entrée",
         );
 
+        m.insert("tooltip_url", "Saisissez l'URL pour le code QR");
+        m.insert("placeholder_url", "https://exemple.com");
         m.insert("tooltip_sms_phone", "Numéro du destinataire SMS");
         m.insert("tooltip_sms_message", "Texte du message SMS");
         m.insert(
@@ -1776,6 +1934,7 @@ impl I18n {
         m.insert("tooltip_batch", "Exporter plusieurs codes QR à la fois");
         m.insert("tooltip_export_more", "Plus d'options d'exportation");
         m.insert("tooltip_sidebar_toggle", "Basculer la barre latérale");
+        m.insert("tooltip_shortcuts", "Raccourcis clavier");
         // Feature 3: labels
         m.insert("label_start_date", "Date de début");
         m.insert("label_end_date", "Date de fin");
@@ -1843,6 +2002,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "Angles stylisés — les scanneurs de smartphones les lisent de manière fiable",
         );
+        m.insert("btn_import_qr", "Importer le code QR");
+        m.insert(
+            "tooltip_import_qr",
+            "Importer et décoder un code QR depuis un fichier image",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "Sélectionner un logo");
@@ -1853,6 +2017,7 @@ impl I18n {
         );
         m.insert("dlg_select_csv", "Sélectionner un fichier CSV");
         m.insert("dlg_select_folder", "Sélectionner un dossier");
+        m.insert("dlg_import_qr", "Sélectionner l'image du code QR");
 
         // Dialog buttons
         m.insert("btn_open", "Ouvrir");
@@ -1895,6 +2060,11 @@ impl I18n {
         );
         m.insert("status_copied", "Copié dans le presse-papiers");
         m.insert("status_copied_svg", "SVG copié dans le presse-papiers");
+        m.insert("status_qr_imported", "Code QR importé");
+        m.insert(
+            "status_qr_import_failed",
+            "Impossible de décoder le code QR",
+        );
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "Données QR (une par ligne) :");
@@ -1935,6 +2105,17 @@ impl I18n {
         m.insert("dlg_export_style", "Exporter le style");
         m.insert("dlg_batch_export", "Export par lots");
         m.insert("dlg_label_sheet", "Feuille d'étiquettes");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "Raccourcis clavier");
+        m.insert("shortcuts_general", "Général");
+        m.insert("shortcuts_undo", "Annuler");
+        m.insert("shortcuts_redo", "Rétablir");
+        m.insert("shortcuts_export", "Exportation");
+        m.insert("shortcuts_copy_png", "Copier PNG dans le presse-papiers");
+        m.insert("shortcuts_copy_svg", "Copier SVG dans le presse-papiers");
+        m.insert("shortcuts_save_png", "Enregistrer en PNG");
+        m.insert("shortcuts_save_svg", "Enregistrer en SVG");
 
         m
     }
@@ -2012,7 +2193,24 @@ impl I18n {
         m.insert("color_bg", "Sfondo");
         m.insert("color_corner", "Colore angoli");
         m.insert("color_gradient", "Destinazione gradiente");
+        m.insert("tooltip_pick_color", "Preleva colore dallo schermo");
+        m.insert("status_color_picked", "Contagocce: Colore applicato");
+        m.insert(
+            "status_color_pick_error",
+            "Contagocce non disponibile (portal mancante)",
+        );
         m.insert("dnd_logo_imported", "Logo importato tramite drag & drop");
+        m.insert(
+            "dnd_bg_imported",
+            "Immagine di sfondo importata tramite drag & drop",
+        );
+        m.insert("dnd_image_title", "Inserisci immagine");
+        m.insert(
+            "dnd_image_body",
+            "L'immagine deve essere inserita come logo o come immagine di sfondo?",
+        );
+        m.insert("dnd_as_logo", "Inserisci come logo");
+        m.insert("dnd_as_background", "Inserisci come sfondo");
         // QR Info
         m.insert("qrinfo_version", "Versione");
         m.insert("qrinfo_modules", "moduli");
@@ -2048,6 +2246,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Testo");
+        m.insert("dd_content_url", "Sito web");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/Contatto");
         m.insert("dd_content_calendar", "Evento calendario");
@@ -2112,7 +2311,10 @@ impl I18n {
         m.insert("btn_print_calc", "Calcolatore dimensione stampa");
         m.insert("dlg_print_calc", "Calcolatore dimensione stampa");
         m.insert("btn_apply", "Applica");
-        m.insert("print_calc_result", "{} x {} pixel (dimensione modulo consigliata: ~{}px)");
+        m.insert(
+            "print_calc_result",
+            "{} x {} pixel (dimensione modulo consigliata: ~{}px)",
+        );
         m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Sfondo trasparente");
         m.insert("check_gradient", "Abilita gradiente");
@@ -2147,6 +2349,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "Longitudine");
         m.insert("tooltip_gps_search", "Digita un luogo e premi Invio");
 
+        m.insert("tooltip_url", "Inserisci l'URL per il codice QR");
+        m.insert("placeholder_url", "https://esempio.com");
         m.insert("tooltip_sms_phone", "Numero destinatario SMS");
         m.insert("tooltip_sms_message", "Testo messaggio SMS");
         m.insert("tooltip_preset_select", "Seleziona preimpostazione stile");
@@ -2249,6 +2453,7 @@ impl I18n {
         m.insert("tooltip_batch", "Esporta più codici QR contemporaneamente");
         m.insert("tooltip_export_more", "Altre opzioni di esportazione");
         m.insert("tooltip_sidebar_toggle", "Attiva/disattiva barra laterale");
+        m.insert("tooltip_shortcuts", "Scorciatoie da tastiera");
         // Feature 3: labels
         m.insert("label_start_date", "Data inizio");
         m.insert("label_end_date", "Data fine");
@@ -2315,6 +2520,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "Angoli stilizzati — gli scanner degli smartphone li gestiscono in modo affidabile",
         );
+        m.insert("btn_import_qr", "Importa codice QR");
+        m.insert(
+            "tooltip_import_qr",
+            "Importa e decodifica un codice QR da un file immagine",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "Seleziona logo");
@@ -2322,6 +2532,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "Salva foglio etichette");
         m.insert("dlg_select_csv", "Seleziona file CSV");
         m.insert("dlg_select_folder", "Seleziona cartella");
+        m.insert("dlg_import_qr", "Seleziona immagine codice QR");
 
         // Dialog buttons
         m.insert("btn_open", "Apri");
@@ -2361,6 +2572,11 @@ impl I18n {
         );
         m.insert("status_copied", "Copiato negli appunti");
         m.insert("status_copied_svg", "SVG copiato negli appunti");
+        m.insert("status_qr_imported", "Codice QR importato");
+        m.insert(
+            "status_qr_import_failed",
+            "Impossibile decodificare il codice QR",
+        );
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "Dati QR (uno per riga):");
@@ -2401,6 +2617,17 @@ impl I18n {
         m.insert("dlg_export_style", "Esporta stile");
         m.insert("dlg_batch_export", "Esportazione batch");
         m.insert("dlg_label_sheet", "Foglio etichette");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "Scorciatoie da tastiera");
+        m.insert("shortcuts_general", "Generale");
+        m.insert("shortcuts_undo", "Annulla");
+        m.insert("shortcuts_redo", "Ripristina");
+        m.insert("shortcuts_export", "Esportazione");
+        m.insert("shortcuts_copy_png", "Copia PNG negli appunti");
+        m.insert("shortcuts_copy_svg", "Copia SVG negli appunti");
+        m.insert("shortcuts_save_png", "Salva come PNG");
+        m.insert("shortcuts_save_svg", "Salva come SVG");
 
         m
     }
@@ -2478,7 +2705,24 @@ impl I18n {
         m.insert("color_bg", "Plano de Fundo");
         m.insert("color_corner", "Cor do Canto");
         m.insert("color_gradient", "Alvo do Gradiente");
+        m.insert("tooltip_pick_color", "Capturar cor da tela");
+        m.insert("status_color_picked", "Conta-gotas: Cor aplicada");
+        m.insert(
+            "status_color_pick_error",
+            "Conta-gotas indisponível (portal ausente)",
+        );
         m.insert("dnd_logo_imported", "Logo importada via Arrastar e Soltar");
+        m.insert(
+            "dnd_bg_imported",
+            "Imagem de fundo importada via Arrastar e Soltar",
+        );
+        m.insert("dnd_image_title", "Inserir imagem");
+        m.insert(
+            "dnd_image_body",
+            "A imagem deve ser inserida como logo ou como imagem de fundo?",
+        );
+        m.insert("dnd_as_logo", "Inserir como logo");
+        m.insert("dnd_as_background", "Inserir como imagem de fundo");
         // QR Info
         m.insert("qrinfo_version", "Versão");
         m.insert("qrinfo_modules", "módulos");
@@ -2514,6 +2758,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "Texto");
+        m.insert("dd_content_url", "Site");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/Contato");
         m.insert("dd_content_calendar", "Evento de Calendário");
@@ -2578,7 +2823,10 @@ impl I18n {
         m.insert("btn_print_calc", "Calculadora de Tamanho de Impressão");
         m.insert("dlg_print_calc", "Calculadora de Tamanho de Impressão");
         m.insert("btn_apply", "Aplicar");
-        m.insert("print_calc_result", "{} x {} pixels (tamanho de módulo recomendado: ~{}px)");
+        m.insert(
+            "print_calc_result",
+            "{} x {} pixels (tamanho de módulo recomendado: ~{}px)",
+        );
         m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "Plano de Fundo Transparente");
         m.insert("check_gradient", "Ativar Gradiente");
@@ -2616,6 +2864,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "Longitude");
         m.insert("tooltip_gps_search", "Digite um local e pressione Enter");
 
+        m.insert("tooltip_url", "Insira a URL para o código QR");
+        m.insert("placeholder_url", "https://exemplo.com");
         m.insert("tooltip_sms_phone", "Número do destinatário SMS");
         m.insert("tooltip_sms_message", "Texto da mensagem SMS");
         m.insert("tooltip_preset_select", "Selecionar predefinição de estilo");
@@ -2742,6 +2992,7 @@ impl I18n {
         m.insert("tooltip_batch", "Exportar múltiplos códigos QR de uma vez");
         m.insert("tooltip_export_more", "Mais opções de exportação");
         m.insert("tooltip_sidebar_toggle", "Alternar barra lateral");
+        m.insert("tooltip_shortcuts", "Atalhos de teclado");
         // Feature 3: labels
         m.insert("label_start_date", "Data de início");
         m.insert("label_end_date", "Data de término");
@@ -2806,6 +3057,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "Cantos estilizados — escâneres de smartphones lidam com estes de forma confiável",
         );
+        m.insert("btn_import_qr", "Importar código QR");
+        m.insert(
+            "tooltip_import_qr",
+            "Importar e decodificar um código QR de um arquivo de imagem",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "Selecionar logo");
@@ -2813,6 +3069,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "Salvar folha de etiquetas");
         m.insert("dlg_select_csv", "Selecionar arquivo CSV");
         m.insert("dlg_select_folder", "Selecionar pasta");
+        m.insert("dlg_import_qr", "Selecionar imagem do código QR");
 
         // Dialog buttons
         m.insert("btn_open", "Abrir");
@@ -2848,6 +3105,11 @@ impl I18n {
         m.insert(
             "status_copied_svg",
             "SVG copiado para a área de transferência",
+        );
+        m.insert("status_qr_imported", "Código QR importado");
+        m.insert(
+            "status_qr_import_failed",
+            "Não foi possível decodificar o código QR",
         );
 
         // Batch/Label dialog labels
@@ -2889,6 +3151,23 @@ impl I18n {
         m.insert("dlg_export_style", "Exportar estilo");
         m.insert("dlg_batch_export", "Exportação em lote");
         m.insert("dlg_label_sheet", "Folha de etiquetas");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "Atalhos de teclado");
+        m.insert("shortcuts_general", "Geral");
+        m.insert("shortcuts_undo", "Desfazer");
+        m.insert("shortcuts_redo", "Refazer");
+        m.insert("shortcuts_export", "Exportar");
+        m.insert(
+            "shortcuts_copy_png",
+            "Copiar PNG para a área de transferência",
+        );
+        m.insert(
+            "shortcuts_copy_svg",
+            "Copiar SVG para a área de transferência",
+        );
+        m.insert("shortcuts_save_png", "Salvar como PNG");
+        m.insert("shortcuts_save_svg", "Salvar como SVG");
 
         m
     }
@@ -2966,10 +3245,27 @@ impl I18n {
         m.insert("color_bg", "背景色");
         m.insert("color_corner", "角の色");
         m.insert("color_gradient", "グラデーション対象");
+        m.insert("tooltip_pick_color", "画面から色を取得");
+        m.insert("status_color_picked", "スポイト: 色を適用しました");
+        m.insert(
+            "status_color_pick_error",
+            "スポイトが利用できません（ポータル未検出）",
+        );
         m.insert(
             "dnd_logo_imported",
             "ドラッグ＆ドロップでロゴをインポートしました",
         );
+        m.insert(
+            "dnd_bg_imported",
+            "ドラッグ＆ドロップで背景画像をインポートしました",
+        );
+        m.insert("dnd_image_title", "画像を挿入");
+        m.insert(
+            "dnd_image_body",
+            "画像をロゴとして挿入しますか？それとも背景画像として挿入しますか？",
+        );
+        m.insert("dnd_as_logo", "ロゴとして挿入");
+        m.insert("dnd_as_background", "背景画像として挿入");
         // QR Info
         m.insert("qrinfo_version", "バージョン");
         m.insert("qrinfo_modules", "モジュール");
@@ -3002,6 +3298,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "テキスト");
+        m.insert("dd_content_url", "ウェブサイト");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/連絡先");
         m.insert("dd_content_calendar", "カレンダーイベント");
@@ -3066,7 +3363,10 @@ impl I18n {
         m.insert("btn_print_calc", "印刷サイズ計算ツール");
         m.insert("dlg_print_calc", "印刷サイズ計算ツール");
         m.insert("btn_apply", "適用");
-        m.insert("print_calc_result", "{} x {} ピクセル（推奨モジュールサイズ: ~{}px）");
+        m.insert(
+            "print_calc_result",
+            "{} x {} ピクセル（推奨モジュールサイズ: ~{}px）",
+        );
         m.insert("label_dpi", "DPI:");
         m.insert("check_transparent_bg", "透明な背景");
         m.insert("check_gradient", "グラデーションを有効化");
@@ -3104,6 +3404,8 @@ impl I18n {
             "場所を入力して Enter を押してください",
         );
 
+        m.insert("tooltip_url", "QRコードのURLを入力");
+        m.insert("placeholder_url", "https://example.com");
         m.insert("tooltip_sms_phone", "SMS 宛先番号");
         m.insert("tooltip_sms_message", "SMS メッセージ本文");
         m.insert("tooltip_preset_select", "スタイルプリセットを選択");
@@ -3206,6 +3508,7 @@ impl I18n {
         m.insert("tooltip_batch", "複数の QR コードを一括エクスポート");
         m.insert("tooltip_export_more", "その他のエクスポートオプション");
         m.insert("tooltip_sidebar_toggle", "サイドバーの切り替え");
+        m.insert("tooltip_shortcuts", "キーボードショートカット");
         // Feature 3: labels
         m.insert("label_start_date", "開始日");
         m.insert("label_end_date", "終了日");
@@ -3270,6 +3573,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "スタイル付きコーナー — スマートフォンのスキャナーはこれらを確実に認識します",
         );
+        m.insert("btn_import_qr", "QRコードをインポート");
+        m.insert(
+            "tooltip_import_qr",
+            "画像ファイルからQRコードをインポート・デコード",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "ロゴを選択");
@@ -3277,6 +3585,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "ラベルシートを保存");
         m.insert("dlg_select_csv", "CSVファイルを選択");
         m.insert("dlg_select_folder", "フォルダーを選択");
+        m.insert("dlg_import_qr", "QRコード画像を選択");
 
         // Dialog buttons
         m.insert("btn_open", "開く");
@@ -3319,6 +3628,11 @@ impl I18n {
         );
         m.insert("status_copied", "クリップボードにコピーしました");
         m.insert("status_copied_svg", "SVGをクリップボードにコピーしました");
+        m.insert("status_qr_imported", "QRコードをインポートしました");
+        m.insert(
+            "status_qr_import_failed",
+            "QRコードをデコードできませんでした",
+        );
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "QRデータ（1行に1つ）:");
@@ -3353,6 +3667,17 @@ impl I18n {
         m.insert("dlg_export_style", "スタイルをエクスポート");
         m.insert("dlg_batch_export", "一括エクスポート");
         m.insert("dlg_label_sheet", "ラベルシート");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "キーボードショートカット");
+        m.insert("shortcuts_general", "全般");
+        m.insert("shortcuts_undo", "元に戻す");
+        m.insert("shortcuts_redo", "やり直す");
+        m.insert("shortcuts_export", "エクスポート");
+        m.insert("shortcuts_copy_png", "PNGをクリップボードにコピー");
+        m.insert("shortcuts_copy_svg", "SVGをクリップボードにコピー");
+        m.insert("shortcuts_save_png", "PNGとして保存");
+        m.insert("shortcuts_save_svg", "SVGとして保存");
 
         m
     }
@@ -3430,10 +3755,24 @@ impl I18n {
         m.insert("color_bg", "배경");
         m.insert("color_corner", "모서리 색상");
         m.insert("color_gradient", "그라데이션 대상");
+        m.insert("tooltip_pick_color", "화면에서 색상 선택");
+        m.insert("status_color_picked", "스포이드: 색상이 적용됨");
+        m.insert("status_color_pick_error", "스포이드 사용 불가 (포털 없음)");
         m.insert(
             "dnd_logo_imported",
             "드래그 앤 드롭으로 로고를 가져왔습니다",
         );
+        m.insert(
+            "dnd_bg_imported",
+            "드래그 앤 드롭으로 배경 이미지를 가져왔습니다",
+        );
+        m.insert("dnd_image_title", "이미지 삽입");
+        m.insert(
+            "dnd_image_body",
+            "이미지를 로고로 삽입하시겠습니까? 아니면 배경 이미지로 삽입하시겠습니까?",
+        );
+        m.insert("dnd_as_logo", "로고로 삽입");
+        m.insert("dnd_as_background", "배경 이미지로 삽입");
         // QR Info
         m.insert("qrinfo_version", "버전");
         m.insert("qrinfo_modules", "모듈");
@@ -3469,6 +3808,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "텍스트");
+        m.insert("dd_content_url", "웹사이트");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/연락처");
         m.insert("dd_content_calendar", "일정 이벤트");
@@ -3568,6 +3908,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "경도");
         m.insert("tooltip_gps_search", "위치를 입력하고 Enter를 누르세요");
 
+        m.insert("tooltip_url", "QR 코드의 URL 입력");
+        m.insert("placeholder_url", "https://example.com");
         m.insert("tooltip_sms_phone", "SMS 수신 번호");
         m.insert("tooltip_sms_message", "SMS 메시지 텍스트");
         m.insert("tooltip_preset_select", "스타일 프리셋 선택");
@@ -3667,6 +4009,7 @@ impl I18n {
         m.insert("tooltip_batch", "여러 QR 코드를 한 번에 내보내기");
         m.insert("tooltip_export_more", "더 많은 내보내기 옵션");
         m.insert("tooltip_sidebar_toggle", "사이드바 전환");
+        m.insert("tooltip_shortcuts", "키보드 단축키");
         // Feature 3: labels
         m.insert("label_start_date", "시작 날짜");
         m.insert("label_end_date", "종료 날짜");
@@ -3727,6 +4070,11 @@ impl I18n {
             "scan_detail_styled_corners",
             "스타일이 적용된 모서리 — 스마트폰 스캐너에서 안정적으로 인식됩니다",
         );
+        m.insert("btn_import_qr", "QR 코드 가져오기");
+        m.insert(
+            "tooltip_import_qr",
+            "이미지 파일에서 QR 코드 가져오기 및 디코딩",
+        );
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "로고 선택");
@@ -3734,6 +4082,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "라벨 시트 저장");
         m.insert("dlg_select_csv", "CSV 파일 선택");
         m.insert("dlg_select_folder", "폴더 선택");
+        m.insert("dlg_import_qr", "QR 코드 이미지 선택");
 
         // Dialog buttons
         m.insert("btn_open", "열기");
@@ -3767,6 +4116,8 @@ impl I18n {
         );
         m.insert("status_copied", "클립보드에 복사됨");
         m.insert("status_copied_svg", "SVG가 클립보드에 복사됨");
+        m.insert("status_qr_imported", "QR 코드를 가져왔습니다");
+        m.insert("status_qr_import_failed", "QR 코드를 디코딩할 수 없습니다");
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "QR 데이터 (한 줄에 하나):");
@@ -3801,6 +4152,17 @@ impl I18n {
         m.insert("dlg_export_style", "스타일 내보내기");
         m.insert("dlg_batch_export", "일괄 내보내기");
         m.insert("dlg_label_sheet", "라벨 시트");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "키보드 단축키");
+        m.insert("shortcuts_general", "일반");
+        m.insert("shortcuts_undo", "실행 취소");
+        m.insert("shortcuts_redo", "다시 실행");
+        m.insert("shortcuts_export", "내보내기");
+        m.insert("shortcuts_copy_png", "PNG 클립보드에 복사");
+        m.insert("shortcuts_copy_svg", "SVG 클립보드에 복사");
+        m.insert("shortcuts_save_png", "PNG로 저장");
+        m.insert("shortcuts_save_svg", "SVG로 저장");
 
         m
     }
@@ -3872,7 +4234,15 @@ impl I18n {
         m.insert("color_bg", "背景色");
         m.insert("color_corner", "定位角颜色");
         m.insert("color_gradient", "渐变目标色");
+        m.insert("tooltip_pick_color", "从屏幕取色");
+        m.insert("status_color_picked", "取色器：颜色已应用");
+        m.insert("status_color_pick_error", "取色器不可用（缺少门户）");
         m.insert("dnd_logo_imported", "标志已通过拖放导入");
+        m.insert("dnd_bg_imported", "背景图片已通过拖放导入");
+        m.insert("dnd_image_title", "插入图片");
+        m.insert("dnd_image_body", "要将图片作为标志还是背景图片插入？");
+        m.insert("dnd_as_logo", "作为标志插入");
+        m.insert("dnd_as_background", "作为背景图片插入");
         // QR Info
         m.insert("qrinfo_version", "版本");
         m.insert("qrinfo_modules", "模块");
@@ -3908,6 +4278,7 @@ impl I18n {
         // Generate button
         // Dropdown items as used in build_ui
         m.insert("dd_content_text", "文本");
+        m.insert("dd_content_url", "网站");
         m.insert("dd_content_wifi", "WiFi");
         m.insert("dd_content_vcard", "vCard/联系人");
         m.insert("dd_content_calendar", "日历事件");
@@ -4007,6 +4378,8 @@ impl I18n {
         m.insert("tooltip_gps_lon", "经度");
         m.insert("tooltip_gps_search", "输入位置后按回车键");
 
+        m.insert("tooltip_url", "输入二维码的网址");
+        m.insert("placeholder_url", "https://example.com");
         m.insert("tooltip_sms_phone", "短信接收号码");
         m.insert("tooltip_sms_message", "短信内容");
         m.insert("tooltip_preset_select", "选择样式预设");
@@ -4091,6 +4464,7 @@ impl I18n {
         m.insert("tooltip_batch", "一次导出多个 QR 码");
         m.insert("tooltip_export_more", "更多导出选项");
         m.insert("tooltip_sidebar_toggle", "切换侧边栏");
+        m.insert("tooltip_shortcuts", "键盘快捷键");
         // Feature 3: labels
         m.insert("label_start_date", "开始日期");
         m.insert("label_end_date", "结束日期");
@@ -4134,6 +4508,8 @@ impl I18n {
             "scan_detail_styled_corners",
             "已设置定位角样式 — 智能手机扫描器可可靠识别",
         );
+        m.insert("btn_import_qr", "导入二维码");
+        m.insert("tooltip_import_qr", "从图像文件导入并解码二维码");
 
         // Dialog titles for file choosers
         m.insert("dlg_select_logo", "选择Logo");
@@ -4141,6 +4517,7 @@ impl I18n {
         m.insert("dlg_save_label_sheet", "保存标签页");
         m.insert("dlg_select_csv", "选择CSV文件");
         m.insert("dlg_select_folder", "选择文件夹");
+        m.insert("dlg_import_qr", "选择二维码图片");
 
         // Dialog buttons
         m.insert("btn_open", "打开");
@@ -4168,6 +4545,8 @@ impl I18n {
         m.insert("status_render_error", "错误：无法渲染二维码");
         m.insert("status_copied", "已复制到剪贴板");
         m.insert("status_copied_svg", "SVG已复制到剪贴板");
+        m.insert("status_qr_imported", "二维码已导入");
+        m.insert("status_qr_import_failed", "无法解码二维码");
 
         // Batch/Label dialog labels
         m.insert("batch_data_label", "二维码数据（每行一个）：");
@@ -4199,6 +4578,17 @@ impl I18n {
         m.insert("dlg_export_style", "导出样式");
         m.insert("dlg_batch_export", "批量导出");
         m.insert("dlg_label_sheet", "标签页");
+
+        // Keyboard shortcuts overlay
+        m.insert("shortcuts_title", "键盘快捷键");
+        m.insert("shortcuts_general", "通用");
+        m.insert("shortcuts_undo", "撤销");
+        m.insert("shortcuts_redo", "重做");
+        m.insert("shortcuts_export", "导出");
+        m.insert("shortcuts_copy_png", "复制PNG到剪贴板");
+        m.insert("shortcuts_copy_svg", "复制SVG到剪贴板");
+        m.insert("shortcuts_save_png", "保存为PNG");
+        m.insert("shortcuts_save_svg", "保存为SVG");
 
         m
     }

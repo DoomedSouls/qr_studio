@@ -13,9 +13,9 @@ set -euo pipefail
 # ═══════════════════════════════════════════════════════════════
 
 APP_NAME="QR_Studio"
-APP_ID="com.example.qr_studio"
+APP_ID="io.github.SlobCoder.qr_studio"
 BINARY="qr_studio"
-VERSION="0.2.5"
+VERSION="0.4.0"
 ARCH="x86_64"
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -68,10 +68,17 @@ fi
 
 # .desktop file (must live in AppDir root for appimagetool)
 DESKTOP_SRC="${HOME}/.local/share/applications/${APP_ID}.desktop"
-[ -f "$DESKTOP_SRC" ] && cp "$DESKTOP_SRC" "${APPDIR}/${APP_ID}.desktop" && ok "desktop file"
+[ -f "$DESKTOP_SRC" ] || DESKTOP_SRC="${PROJECT_DIR}/data/${APP_ID}.desktop"
+if [ -f "$DESKTOP_SRC" ]; then
+    cp "$DESKTOP_SRC" "${APPDIR}/${APP_ID}.desktop"
+    # Fix Exec for AppImage (must be just the binary name)
+    sed -i 's|^Exec=.*|Exec=qr_studio|' "${APPDIR}/${APP_ID}.desktop"
+    ok "desktop file"
+fi
 
 # Icon (must live in AppDir root for appimagetool)
 ICON_SRC="${HOME}/.local/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
+[ -f "$ICON_SRC" ] || ICON_SRC="${PROJECT_DIR}/data/${APP_ID}.svg"
 if [ -f "$ICON_SRC" ]; then
     cp "$ICON_SRC" "${APPDIR}/${APP_ID}.svg"
     cp "$ICON_SRC" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
@@ -124,6 +131,13 @@ for f in "${SCHEMA_SRC}"/org.gtk.gtk4.*.gschema.xml \
     [ -f "$f" ] && cp "$f" "$SCHEMA_DST/"
 done
 
+# App's own GSettings schema
+if [ -f "${PROJECT_DIR}/data/${APP_ID}.gschema.xml" ]; then
+    cp "${PROJECT_DIR}/data/${APP_ID}.gschema.xml" "$SCHEMA_DST/"
+    ok "app schema"
+fi
+
+# Compile all schemas together
 glib-compile-schemas "$SCHEMA_DST" 2>/dev/null || true
 ok "$(ls "$SCHEMA_DST"/*.xml 2>/dev/null | wc -l) schemas compiled"
 

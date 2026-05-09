@@ -13,7 +13,7 @@ erstellt."); // 3. main.rs schreiben let main_rs = r#"use adw::prelude::*; use
 adw::{Application, ApplicationWindow, HeaderBar}; use gtk::{Alignment, Box,
 Button, Entry, Label, Orientation, Picture}; use std::cell::RefCell; use
 std::rc::Rc; struct AppState { preview_picture: Picture, } fn main() { let app =
-Application::builder() .application_id("com.example.qr_studio") .build();
+Application::builder() .application_id("io.github.SlobCoder.qr_studio") .build();
 app.connect_activate(build_ui); app.run(); } fn build_ui(app: &Application) {
 let window = ApplicationWindow::builder() .application(app) .title("QR Code
 Studio") .default_width(800) .default_height(600) .build(); let main_box =

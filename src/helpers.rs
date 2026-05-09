@@ -1,14 +1,22 @@
 use crate::types::*;
+#[cfg(feature = "gui")]
 use gtk4::gdk;
+#[cfg(feature = "gui")]
 use gtk4::glib;
+#[cfg(feature = "gui")]
 use gtk4::prelude::*;
-use image::{DynamicImage, Rgba, RgbaImage};
+#[cfg(feature = "gui")]
+use image::DynamicImage;
+use image::{Rgba, RgbaImage};
+#[cfg(feature = "gui")]
+use std::path::Path;
 use std::path::PathBuf;
 
 // ============================================================
 // COLOR CONVERSION
 // ============================================================
 
+#[cfg(feature = "gui")]
 pub fn gdk_to_image_rgba(rgba: &gdk::RGBA) -> Rgba<u8> {
     Rgba([
         (rgba.red() * 255.0) as u8,
@@ -92,6 +100,7 @@ pub fn parse_gradient_direction(s: &str) -> GradientDirection {
 pub fn parse_content_type(s: &str) -> ContentType {
     match s {
         "Text" => ContentType::Text,
+        "URL" | "Webseite" | "Website" => ContentType::Url,
         "WiFi" => ContentType::Wifi,
         "vCard" | "vCard/Kontakt" | "vCard/Contact" => ContentType::Vcard,
         "Kalender" | "Kalenderereignis" | "Calendar Event" => ContentType::Calendar,
@@ -206,6 +215,211 @@ fn decode_plain_qr(data: &str, ec_level: ErrorCorrectionLevel) -> Option<String>
     }
 }
 
+/// Decode a QR code from an image file (PNG, JPEG, SVG, etc.)
+/// Returns the decoded text content, or an error message if decoding fails.
+/// SVG files are rasterized via gdk-pixbuf/librsvg before decoding.
+#[cfg(feature = "gui")]
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
+pub fn decode_qr_image(path: &Path) -> Result<String, String> {
+    let gray = if path.extension().is_some_and(|e| e == "svg" || e == "SVG") {
+        // SVG: rasterize via gdk-pixbuf + librsvg, then convert to grayscale
+        let pixbuf = gdk_pixbuf::Pixbuf::from_file_at_scale(path, 800, 800, true)
+            .map_err(|e| format!("Failed to load SVG: {}", e))?;
+        let w = pixbuf.width() as u32;
+        let h = pixbuf.height() as u32;
+        let n_channels = pixbuf.n_channels() as usize;
+        let rowstride = pixbuf.rowstride() as usize;
+        let has_alpha = pixbuf.has_alpha();
+        let data = unsafe { pixbuf.pixels() };
+
+        // Build RgbaImage from pixbuf pixels
+        let mut rgba = Vec::with_capacity((w * h * 4) as usize);
+        for y in 0..h {
+            for x in 0..w {
+                let offset = y as usize * rowstride + x as usize * n_channels;
+                if offset + 2 < data.len() {
+                    rgba.push(data[offset]); // R
+                    rgba.push(data[offset + 1]); // G
+                    rgba.push(data[offset + 2]); // B
+                    rgba.push(if has_alpha && n_channels >= 4 && offset + 3 < data.len() {
+                        data[offset + 3] // A
+                    } else {
+                        255 // opaque
+                    });
+                }
+            }
+        }
+        let img = RgbaImage::from_raw(w, h, rgba)
+            .ok_or_else(|| "Failed to convert SVG pixels".to_string())?;
+        DynamicImage::ImageRgba8(img).to_luma8()
+    } else {
+        // Raster image: load directly via the image crate
+        let img = image::open(path).map_err(|e| format!("Failed to open image: {}", e))?;
+        img.to_luma8()
+    };
+
+    let mut prepared = rqrr::PreparedImage::prepare(gray);
+    let grids = prepared.detect_grids();
+    if grids.is_empty() {
+        return Err("No QR code found in image".to_string());
+    }
+    grids[0]
+        .decode()
+        .map(|(_, content)| content)
+        .map_err(|e| format!("Failed to decode QR code: {}", e))
+}
+
+/// Result of parsing decoded QR content — determines content type and extracts fields.
+pub struct DetectedContent {
+    pub content_type: ContentType,
+    pub text: String,
+    pub url_content: String,
+    pub wifi_ssid: String,
+    pub wifi_password: String,
+    pub wifi_encryption: WifiEncryption,
+    pub vcard_name: String,
+    pub vcard_phone: String,
+    pub vcard_email: String,
+    pub vcard_org: String,
+    pub vcard_url: String,
+    pub calendar_title: String,
+    pub calendar_location: String,
+    pub calendar_start: String,
+    pub calendar_end: String,
+    pub gps_lat: String,
+    pub gps_lon: String,
+    pub sms_phone: String,
+    pub sms_message: String,
+}
+
+/// Parse decoded QR content to determine the content type and extract fields.
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
+pub fn detect_content_type(decoded: &str) -> DetectedContent {
+    let d = decoded.trim();
+
+    // Default: plain text
+    let mut result = DetectedContent {
+        content_type: ContentType::Text,
+        text: d.to_string(),
+        url_content: String::new(),
+        wifi_ssid: String::new(),
+        wifi_password: String::new(),
+        wifi_encryption: WifiEncryption::Wpa,
+        vcard_name: String::new(),
+        vcard_phone: String::new(),
+        vcard_email: String::new(),
+        vcard_org: String::new(),
+        vcard_url: String::new(),
+        calendar_title: String::new(),
+        calendar_location: String::new(),
+        calendar_start: String::new(),
+        calendar_end: String::new(),
+        gps_lat: String::new(),
+        gps_lon: String::new(),
+        sms_phone: String::new(),
+        sms_message: String::new(),
+    };
+
+    if d.starts_with("WIFI:") {
+        // WIFI:T:WPA;S:MyNetwork;P:password;;
+        result.content_type = ContentType::Wifi;
+        // Parse WiFi fields
+        let rest = &d[5..]; // skip "WIFI:"
+        for part in rest.split(';') {
+            if let Some(value) = part.strip_prefix("T:") {
+                result.wifi_encryption = match value {
+                    "WPA" => WifiEncryption::Wpa,
+                    "WEP" => WifiEncryption::Wep,
+                    "nopass" | _ => WifiEncryption::None,
+                };
+            } else if let Some(value) = part.strip_prefix("S:") {
+                result.wifi_ssid = value.to_string();
+            } else if let Some(value) = part.strip_prefix("P:") {
+                result.wifi_password = value.to_string();
+            }
+        }
+        result.text = String::new();
+    } else if d.starts_with("BEGIN:VCARD") {
+        result.content_type = ContentType::Vcard;
+        for line in d.lines() {
+            if let Some(value) = line.strip_prefix("FN:") {
+                result.vcard_name = value.to_string();
+            } else if let Some(value) = line.strip_prefix("N:") {
+                if result.vcard_name.is_empty() {
+                    result.vcard_name = value.to_string();
+                }
+            } else if let Some(value) = line.strip_prefix("TEL") {
+                // TEL or TEL:type=value
+                let phone = if value.starts_with(':') {
+                    &value[1..]
+                } else if let Some(idx) = value.find(':') {
+                    &value[idx + 1..]
+                } else {
+                    value
+                };
+                result.vcard_phone = phone.to_string();
+            } else if let Some(value) = line.strip_prefix("EMAIL") {
+                let email = if value.starts_with(':') {
+                    &value[1..]
+                } else if let Some(idx) = value.find(':') {
+                    &value[idx + 1..]
+                } else {
+                    value
+                };
+                result.vcard_email = email.to_string();
+            } else if let Some(value) = line.strip_prefix("ORG:") {
+                result.vcard_org = value.to_string();
+            } else if let Some(value) = line.strip_prefix("URL:") {
+                result.vcard_url = value.to_string();
+            }
+        }
+        result.text = String::new();
+    } else if d.starts_with("BEGIN:VEVENT") {
+        result.content_type = ContentType::Calendar;
+        for line in d.lines() {
+            if let Some(value) = line.strip_prefix("SUMMARY:") {
+                result.calendar_title = value.to_string();
+            } else if let Some(value) = line.strip_prefix("LOCATION:") {
+                result.calendar_location = value.to_string();
+            } else if let Some(value) = line.strip_prefix("DTSTART:") {
+                result.calendar_start = value.to_string();
+            } else if let Some(value) = line.strip_prefix("DTEND:") {
+                result.calendar_end = value.to_string();
+            }
+        }
+        result.text = String::new();
+    } else if d.starts_with("geo:") {
+        result.content_type = ContentType::Gps;
+        let coords = &d[4..]; // skip "geo:"
+        let parts: Vec<&str> = coords.splitn(2, ',').collect();
+        if parts.len() >= 1 {
+            result.gps_lat = parts[0].to_string();
+        }
+        if parts.len() >= 2 {
+            result.gps_lon = parts[1].to_string();
+        }
+        result.text = String::new();
+    } else if d.starts_with("SMSTO:") {
+        result.content_type = ContentType::Sms;
+        let rest = &d[6..]; // skip "SMSTO:"
+        let parts: Vec<&str> = rest.splitn(2, ':').collect();
+        if !parts.is_empty() {
+            result.sms_phone = parts[0].to_string();
+        }
+        if parts.len() >= 2 {
+            result.sms_message = parts[1].to_string();
+        }
+        result.text = String::new();
+    } else if d.starts_with("http://") || d.starts_with("https://") {
+        result.content_type = ContentType::Url;
+        result.url_content = d.to_string();
+        result.text = String::new();
+    }
+    // else: stays as ContentType::Text with text = d
+
+    result
+}
+
 /// Verify that a rendered QR code image is scannable.
 ///
 /// Performs these checks:
@@ -214,6 +428,112 @@ fn decode_plain_qr(data: &str, ec_level: ErrorCorrectionLevel) -> Option<String>
 /// 3. **Contrast ratio** — fg/bg contrast ≥ 4.5:1 (WCAG AA)?
 /// 4. **Logo vs EC level** — Is the logo within error correction capacity?
 /// 5. **Module gap** — Is the gap between modules within safe limits?
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
+/// Variant of verify_qr_scanability that takes a pre-prepared grayscale image.
+/// This skips the RGBA→grayscale+downscale step (already done on the main thread)
+/// and the re-rasterization from SVG, going directly to rqrr decode.
+///
+/// **Key optimization for styled QR codes**: rqrr cannot decode QR codes with
+/// styled corners (ExtraRounded, Circle, Dot) or non-square dot styles (Rounded,
+/// Dots, Diamond). Attempting to decode them always fails, triggering the expensive
+/// `decode_plain_qr` fallback (~25ms). Since the qrcode crate already proved
+/// the data is valid (it successfully encoded it in render_vector_svg), we skip
+/// rqrr decode entirely for styled QR codes and only do cheap static checks
+/// (contrast, logo vs EC, gap). This reduces verify from ~60ms to <1ms.
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
+pub fn verify_qr_scanability_from_gray(
+    gray: &image::GrayImage,
+    expected_data: &str,
+    fg_color: Rgba<u8>,
+    bg_color: Rgba<u8>,
+    ec_level: ErrorCorrectionLevel,
+    logo_path: Option<&PathBuf>,
+    logo_size: f64,
+    module_gap: f64,
+    corner_square_style: CornerSquareStyle,
+    dot_style: DotStyle,
+) -> ScanResult {
+    let mut result = ScanResult {
+        quality: ScanQuality::Good,
+        contrast_ratio: None,
+        logo_ec_warning: false,
+        gap_warning: false,
+        decode_ok: false,
+        content_matches: false,
+        styled_corners_fallback: false,
+    };
+
+    let has_styled_corners =
+        corner_square_style != CornerSquareStyle::Square || dot_style != DotStyle::Square;
+
+    if has_styled_corners {
+        // ── Fast path for styled QR codes (~1ms) ──
+        // rqrr cannot decode styled corners/dots — attempting it always fails
+        // and triggers the expensive decode_plain_qr fallback. Since the
+        // qrcode crate already proved the data is valid by encoding it,
+        // we skip rqrr entirely and only do static checks.
+        result.styled_corners_fallback = true;
+    } else {
+        // ── Full rqrr decode for plain QR codes (~15ms) ──
+        // Plain square/square QR codes CAN be decoded by rqrr,
+        // so we run the full decode to verify actual scannability.
+        let mut prepared = rqrr::PreparedImage::prepare(gray.clone());
+        let grids = prepared.detect_grids();
+
+        let decode_failed = if grids.is_empty() {
+            true
+        } else {
+            match grids[0].decode() {
+                Ok((_, content)) => {
+                    result.decode_ok = true;
+                    result.content_matches = content == expected_data;
+                    !result.content_matches
+                }
+                Err(_) => true,
+            }
+        };
+
+        if decode_failed {
+            result.quality = ScanQuality::Bad;
+            return result;
+        }
+    }
+
+    // ── Static checks (contrast, logo vs EC, gap) — always run ──
+    let ratio = contrast_ratio(&fg_color, &bg_color);
+    if ratio < 4.5 {
+        result.contrast_ratio = Some(ratio);
+    }
+
+    if logo_path.is_some() && logo_size > 0.0 {
+        let ec_capacity = match ec_level {
+            ErrorCorrectionLevel::Low => 0.07,
+            ErrorCorrectionLevel::Medium => 0.15,
+            ErrorCorrectionLevel::Quartile => 0.25,
+            ErrorCorrectionLevel::High => 0.30,
+        };
+        let area_fraction = logo_size * logo_size;
+        if area_fraction >= ec_capacity {
+            result.quality = ScanQuality::Bad;
+            return result;
+        }
+        if area_fraction >= ec_capacity * 0.5 {
+            result.logo_ec_warning = true;
+        }
+    }
+
+    if module_gap > 0.4 {
+        result.gap_warning = true;
+    }
+
+    if result.contrast_ratio.is_some() || result.logo_ec_warning || result.gap_warning {
+        result.quality = ScanQuality::Limited;
+    }
+
+    result
+}
+
+#[allow(dead_code)]
 pub fn verify_qr_scanability(
     img: &RgbaImage,
     expected_data: &str,
@@ -239,16 +559,26 @@ pub fn verify_qr_scanability(
     let has_styled_corners =
         corner_square_style != CornerSquareStyle::Square || dot_style != DotStyle::Square;
 
-    // 1. Try rqrr decode — downscale large images first (module_size 128px
-    //    produces huge images that rqrr can't handle), then convert to grayscale
-    let dyn_img = DynamicImage::ImageRgba8(img.clone());
-    let max_dim = 800u32;
-    let gray = if dyn_img.width() > max_dim || dyn_img.height() > max_dim {
-        dyn_img
-            .resize(max_dim, max_dim, image::imageops::FilterType::Nearest)
-            .to_luma8()
+    // 1. Try rqrr decode — downscale + convert to grayscale in one pass (no full-image clone)
+    let (w, h) = (img.width(), img.height());
+    let max_dim = 400u32;
+    let gray = if w > max_dim || h > max_dim {
+        // Downscale during grayscale conversion — only allocates the small output image
+        let scale = (w.max(h) as f64 / max_dim as f64).max(1.0);
+        let new_w = (w as f64 / scale) as u32;
+        let new_h = (h as f64 / scale) as u32;
+        image::GrayImage::from_fn(new_w, new_h, |x, y| {
+            let sx = ((x as f64 * scale) as u32).min(w - 1);
+            let sy = ((y as f64 * scale) as u32).min(h - 1);
+            let [r, g, b, _] = img.get_pixel(sx, sy).0;
+            image::Luma([(0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8])
+        })
     } else {
-        dyn_img.to_luma8()
+        // Convert to grayscale at original size — no RGBA clone needed
+        image::GrayImage::from_fn(w, h, |x, y| {
+            let [r, g, b, _] = img.get_pixel(x, y).0;
+            image::Luma([(0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) as u8])
+        })
     };
     let mut prepared = rqrr::PreparedImage::prepare(gray);
     let grids = prepared.detect_grids();
@@ -338,6 +668,7 @@ pub fn verify_qr_scanability(
 pub fn format_qr_data(
     content_type: ContentType,
     text: &str,
+    url_content: &str,
     wifi_ssid: &str,
     wifi_password: &str,
     wifi_encryption: WifiEncryption,
@@ -376,6 +707,18 @@ pub fn format_qr_data(
                 format!("https://{}", t)
             } else {
                 t.to_string()
+            }
+        }
+        ContentType::Url => {
+            let u = url_content.trim();
+            if u.is_empty() {
+                String::new()
+            } else if u.starts_with("http://") || u.starts_with("https://") {
+                u.to_string()
+            } else if u.starts_with("www.") || (u.contains('.') && !u.contains(' ')) {
+                format!("https://{}", u)
+            } else {
+                u.to_string()
             }
         }
         ContentType::Wifi => {
@@ -440,6 +783,7 @@ pub fn format_qr_data(
     }
 }
 
+#[cfg(feature = "gui")]
 pub fn get_qr_data(state: &AppState) -> Option<String> {
     let content_type = *state.content_type.borrow();
     let text = state
@@ -451,6 +795,7 @@ pub fn get_qr_data(state: &AppState) -> Option<String> {
         )
         .trim()
         .to_string();
+    let url_content = state.url_content.borrow().clone();
     let wifi_ssid = state.wifi_ssid.borrow().clone();
     let wifi_password = state.wifi_password.borrow().clone();
     let wifi_encryption = *state.wifi_encryption.borrow();
@@ -473,6 +818,7 @@ pub fn get_qr_data(state: &AppState) -> Option<String> {
     let data = format_qr_data(
         content_type,
         &text,
+        &url_content,
         &wifi_ssid,
         &wifi_password,
         wifi_encryption,
@@ -499,6 +845,7 @@ pub fn get_qr_data(state: &AppState) -> Option<String> {
 // STYLE SETTINGS HELPERS (for Undo/Redo and Import/Export)
 // ============================================================
 
+#[cfg(feature = "gui")]
 pub fn current_style_settings(state: &AppState) -> StyleSettings {
     let s = state;
     StyleSettings {
@@ -536,9 +883,26 @@ pub fn current_style_settings(state: &AppState) -> StyleSettings {
         frame_inner_radius: *s.frame_inner_radius.borrow(),
         outer_text_font: s.outer_text_font.borrow().clone(),
         outer_text_font_size: *s.outer_text_font_size.borrow(),
+        // Previously missing from undo/redo
+        logo_path: s
+            .logo_path
+            .borrow()
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string()),
+        logo_size: *s.logo_size.borrow(),
+        bg_image_path: s
+            .bg_image_path
+            .borrow()
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string()),
+        outer_text_top: s.outer_text_top.borrow().clone(),
+        outer_text_bottom: s.outer_text_bottom.borrow().clone(),
+        outer_text_color: s.outer_text_color.borrow().0,
+        custom_dot_path: s.custom_dot_path.borrow().clone(),
     }
 }
 
+#[cfg(feature = "gui")]
 pub fn apply_style_to_state(state: &AppState, settings: &StyleSettings) {
     *state.dot_style.borrow_mut() = parse_dot_style(&settings.dot_style);
     *state.corner_square_style.borrow_mut() =
@@ -575,6 +939,29 @@ pub fn apply_style_to_state(state: &AppState, settings: &StyleSettings) {
     *state.frame_inner_radius.borrow_mut() = settings.frame_inner_radius;
     *state.outer_text_font.borrow_mut() = settings.outer_text_font.clone();
     *state.outer_text_font_size.borrow_mut() = settings.outer_text_font_size;
+    // Previously missing from undo/redo
+    let new_logo_path = settings.logo_path.as_ref().map(PathBuf::from);
+    *state.logo_path.borrow_mut() = new_logo_path;
+    // Migration fix: if logo_path is set but logo_size is 0.0,
+    // the session was saved by an older version without logo_size.
+    // Restore to default 0.4 so the logo is actually visible.
+    let effective_logo_size = if settings.logo_size <= 0.0 && state.logo_path.borrow().is_some() {
+        0.4
+    } else {
+        settings.logo_size
+    };
+    *state.logo_size.borrow_mut() = effective_logo_size;
+    // Invalidate bg image cache if path changed
+    let old_bg_path = state.bg_image_path.borrow().clone();
+    let new_bg_path = settings.bg_image_path.as_ref().map(PathBuf::from);
+    if old_bg_path != new_bg_path {
+        *state.bg_image_path.borrow_mut() = new_bg_path;
+        *state.cached_bg_image_data.borrow_mut() = None;
+    }
+    *state.outer_text_top.borrow_mut() = settings.outer_text_top.clone();
+    *state.outer_text_bottom.borrow_mut() = settings.outer_text_bottom.clone();
+    *state.outer_text_color.borrow_mut() = Rgba(settings.outer_text_color);
+    *state.custom_dot_path.borrow_mut() = settings.custom_dot_path.clone();
 }
 
 // ============================================================
@@ -672,6 +1059,7 @@ pub fn load_saved_item_json(name: &str) -> Option<(String, String)> {
 
 /// Smoothly animate a ProgressBar from its current fraction to a target value.
 /// Uses 20 steps over ~300ms for a fluid glide effect.
+#[cfg(feature = "gui")]
 pub fn set_fraction_animated(bar: &gtk4::ProgressBar, target: f64) {
     let current = bar.fraction();
     if (current - target).abs() < 0.005 {
@@ -695,6 +1083,7 @@ pub fn set_fraction_animated(bar: &gtk4::ProgressBar, target: f64) {
     });
 }
 
+#[cfg(feature = "gui")]
 pub fn update_qr_info(state: &AppState) {
     let i18n = state.i18n.borrow();
 
@@ -876,10 +1265,12 @@ pub fn get_templates_dir() -> Option<std::path::PathBuf> {
 // ============================================================
 
 /// Create a TemplateSettings from the current AppState (style + content).
+#[cfg(feature = "gui")]
 pub fn current_template_settings(state: &AppState) -> TemplateSettings {
     let ct = *state.content_type.borrow();
     let content_type_str = match ct {
         ContentType::Text => "Text",
+        ContentType::Url => "URL",
         ContentType::Wifi => "WiFi",
         ContentType::Vcard => "vCard",
         ContentType::Calendar => "Kalender",
@@ -901,6 +1292,7 @@ pub fn current_template_settings(state: &AppState) -> TemplateSettings {
                 false,
             )
             .to_string(),
+        url_content: state.url_content.borrow().clone(),
         wifi_ssid: state.wifi_ssid.borrow().clone(),
         wifi_password: state.wifi_password.borrow().clone(),
         wifi_encryption: wifi_enc_str.to_string(),
@@ -924,10 +1316,12 @@ pub fn current_template_settings(state: &AppState) -> TemplateSettings {
 }
 
 /// Apply template settings to state (content + style).
+#[cfg(feature = "gui")]
 pub fn apply_template_to_state(state: &AppState, tmpl: &TemplateSettings) {
     // Apply content
     *state.content_type.borrow_mut() = parse_content_type(&tmpl.content_type);
     state.text_buffer.set_text(&tmpl.text_content);
+    *state.url_content.borrow_mut() = tmpl.url_content.clone();
     *state.wifi_ssid.borrow_mut() = tmpl.wifi_ssid.clone();
     *state.wifi_password.borrow_mut() = tmpl.wifi_password.clone();
     *state.wifi_encryption.borrow_mut() = parse_wifi_encryption(&tmpl.wifi_encryption);
@@ -1043,4 +1437,40 @@ pub fn color_harmonies(color: Rgba<u8>) -> Vec<(String, Rgba<u8>)> {
         ("Triadisch 1".to_string(), rotate(120.0)),
         ("Triadisch 2".to_string(), rotate(240.0)),
     ]
+}
+
+// ============================================================
+// COLOR PICKER (PIPETTE) — pick a color from the screen via XDG portal
+// ============================================================
+
+/// Tokio runtime for ashpd D-Bus calls. Lazy-init, shared across all pipette clicks.
+#[cfg(feature = "gui")]
+static ASHPD_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
+
+/// Pick a color from the screen using the XDG Screenshot portal's PickColor method.
+///
+/// Returns the picked color as `gdk::RGBA` on success, or an error message string on failure.
+/// The portal may not be available on all desktop environments (requires xdg-desktop-portal
+/// with a backend that implements PickColor, e.g. GNOME 44+).
+#[cfg(feature = "gui")]
+pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
+    use ashpd::desktop::screenshot;
+
+    let runtime = ASHPD_RUNTIME.get_or_init(|| {
+        tokio::runtime::Runtime::new()
+            .map_err(|e| format!("Failed to create tokio runtime: {e}"))
+            .expect("ashpd tokio runtime")
+    });
+
+    runtime.block_on(async {
+        let result = screenshot::ColorRequest::default()
+            .send()
+            .await
+            .and_then(|r| r.response());
+
+        match result {
+            Ok(color) => Ok(gdk::RGBA::from(color)),
+            Err(err) => Err(format!("{err}")),
+        }
+    })
 }

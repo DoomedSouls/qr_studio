@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] — 2025-05-10
+
+### Added
+- **CLI mode** — Headless QR code generation without GUI. Supports all content types (text, URL, WiFi, vCard, Calendar, GPS, SMS) and all style options (dot style, colors, gradient, frame, logo, etc.). Output formats: PNG, SVG, PDF. Usage: `qr_studio --cli --text "Hello" --output qr.png --dot-style rounded --fg-color "#ff0000"`. Ideal for scripting, automation, and batch processing.
+- **Unit tests (97 tests)** — Comprehensive test suite covering: `format_qr_data()` for all 7 content types, parsing helpers with English/German input, SVG helpers (rgba_to_svg, base64_encode, xml_escape, parse_svg_viewbox), i18n completeness (all 9 languages checked for missing keys), contrast ratio, and color harmonies.
+- **Keyboard shortcuts overlay** — Press `Ctrl+?` to show all keyboard shortcuts in a GTK ShortcutsWindow. Integrated via GResource bundle with `gtk/help-overlay.ui` (standard GNOME pattern).
+- **GSettings schema** — Persistent user settings via `io.github.SlobCoder.qr_studio` GSettings schema. Window size, maximized state, sidebar width, and other preferences are saved on close and restored on startup.
+
+### Changed
+- **GResource compilation** — Added `build.rs` with `glib-build-tools` for compiling UI resources at build time.
+- **AppImage** — Build script now bundles the app's own GSettings schema.
+
+## [0.3.0] — 2025-05-06
+
+### Added
+- **URL content type** — Dedicated "Website" tab for URL QR codes. Auto-prepends `https://` for domains without scheme. Available in all 9 languages.
+- **QR code import** — Import and decode existing QR codes from image files (PNG, JPEG, SVG, etc.). Auto-detects content type (WiFi, vCard, Calendar, GPS, SMS, URL, Text) and fills in all corresponding fields. SVG files are rasterized via gdk-pixbuf/librsvg. Uses `rqrr` for decoding.
+- **Performance profiling** — Optional `hotpath` integration for profiling render pipeline, SVG rasterization, QR decoding, and scan verification. Zero-cost when disabled (`--features hotpath,hotpath-alloc` to enable).
+
+### Fixed
+- **Memory: 180× less allocation in scan verification** — `verify_qr_scanability` now converts RGBA→grayscale+downscale in a single pass instead of cloning the full image. Per-call allocation reduced from ~110 MB to ~0.6 MB for large QR codes.
+- **UI: scan verification moved to background thread** — The 438ms `verify_qr_scanability` call no longer blocks the main thread. Scan results arrive alongside the rendered image.
+- **Memory: cached RGBA buffer released after display** — The preview RGBA image (up to 85 MB) is consumed directly into a GDK texture instead of being cloned and cached. Export operations re-render from cached SVG.
+- **Preview: style changes now visible with empty content** — When no QR content is entered, a placeholder "QR Studio" QR code is rendered so style changes (dot style, colors, etc.) are immediately visible. Scan verification is skipped for placeholders.
+- **Background image not displayed in preview** — librsvg does not render PNG images embedded as `data:` URIs in `<image>` elements (JPEG works fine). Fixed by converting PNG background images to JPEG in-memory before embedding in SVG. No visible quality loss since the image is displayed at 30% opacity.
+- **Double rendering on startup** — Session/style settings triggered intermediate renders with incomplete state while UI widgets were being updated. Fixed by blocking `schedule_preview` during `is_restoring` until all widgets are fully synchronized.
+
+### Changed
+- **App ID**: `com.example.qr_studio` → `io.github.SlobCoder.qr_studio` — Proper reverse-DNS identifier for D-Bus, icon lookup, desktop integration, and future Flatpak support.
+- **Desktop file**: Fixed hardcoded path, added localized `Comment` and `Keywords` entries for all 9 languages.
+
 ## [0.2.2] — 2025-05-03
 
 ### Fixed

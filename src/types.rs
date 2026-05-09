@@ -1,9 +1,28 @@
-use crate::i18n::I18n;
-use adw::ToastOverlay;
-use gtk4::{Button, Label, Picture, ProgressBar, TextBuffer};
-use image::{Rgba, RgbaImage};
-use std::cell::RefCell;
+#[cfg(feature = "gui")]
+use image::Rgba;
+#[cfg(feature = "gui")]
+use image::RgbaImage;
+#[cfg(feature = "gui")]
 use std::path::PathBuf;
+
+#[cfg(feature = "gui")]
+use crate::i18n::I18n;
+#[cfg(feature = "gui")]
+use adw::ToastOverlay;
+#[cfg(feature = "gui")]
+use gtk4::glib;
+#[cfg(feature = "gui")]
+use gtk4::{Button, Label, Picture, ProgressBar, TextBuffer};
+#[cfg(feature = "gui")]
+use std::cell::RefCell;
+
+/// Maximum number of undo snapshots retained.
+pub const MAX_UNDO_STACK: usize = 50;
+
+/// Default logo size (40 % of QR area).
+fn default_logo_size() -> f64 {
+    0.4
+}
 
 // ============================================================
 // ENUMS
@@ -67,6 +86,7 @@ pub enum ScanQuality {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ContentType {
     Text,
+    Url,
     Wifi,
     Vcard,
     Calendar,
@@ -133,6 +153,15 @@ pub struct StyleSettings {
     pub frame_inner_radius: f64,
     pub outer_text_font: String,
     pub outer_text_font_size: u32,
+    // --- Fields previously missing from undo/redo ---
+    pub logo_path: Option<String>,
+    #[serde(default = "default_logo_size")]
+    pub logo_size: f64,
+    pub bg_image_path: Option<String>,
+    pub outer_text_top: String,
+    pub outer_text_bottom: String,
+    pub outer_text_color: [u8; 4],
+    pub custom_dot_path: String,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
@@ -141,6 +170,7 @@ pub struct TemplateSettings {
     // Content
     pub content_type: String,
     pub text_content: String,
+    pub url_content: String,
     pub wifi_ssid: String,
     pub wifi_password: String,
     pub wifi_encryption: String,
@@ -164,9 +194,10 @@ pub struct TemplateSettings {
 }
 
 // ============================================================
-// APP STATE
+// APP STATE (GUI only — requires GTK4 widgets)
 // ============================================================
 
+#[cfg(feature = "gui")]
 pub struct AppState {
     pub preview_picture: Picture,
     pub text_buffer: TextBuffer,
@@ -209,6 +240,7 @@ pub struct AppState {
     pub gradient_color: RefCell<Rgba<u8>>,
     pub gradient_direction: RefCell<GradientDirection>,
     pub content_type: RefCell<ContentType>,
+    pub url_content: RefCell<String>,
     pub wifi_ssid: RefCell<String>,
     pub wifi_password: RefCell<String>,
     pub wifi_encryption: RefCell<WifiEncryption>,
@@ -231,25 +263,39 @@ pub struct AppState {
     pub sms_country_code: RefCell<String>,
     pub sms_message: RefCell<String>,
     pub preview_generation: RefCell<u32>,
+    pub preview_debounce_id: RefCell<Option<glib::SourceId>>,
+    /// Cached background image data: (path, mime_type, base64_data)
+    /// Processed once when image is loaded, reused for every render.
+    /// Invalidated when bg_image_path changes.
+    pub cached_bg_image_data: RefCell<Option<(PathBuf, String, String)>>,
     pub cached_svg: RefCell<Option<String>>,
     pub cached_rgba: RefCell<Option<RgbaImage>>,
     pub cached_qr_data: RefCell<Option<String>>,
     pub scan_verify_btn: Button,
-    pub undo_stack: RefCell<Vec<StyleSettings>>,
-    pub redo_stack: RefCell<Vec<StyleSettings>>,
+    pub undo_stack: RefCell<Vec<TemplateSettings>>,
+    pub redo_stack: RefCell<Vec<TemplateSettings>>,
     pub is_restoring: RefCell<bool>,
+    /// Debounce timer for content-change undo snapshots (1 s).
+    pub content_undo_debounce_id: RefCell<Option<glib::SourceId>>,
+    pub undo_btn: Button,
+    pub redo_btn: Button,
     pub custom_dot_path: RefCell<String>,
     pub outer_text_font: RefCell<String>,
     pub outer_text_font_size: RefCell<u32>,
     pub contrast_warning_label: Label,
+    /// Reusable RGBA pixel buffer for `rasterize_svg_into()`.
+    /// Cleared and refilled on each preview render, capacity preserved
+    /// across calls to eliminate ~18 MB heap allocation per render.
+    pub raster_buf: RefCell<Vec<u8>>,
     #[allow(dead_code)]
     pub i18n: RefCell<I18n>,
 }
 
 // ============================================================
-// TOAST TYPE (visual feedback)
+// TOAST TYPE (visual feedback — GUI only)
 // ============================================================
 
+#[cfg(feature = "gui")]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum ToastType {
@@ -258,6 +304,7 @@ pub enum ToastType {
     Info,
 }
 
+#[cfg(feature = "gui")]
 impl AppState {
     /// Show a toast with a colored accent based on type.
     /// Success = green, Error = red, Info = blue.
@@ -267,7 +314,14 @@ impl AppState {
             ToastType::Error => "❌  ",
             ToastType::Info => "ℹ️  ",
         };
-        let title = format!("{}{}", prefix, msg);
+        // Escape Pango markup special characters in the message
+        let escaped = msg
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('\'', "&apos;")
+            .replace('"', "&quot;");
+        let title = format!("{}{}", prefix, escaped);
         let toast = adw::Toast::builder().title(&title).timeout(3).build();
         self.toast_overlay.add_toast(toast);
     }

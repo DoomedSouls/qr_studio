@@ -33,3 +33,6 @@ desktop.ini
 *.dylib
 preview/
 qrcode.svg
+
+# SVG snapshot test failure artifacts
+*.actual.svg

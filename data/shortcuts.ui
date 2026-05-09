@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkShortcutsWindow" id="help_overlay">
+    <property name="modal">true</property>
+    <child>
+      <object class="GtkShortcutsSection">
+        <property name="section-name">shortcuts</property>
+        <property name="title" translatable="yes">Keyboard Shortcuts</property>
+        <child>
+          <object class="GtkShortcutsGroup">
+            <property name="title" translatable="yes">General</property>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Control&gt;z</property>
+                <property name="title" translatable="yes">Undo</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Control&gt;y</property>
+                <property name="title" translatable="yes">Redo</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcutsGroup">
+            <property name="title" translatable="yes">Export</property>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Control&gt;c</property>
+                <property name="title" translatable="yes">Copy PNG to Clipboard</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;c</property>
+                <property name="title" translatable="yes">Copy SVG to Clipboard</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Control&gt;s</property>
+                <property name="title" translatable="yes">Save as PNG</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;s</property>
+                <property name="title" translatable="yes">Save as SVG</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

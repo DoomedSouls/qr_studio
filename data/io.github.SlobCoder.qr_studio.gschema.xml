@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="io.github.SlobCoder.qr_studio" path="/io/github/SlobCoder/qr_studio/">
+    <key name="window-width" type="i">
+      <default>1200</default>
+      <summary>Window width</summary>
+      <description>Width of the main application window in pixels.</description>
+    </key>
+    <key name="window-height" type="i">
+      <default>800</default>
+      <summary>Window height</summary>
+      <description>Height of the main application window in pixels.</description>
+    </key>
+    <key name="window-maximized" type="b">
+      <default>false</default>
+      <summary>Window maximized state</summary>
+      <description>Whether the main window is maximized.</description>
+    </key>
+    <key name="sidebar-width" type="i">
+      <default>360</default>
+      <summary>Sidebar width</summary>
+      <description>Width of the sidebar/paned position in pixels.</description>
+    </key>
+    <key name="last-content-type" type="s">
+      <default>'text'</default>
+      <summary>Last content type</summary>
+      <description>The last selected content type (text, url, wifi, vcard, calendar, gps, sms).</description>
+    </key>
+    <key name="last-dot-style" type="s">
+      <default>'rounded'</default>
+      <summary>Last dot style</summary>
+      <description>The last selected dot style (rounded, square, dots, diamond, custom).</description>
+    </key>
+    <key name="last-ec-level" type="s">
+      <default>'M'</default>
+      <summary>Last error correction level</summary>
+      <description>The last selected error correction level (L, M, Q, H).</description>
+    </key>
+    <key name="last-language" type="s">
+      <default>'de'</default>
+      <summary>UI language</summary>
+      <description>Language code for the interface (de, en, es, fr, it, pt-br, ja, ko, zh-cn).</description>
+    </key>
+  </schema>
+</schemalist>

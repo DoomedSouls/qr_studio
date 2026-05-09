@@ -1,17 +1,64 @@
+mod cli;
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod country_codes;
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod helpers;
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod i18n;
+#[cfg(feature = "gui")]
 mod map_styles;
+#[cfg(feature = "gui")]
 mod render;
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod svg;
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
+mod tests;
+#[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod types;
+#[cfg(feature = "gui")]
 mod ui;
 
+#[cfg(feature = "gui")]
 use adw::prelude::*;
 
+#[cfg(not(feature = "gui"))]
 fn main() {
+    // Headless CLI-only binary — no GTK4, no display server needed
+    let cli = match clap::Parser::try_parse() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(e.exit_code());
+        }
+    };
+    let exit_code = cli::run_cli(&cli);
+    std::process::exit(exit_code);
+}
+
+#[cfg(feature = "gui")]
+#[cfg_attr(feature = "hotpath", hotpath::main)]
+fn main() {
+    // Check for CLI mode BEFORE GTK initialization
+    // This allows headless QR generation without a display server
+    let cli_args: Vec<String> = std::env::args().collect();
+    if cli_args.iter().any(|a| a == "--cli") {
+        let cli = match clap::Parser::try_parse_from(&cli_args) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("{}", e);
+                std::process::exit(e.exit_code());
+            }
+        };
+        let exit_code = cli::run_cli(&cli);
+        std::process::exit(exit_code);
+    }
+
+    // Register compiled GResources (includes shortcuts overlay)
+    gtk4::gio::resources_register_include!("io.github.SlobCoder.qr_studio.gresource")
+        .expect("Failed to register GResource");
+
     let app = adw::Application::builder()
-        .application_id("com.example.qr_studio")
+        .application_id("io.github.SlobCoder.qr_studio")
         .build();
     app.connect_activate(|app| {
         // Pre-fetch OpenFreeMap TileJSON in background so style switching is instant
@@ -38,7 +85,19 @@ fn main() {
                 50% { opacity: 0.55; }
             }
 
-            /* ---- DnD drop zone highlight ---- */
+            /* ---- DnD: dim normal content when drop-zone overlay is visible ---- */
+            paned.dnd-dim { opacity: 0.12; transition: opacity 150ms ease-out; }
+
+            /* ---- DnD drop zone container (overlay) ---- */
+            .drop-zone-container { background: alpha(@window_bg_color, 0.92); padding: 24px; }
+            .drop-zone { border: 2px dashed alpha(@window_fg_color, 0.3); border-radius: 16px; margin: 12px; padding: 32px 24px; transition: all 180ms ease-out; }
+            .drop-zone-hover { border-color: @accent_color; background: alpha(@accent_color, 0.1); border-style: solid; box-shadow: 0 0 20px alpha(@accent_color, 0.15); }
+            .drop-zone-icon { color: alpha(@window_fg_color, 0.4); transition: color 180ms ease-out; -gtk-icon-size: 48px; }
+            .drop-zone-hover .drop-zone-icon { color: @accent_color; }
+            .drop-zone-label { color: alpha(@window_fg_color, 0.6); font-size: 1.15em; font-weight: 600; transition: color 180ms ease-out; }
+            .drop-zone-hover .drop-zone-label { color: @accent_color; }
+
+            /* ---- DnD drop zone highlight (legacy) ---- */
             .drop-active { border: 2px dashed @accent_color; background: alpha(@accent_color, 0.08); border-radius: 8px; transition: all 200ms ease-out; }
 
             /* ---- preview fade-in ---- */
