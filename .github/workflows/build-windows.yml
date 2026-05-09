@@ -21,6 +21,14 @@ jobs:
         with:
           targets: x86_64-pc-windows-gnu
 
+      - name: Set default host to GNU toolchain
+        shell: bash
+        run: |
+          # Build script (build.rs) is compiled for the HOST target.
+          # With default host = msvc, link.exe can't find MinGW .lib files.
+          # Set GNU as default so build.rs also links with MinGW.
+          rustup default stable-x86_64-pc-windows-gnu
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
