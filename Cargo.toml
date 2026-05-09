@@ -30,7 +30,7 @@ libshumate = { version = "0.8", optional = true }
 reqwest = { version = "0.12", features = ["blocking", "json"], optional = true }
 once_cell = { version = "1.21.4", optional = true }
 hotpath = { version = "0.14", optional = true }
-ashpd = { version = "0.13", default-features = false, features = ["tokio", "screenshot", "gtk4"], optional = true }
+ashpd = { version = "0.13", default-features = false, features = ["tokio", "screenshot"], optional = true }
 tokio = { version = "1", features = ["rt"], optional = true }
 
 [build-dependencies]

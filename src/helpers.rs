@@ -1469,7 +1469,11 @@ pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
             .and_then(|r| r.response());
 
         match result {
-            Ok(color) => Ok(gdk::RGBA::from(color)),
+            Ok(color) => Ok(gdk::RGBA::builder()
+                .red(color.red() as f32)
+                .green(color.green() as f32)
+                .blue(color.blue() as f32)
+                .build()),
             Err(err) => Err(format!("{err}")),
         }
     })
