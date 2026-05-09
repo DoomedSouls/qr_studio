@@ -30,6 +30,8 @@ libshumate = { version = "0.8", optional = true }
 reqwest = { version = "0.12", features = ["blocking", "json"], optional = true }
 once_cell = { version = "1.21.4", optional = true }
 hotpath = { version = "0.14", optional = true }
+
+# ── Linux-only: color picker pipette via XDG portal ──
 ashpd = { version = "0.13", default-features = false, features = ["tokio", "screenshot"], optional = true }
 tokio = { version = "1", features = ["rt"], optional = true }
 
@@ -45,6 +47,8 @@ gui = [
     "dep:libshumate",
     "dep:reqwest",
     "dep:once_cell",
+]
+pipette = [
     "dep:ashpd",
     "dep:tokio",
 ]

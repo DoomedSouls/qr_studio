@@ -1024,6 +1024,7 @@ pub fn build_ui(app: &Application) {
             gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
     }
+    #[cfg(feature = "pipette")]
     {
         let pipette_css = gtk4::CssProvider::new();
         pipette_css.load_from_data(
@@ -1806,14 +1807,12 @@ pub fn build_ui(app: &Application) {
     ));
     fg_color_btn.set_tooltip_text(Some(&i18n.t("color_fg")));
     fg_color_btn.add_css_class("color-btn-hover");
-    let fg_pipette_btn = Button::new();
-    fg_pipette_btn.set_icon_name("color-select-symbolic");
-    fg_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    fg_pipette_btn.add_css_class("pipette-btn");
-    fg_pipette_btn.set_valign(Align::Center);
+    let fg_pipette_btn = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     fg_color_row.append(&fg_color_label);
     fg_color_row.append(&fg_color_btn);
-    fg_color_row.append(&fg_pipette_btn);
+    if let Some(ref btn) = fg_pipette_btn {
+        fg_color_row.append(btn);
+    }
     colors_box.append(&fg_color_row);
 
     // --- Farbharmonien ---
@@ -1852,14 +1851,12 @@ pub fn build_ui(app: &Application) {
     let bg_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(1.0, 1.0, 1.0, 1.0));
     bg_color_btn.set_tooltip_text(Some(&i18n.t("color_bg")));
     bg_color_btn.add_css_class("color-btn-hover");
-    let bg_pipette_btn = Button::new();
-    bg_pipette_btn.set_icon_name("color-select-symbolic");
-    bg_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    bg_pipette_btn.add_css_class("pipette-btn");
-    bg_pipette_btn.set_valign(Align::Center);
+    let bg_pipette_btn = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     bg_color_row.append(&bg_color_label);
     bg_color_row.append(&bg_color_btn);
-    bg_color_row.append(&bg_pipette_btn);
+    if let Some(ref btn) = bg_pipette_btn {
+        bg_color_row.append(btn);
+    }
     colors_box.append(&bg_color_row);
 
     let corner_color_row = Box::new(Orientation::Horizontal, 6);
@@ -1875,14 +1872,12 @@ pub fn build_ui(app: &Application) {
     ));
     corner_color_btn.set_tooltip_text(Some(&i18n.t("color_corner")));
     corner_color_btn.add_css_class("color-btn-hover");
-    let corner_pipette_btn = Button::new();
-    corner_pipette_btn.set_icon_name("color-select-symbolic");
-    corner_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    corner_pipette_btn.add_css_class("pipette-btn");
-    corner_pipette_btn.set_valign(Align::Center);
+    let corner_pipette_btn = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     corner_color_row.append(&corner_color_label);
     corner_color_row.append(&corner_color_btn);
-    corner_color_row.append(&corner_pipette_btn);
+    if let Some(ref btn) = corner_pipette_btn {
+        corner_color_row.append(btn);
+    }
     colors_box.append(&corner_color_row);
 
     let transparent_bg_check = CheckButton::with_label(&i18n.t("check_transparent_bg"));
@@ -1906,14 +1901,12 @@ pub fn build_ui(app: &Application) {
     ));
     grad_color_btn.set_tooltip_text(Some(&i18n.t("color_gradient")));
     grad_color_btn.add_css_class("color-btn-hover");
-    let grad_pipette_btn = Button::new();
-    grad_pipette_btn.set_icon_name("color-select-symbolic");
-    grad_pipette_btn.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    grad_pipette_btn.add_css_class("pipette-btn");
-    grad_pipette_btn.set_valign(Align::Center);
+    let grad_pipette_btn = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     grad_color_row.append(&grad_color_label);
     grad_color_row.append(&grad_color_btn);
-    grad_color_row.append(&grad_pipette_btn);
+    if let Some(ref btn) = grad_pipette_btn {
+        grad_color_row.append(btn);
+    }
     colors_box.append(&grad_color_row);
 
     let grad_dirs = StringList::new(&[]);
@@ -2123,13 +2116,12 @@ pub fn build_ui(app: &Application) {
 
     let logo_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
     logo_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_color")));
-    let logo_color_pipette = Button::new();
-    logo_color_pipette.set_icon_name("color-select-symbolic");
-    logo_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    logo_color_pipette.add_css_class("pipette-btn");
+    let logo_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let logo_color_row = Box::new(Orientation::Horizontal, 4);
     logo_color_row.append(&logo_color_btn);
-    logo_color_row.append(&logo_color_pipette);
+    if let Some(ref btn) = logo_color_pipette {
+        logo_color_row.append(btn);
+    }
     logo_box.append(&logo_color_row);
 
     let logo_border_width_label = Label::new(Some(&i18n.t("label_logo_border_width")));
@@ -2144,13 +2136,12 @@ pub fn build_ui(app: &Application) {
 
     let logo_border_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(1.0, 1.0, 1.0, 1.0));
     logo_border_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_border_color")));
-    let logo_border_color_pipette = Button::new();
-    logo_border_color_pipette.set_icon_name("color-select-symbolic");
-    logo_border_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    logo_border_color_pipette.add_css_class("pipette-btn");
+    let logo_border_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let logo_border_color_row = Box::new(Orientation::Horizontal, 4);
     logo_border_color_row.append(&logo_border_color_btn);
-    logo_border_color_row.append(&logo_border_color_pipette);
+    if let Some(ref btn) = logo_border_color_pipette {
+        logo_border_color_row.append(btn);
+    }
     logo_box.append(&logo_border_color_row);
 
     let logo_vectorize_check = CheckButton::with_label(&i18n.t("check_logo_vectorize"));
@@ -2161,13 +2152,12 @@ pub fn build_ui(app: &Application) {
     let logo_vectorize_bg_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
     logo_vectorize_bg_color_btn.set_use_alpha(true);
     logo_vectorize_bg_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_vectorize_bg")));
-    let logo_vecbg_pipette = Button::new();
-    logo_vecbg_pipette.set_icon_name("color-select-symbolic");
-    logo_vecbg_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    logo_vecbg_pipette.add_css_class("pipette-btn");
+    let logo_vecbg_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let logo_vecbg_row = Box::new(Orientation::Horizontal, 4);
     logo_vecbg_row.append(&logo_vectorize_bg_color_btn);
-    logo_vecbg_row.append(&logo_vecbg_pipette);
+    if let Some(ref btn) = logo_vecbg_pipette {
+        logo_vecbg_row.append(btn);
+    }
     logo_box.append(&logo_vecbg_row);
 
     let logo_bg_transparent_check = CheckButton::with_label(&i18n.t("check_logo_bg_transparent"));
@@ -2213,13 +2203,12 @@ pub fn build_ui(app: &Application) {
 
     let text_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0));
     text_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_text_color")));
-    let text_color_pipette = Button::new();
-    text_color_pipette.set_icon_name("color-select-symbolic");
-    text_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    text_color_pipette.add_css_class("pipette-btn");
+    let text_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let text_color_row = Box::new(Orientation::Horizontal, 4);
     text_color_row.append(&text_color_btn);
-    text_color_row.append(&text_color_pipette);
+    if let Some(ref btn) = text_color_pipette {
+        text_color_row.append(btn);
+    }
     text_outer_box.append(&text_color_row);
 
     // Font family dropdown
@@ -2301,13 +2290,12 @@ pub fn build_ui(app: &Application) {
 
     let frame_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0));
     frame_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_frame_color")));
-    let frame_color_pipette = Button::new();
-    frame_color_pipette.set_icon_name("color-select-symbolic");
-    frame_color_pipette.set_tooltip_text(Some(&i18n.t("tooltip_pick_color")));
-    frame_color_pipette.add_css_class("pipette-btn");
+    let frame_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let frame_color_row = Box::new(Orientation::Horizontal, 4);
     frame_color_row.append(&frame_color_btn);
-    frame_color_row.append(&frame_color_pipette);
+    if let Some(ref btn) = frame_color_pipette {
+        frame_color_row.append(btn);
+    }
     frame_box.append(&frame_color_row);
 
     let frame_width_label = Label::new(Some(&i18n.t("label_frame_width")));
@@ -2651,7 +2639,9 @@ pub fn build_ui(app: &Application) {
     // PIPETTE (COLOR PICKER) SIGNAL CONNECTIONS
     // Connect each pipette button to pick_screen_color() and apply
     // the result to the adjacent ColorButton.
+    // Only compiled when the pipette feature is enabled (Linux).
     // ============================================================
+    #[cfg(feature = "pipette")]
     {
         // Helper closure to connect a pipette button to a color button
         let connect_pipette =
@@ -2683,15 +2673,33 @@ pub fn build_ui(app: &Application) {
                 });
             };
 
-        connect_pipette(&fg_pipette_btn, &fg_color_btn, &state);
-        connect_pipette(&bg_pipette_btn, &bg_color_btn, &state);
-        connect_pipette(&corner_pipette_btn, &corner_color_btn, &state);
-        connect_pipette(&grad_pipette_btn, &grad_color_btn, &state);
-        connect_pipette(&logo_color_pipette, &logo_color_btn, &state);
-        connect_pipette(&logo_border_color_pipette, &logo_border_color_btn, &state);
-        connect_pipette(&logo_vecbg_pipette, &logo_vectorize_bg_color_btn, &state);
-        connect_pipette(&text_color_pipette, &text_color_btn, &state);
-        connect_pipette(&frame_color_pipette, &frame_color_btn, &state);
+        if let Some(ref btn) = fg_pipette_btn {
+            connect_pipette(btn, &fg_color_btn, &state);
+        }
+        if let Some(ref btn) = bg_pipette_btn {
+            connect_pipette(btn, &bg_color_btn, &state);
+        }
+        if let Some(ref btn) = corner_pipette_btn {
+            connect_pipette(btn, &corner_color_btn, &state);
+        }
+        if let Some(ref btn) = grad_pipette_btn {
+            connect_pipette(btn, &grad_color_btn, &state);
+        }
+        if let Some(ref btn) = logo_color_pipette {
+            connect_pipette(btn, &logo_color_btn, &state);
+        }
+        if let Some(ref btn) = logo_border_color_pipette {
+            connect_pipette(btn, &logo_border_color_btn, &state);
+        }
+        if let Some(ref btn) = logo_vecbg_pipette {
+            connect_pipette(btn, &logo_vectorize_bg_color_btn, &state);
+        }
+        if let Some(ref btn) = text_color_pipette {
+            connect_pipette(btn, &text_color_btn, &state);
+        }
+        if let Some(ref btn) = frame_color_pipette {
+            connect_pipette(btn, &frame_color_btn, &state);
+        }
     }
 
     // ============================================================

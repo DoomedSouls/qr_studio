@@ -40,7 +40,7 @@ printf '╚═══════════════════════
 
 # ── 1. Build release binary ───────────────────────────────────
 step "Building release binary"
-cargo build --release --manifest-path "${PROJECT_DIR}/Cargo.toml" \
+cargo build --release --manifest-path "${PROJECT_DIR}/Cargo.toml" --features gui,pipette \
     || die "cargo build failed"
 ok "$(du -h "${BUILD_DIR}/${BINARY}" | cut -f1)"
 

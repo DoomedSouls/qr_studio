@@ -1441,10 +1441,30 @@ pub fn color_harmonies(color: Rgba<u8>) -> Vec<(String, Rgba<u8>)> {
 
 // ============================================================
 // COLOR PICKER (PIPETTE) — pick a color from the screen via XDG portal
+// Linux-only: requires ashpd + tokio (not available on Windows/macOS)
 // ============================================================
 
-/// Tokio runtime for ashpd D-Bus calls. Lazy-init, shared across all pipette clicks.
+/// Create a pipette (color picker) button, or return None if the pipette feature is disabled.
 #[cfg(feature = "gui")]
+pub fn make_pipette_btn(tooltip: &str) -> Option<gtk4::Button> {
+    #[cfg(feature = "pipette")]
+    {
+        let btn = gtk4::Button::new();
+        btn.set_icon_name("color-select-symbolic");
+        btn.set_tooltip_text(Some(tooltip));
+        btn.add_css_class("pipette-btn");
+        btn.set_valign(gtk4::Align::Center);
+        Some(btn)
+    }
+    #[cfg(not(feature = "pipette"))]
+    {
+        let _ = tooltip;
+        None
+    }
+}
+
+/// Tokio runtime for ashpd D-Bus calls. Lazy-init, shared across all pipette clicks.
+#[cfg(feature = "pipette")]
 static ASHPD_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
 
 /// Pick a color from the screen using the XDG Screenshot portal's PickColor method.
@@ -1452,7 +1472,7 @@ static ASHPD_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::
 /// Returns the picked color as `gdk::RGBA` on success, or an error message string on failure.
 /// The portal may not be available on all desktop environments (requires xdg-desktop-portal
 /// with a backend that implements PickColor, e.g. GNOME 44+).
-#[cfg(feature = "gui")]
+#[cfg(feature = "pipette")]
 pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
     use ashpd::desktop::screenshot;
 
