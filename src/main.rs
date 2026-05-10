@@ -449,10 +449,41 @@ fn main() {
 
         ui::build_ui(app);
     });
+
+    // ── Windows diagnostics: allocate console before GTK main loop ──
+    // GTK's GLib writes errors to C stderr, which is invisible with
+    // windows_subsystem = "windows". AllocConsole() creates a console
+    // so we can see what GTK prints before crashing.
+    #[cfg(all(windows, feature = "gui"))]
+    unsafe {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn AllocConsole() -> i32;
+        }
+        AllocConsole();
+    }
+    windows_log("console allocated for GTK diagnostics");
+
+    // Enable verbose GLib logging so we see everything
+    #[cfg(all(windows, feature = "gui"))]
+    unsafe {
+        std::env::set_var("G_MESSAGES_DEBUG", "all");
+    }
+
     windows_log("calling app.run()...");
     #[allow(unused_variables)]
     let exit_status = app.run();
     windows_log(&format!("app.run() returned: {:?}", exit_status));
+
+    // If app.run() actually returned, free the diagnostic console
+    #[cfg(all(windows, feature = "gui"))]
+    unsafe {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn FreeConsole() -> i32;
+        }
+        FreeConsole();
+    }
 
     // On Windows GUI, a non-zero exit code usually means GTK failed
     // to open a display (e.g. missing GPU drivers, RDP session, Wine).
