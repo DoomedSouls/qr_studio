@@ -196,6 +196,26 @@ fn main() {
         windows_log("GLib log handlers installed");
     }
 
+    // ── Windows: help GLib find our compiled GSettings schema ──────
+    // In a portable ZIP, GLib doesn't know where share/glib-2.0/schemas/ is.
+    // Set GSETTINGS_SCHEMA_DIR so Settings::new() can find our schema.
+    #[cfg(all(windows, feature = "gui"))]
+    {
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                let schema_dir = dir.join("share").join("glib-2.0").join("schemas");
+                if schema_dir.exists() {
+                    unsafe {
+                        std::env::set_var("GSETTINGS_SCHEMA_DIR", &schema_dir);
+                    }
+                    windows_log(&format!("Set GSETTINGS_SCHEMA_DIR={:?}", schema_dir));
+                } else {
+                    windows_log(&format!("WARNING: schema dir not found: {:?}", schema_dir));
+                }
+            }
+        }
+    }
+
     // Check for CLI mode BEFORE GTK initialization
     // This allows headless QR generation without a display server
     let cli_args: Vec<String> = std::env::args().collect();

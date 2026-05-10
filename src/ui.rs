@@ -922,11 +922,11 @@ pub fn build_ui(app: &Application) {
 
     // ── GSettings: restore persistent window geometry and sidebar width ──
     // On Windows (portable ZIP), the GSettings schema may not be installed.
-    // gio::Settings::new() panics if the schema is missing, so we catch that.
-    let gsettings = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        gtk4::gio::Settings::new("io.github.SlobCoder.qr_studio")
-    }))
-    .ok();
+    // Check schema existence first — Settings::new() calls g_error()/abort()
+    // if the schema is missing, which cannot be caught by catch_unwind.
+    let gsettings = gtk4::gio::SettingsSchemaSource::default()
+        .and_then(|src| src.lookup("io.github.SlobCoder.qr_studio", true))
+        .map(|_schema| gtk4::gio::Settings::new("io.github.SlobCoder.qr_studio"));
     if let Some(ref gs) = gsettings {
         let w = gs.int("window-width");
         let h = gs.int("window-height");
