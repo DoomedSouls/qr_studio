@@ -171,13 +171,13 @@ fn main() {
         gtk4::glib::log_set_writer_func(move |level, fields| {
             let domain = fields
                 .iter()
-                .find(|f| f.key == "GLIB_DOMAIN")
-                .and_then(|f| f.value.to_str())
+                .find(|f| f.key() == "GLIB_DOMAIN")
+                .and_then(|f| f.value_str())
                 .unwrap_or("GLib");
             let message = fields
                 .iter()
-                .find(|f| f.key == "MESSAGE")
-                .and_then(|f| f.value.to_str())
+                .find(|f| f.key() == "MESSAGE")
+                .and_then(|f| f.value_str())
                 .unwrap_or("");
             let line = format!("[STRUCT/{}] [{:?}] {}\n", domain, level, message);
             if let Some(ref path) = log_path_clone2 {
