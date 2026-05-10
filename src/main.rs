@@ -137,29 +137,63 @@ fn main() {
     init_windows_panic_hook();
     windows_log("panic hook installed");
 
-    // ── Windows: close the console window immediately ───────────
-    // We build as a console subsystem app (not windows_subsystem=windows)
-    // so the C runtime initializes stderr/stdout to valid handles.
-    // GTK/GLib writes to stderr during init — if it's NULL (as with
-    // windows_subsystem=windows), GTK crashes silently. FreeConsole()
-    // closes the console window but leaves the CRT handles valid.
+    // ── Windows: redirect GLib log messages to qr_studio.log ────
+    // This captures all GTK/GLib debug/info/warning/error messages
+    // so we can diagnose why the GUI might not appear.
     #[cfg(all(windows, feature = "gui"))]
-    unsafe {
-        #[link(name = "kernel32")]
-        unsafe extern "system" {
-            fn FreeConsole() -> i32;
-        }
-        FreeConsole();
-    }
-    windows_log("console freed (hidden)");
+    {
+        let log_path_clone = windows_log_path();
+        let log_path_clone2 = windows_log_path();
 
-    // On Windows, force the Win32 GDK backend
-    #[cfg(all(windows, feature = "gui"))]
-    if std::env::var("GDK_BACKEND").is_err() {
-        unsafe {
-            std::env::set_var("GDK_BACKEND", "win32");
-        }
-        windows_log("set GDK_BACKEND=win32");
+        // Capture legacy g_log() messages
+        glib::log_set_handler(
+            None,                   // all domains
+            glib::LogLevels::all(), // all levels
+            true,                   // handle fatal
+            true,                   // handle recursion
+            move |domain, level, message| {
+                let domain_str = domain.unwrap_or("GLib");
+                let line = format!("[GLib/{}] [{:?}] {}\n", domain_str, level, message);
+                if let Some(ref path) = log_path_clone {
+                    use std::io::Write;
+                    if let Ok(mut f) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(path)
+                    {
+                        let _ = f.write_all(line.as_bytes());
+                    }
+                }
+            },
+        );
+
+        // Capture structured g_log_structured() messages (used by modern GLib/GTK)
+        glib::log_set_writer_func(move |level, fields| {
+            let domain = fields
+                .iter()
+                .find(|f| f.key == "GLIB_DOMAIN")
+                .and_then(|f| f.value.to_str())
+                .unwrap_or("GLib");
+            let message = fields
+                .iter()
+                .find(|f| f.key == "MESSAGE")
+                .and_then(|f| f.value.to_str())
+                .unwrap_or("");
+            let line = format!("[STRUCT/{}] [{:?}] {}\n", domain, level, message);
+            if let Some(ref path) = log_path_clone2 {
+                use std::io::Write;
+                if let Ok(mut f) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(path)
+                {
+                    let _ = f.write_all(line.as_bytes());
+                }
+            }
+            glib::LogWriterOutput::Handled
+        });
+
+        windows_log("GLib log handlers installed");
     }
 
     // Check for CLI mode BEFORE GTK initialization
@@ -189,6 +223,8 @@ fn main() {
         .build();
     windows_log("adw::Application built");
     app.connect_activate(|app| {
+        windows_log("connect_activate called — building UI...");
+
         // Pre-fetch OpenFreeMap TileJSON in background so style switching is instant
         map_styles::prefetch_tilejson();
 
@@ -464,12 +500,6 @@ fn main() {
 
         ui::build_ui(app);
     });
-
-    // Enable verbose GLib logging on Windows
-    #[cfg(all(windows, feature = "gui"))]
-    unsafe {
-        std::env::set_var("G_MESSAGES_DEBUG", "all");
-    }
 
     windows_log("calling app.run()...");
     #[allow(unused_variables)]
