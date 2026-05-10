@@ -43,34 +43,90 @@ fn main() {
     std::process::exit(exit_code);
 }
 
+// ── Windows GUI: error diagnostics ─────────────────────────────────
+//
+// With `windows_subsystem = "windows"` there is no console window.
+// GTK/GLib errors go to C stderr which is invisible.
+// If GTK fails to open a display it calls exit(1), bypassing
+// Rust's panic hook entirely — so no log file is written either.
+//
+// Solution: redirect C-level stderr (fd 2) to qr_studio.log BEFORE
+// GTK initialises. This captures every GTK/GLib warning and error,
+// even when GTK calls exit().
+
+#[cfg(all(windows, feature = "gui"))]
+fn init_windows_stderr_log() {
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let log_path = dir.join("qr_studio.log");
+            if let Ok(file) = std::fs::File::create(&log_path) {
+                use std::os::windows::io::AsRawHandle;
+                let raw_handle = file.as_raw_handle();
+
+                unsafe {
+                    // MSVCRT: convert Win32 HANDLE → C file descriptor,
+                    // then redirect fd 2 (C stderr) to the log file.
+                    #[link(name = "msvcrt")]
+                    unsafe extern "C" {
+                        fn _open_osfhandle(osfhandle: isize, flags: i32) -> i32;
+                        fn _dup2(fildes1: i32, fildes2: i32) -> i32;
+                    }
+                    const _O_WRONLY: i32 = 1;
+                    const _O_BINARY: i32 = 0x8000;
+
+                    let fd = _open_osfhandle(raw_handle as isize, _O_WRONLY | _O_BINARY);
+                    if fd >= 0 {
+                        _dup2(fd, 2); // redirect C stderr (fd 2) → log file
+                    }
+                }
+
+                // Leak the File — it must outlive the process so the handle stays open
+                std::mem::forget(file);
+            }
+        }
+    }
+}
+
+#[cfg(not(all(windows, feature = "gui")))]
+#[allow(dead_code)]
+fn init_windows_stderr_log() {}
+
+/// Show a Win32 error MessageBox (used by panic hook and app.run() failure).
+#[cfg(all(windows, feature = "gui"))]
+fn show_windows_error_message(msg: &str) {
+    unsafe {
+        #[link(name = "user32")]
+        unsafe extern "system" {
+            fn MessageBoxA(hwnd: usize, text: *const u8, caption: *const u8, mb: u32) -> i32;
+        }
+        let caption = b"QR Studio - Error\0";
+        // MB_ICONERROR = 0x10, MB_OK = 0
+        MessageBoxA(0, msg.as_ptr(), caption.as_ptr(), 0x10);
+    }
+}
+
 #[cfg(all(windows, feature = "gui"))]
 fn init_windows_panic_hook() {
     // Without a console window, panics are invisible on Windows.
-    // Install a hook that shows a MessageBox with the panic info
-    // and also writes to a log file next to the executable.
+    // Install a hook that shows a MessageBox and appends to qr_studio.log.
     std::panic::set_hook(Box::new(|info| {
         let msg = format!("QR Studio crashed:\n\n{}", info);
         eprintln!("{}", msg);
 
-        // Try to write crash log next to the executable
+        // Also write directly to qr_studio.log (append) in case
+        // the stderr redirect hasn't captured this yet
         if let Ok(exe) = std::env::current_exe() {
             if let Some(dir) = exe.parent() {
-                let log_path = dir.join("qr_studio_crash.log");
-                let _ = std::fs::write(&log_path, &msg);
+                let log_path = dir.join("qr_studio.log");
+                let _ = std::fs::OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open(&log_path)
+                    .and_then(|mut f| std::io::Write::write_all(&mut f, msg.as_bytes()));
             }
         }
 
-        // Show Win32 MessageBox (user32 is always linked on Windows)
-        #[cfg(target_os = "windows")]
-        unsafe {
-            #[link(name = "user32")]
-            unsafe extern "system" {
-                fn MessageBoxA(hwnd: usize, text: *const u8, caption: *const u8, mb: u32) -> i32;
-            }
-            let caption = b"QR Studio - Error\0";
-            // MB_ICONERROR = 0x10, MB_OK = 0
-            MessageBoxA(0, msg.as_ptr(), caption.as_ptr(), 0x10);
-        }
+        show_windows_error_message(&msg);
     }));
 }
 
@@ -83,8 +139,19 @@ fn init_windows_panic_hook() {
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
-    // Install panic handler early (on Windows GUI, shows MessageBox on crash)
+    // ── Windows: early diagnostics (before any GTK init) ────────────
+    // Redirect C stderr → qr_studio.log so GTK/GLib errors are captured
+    // even when GTK calls exit(1) (bypasses Rust's panic hook).
+    init_windows_stderr_log();
+    // Install panic handler (on Windows GUI: shows MessageBox on crash)
     init_windows_panic_hook();
+
+    // On Windows, force the Win32 GDK backend to avoid "No such backend:
+    // wayland/x11" warnings in non-standard environments (Wine, RDP…)
+    #[cfg(all(windows, feature = "gui"))]
+    if std::env::var("GDK_BACKEND").is_err() {
+        std::env::set_var("GDK_BACKEND", "win32");
+    }
 
     // Check for CLI mode BEFORE GTK initialization
     // This allows headless QR generation without a display server
@@ -384,5 +451,29 @@ fn main() {
 
         ui::build_ui(app);
     });
-    app.run();
+    #[allow(unused_variables)]
+    let exit_status = app.run();
+
+    // On Windows GUI, a non-zero exit code usually means GTK failed
+    // to open a display (e.g. missing GPU drivers, RDP session, Wine).
+    // Show a MessageBox so the user knows what happened.
+    #[cfg(all(windows, feature = "gui"))]
+    if exit_status != 0 {
+        let log_hint = if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                format!("\n\nDetails: {}", dir.join("qr_studio.log").display())
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+        show_windows_error_message(&format!(
+            "QR Studio exited with error code {}.\n\
+             This usually means GTK4 could not open a display.\n\
+             Make sure you are running on a real Windows desktop\n\
+             (Wine / headless RDP are not supported).{}",
+            exit_status, log_hint
+        ));
+    }
 }
