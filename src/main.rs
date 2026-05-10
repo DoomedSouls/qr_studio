@@ -46,52 +46,33 @@ fn main() {
 // ── Windows GUI: error diagnostics ─────────────────────────────────
 //
 // With `windows_subsystem = "windows"` there is no console window.
-// GTK/GLib errors go to C stderr which is invisible.
-// If GTK fails to open a display it calls exit(1), bypassing
-// Rust's panic hook entirely — so no log file is written either.
-//
-// Solution: redirect C-level stderr (fd 2) to qr_studio.log BEFORE
-// GTK initialises. This captures every GTK/GLib warning and error,
-// even when GTK calls exit().
+// We write diagnostic messages directly to qr_studio.log via std::fs
+// so we can see exactly how far startup gets.
+// A Win32 MessageBox is shown on panic or app.run() failure.
 
+/// Append a timestamped message to qr_studio.log next to the executable.
 #[cfg(all(windows, feature = "gui"))]
-fn init_windows_stderr_log() {
+fn windows_log(msg: &str) {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             let log_path = dir.join("qr_studio.log");
-            if let Ok(file) = std::fs::File::create(&log_path) {
-                use std::os::windows::io::AsRawHandle;
-                let raw_handle = file.as_raw_handle();
-
-                unsafe {
-                    // MSVCRT: convert Win32 HANDLE → C file descriptor,
-                    // then redirect fd 2 (C stderr) to the log file.
-                    #[link(name = "msvcrt")]
-                    unsafe extern "C" {
-                        fn _open_osfhandle(osfhandle: isize, flags: i32) -> i32;
-                        fn _dup2(fildes1: i32, fildes2: i32) -> i32;
-                    }
-                    const _O_WRONLY: i32 = 1;
-                    const _O_BINARY: i32 = 0x8000;
-
-                    let fd = _open_osfhandle(raw_handle as isize, _O_WRONLY | _O_BINARY);
-                    if fd >= 0 {
-                        _dup2(fd, 2); // redirect C stderr (fd 2) → log file
-                    }
-                }
-
-                // Leak the File — it must outlive the process so the handle stays open
-                std::mem::forget(file);
-            }
+            let _ = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&log_path)
+                .and_then(|mut f| {
+                    use std::io::Write;
+                    writeln!(f, "{}", msg)
+                });
         }
     }
 }
 
 #[cfg(not(all(windows, feature = "gui")))]
 #[allow(dead_code)]
-fn init_windows_stderr_log() {}
+fn windows_log(_msg: &str) {}
 
-/// Show a Win32 error MessageBox (used by panic hook and app.run() failure).
+/// Show a Win32 error MessageBox.
 #[cfg(all(windows, feature = "gui"))]
 fn show_windows_error_message(msg: &str) {
     unsafe {
@@ -100,61 +81,44 @@ fn show_windows_error_message(msg: &str) {
             fn MessageBoxA(hwnd: usize, text: *const u8, caption: *const u8, mb: u32) -> i32;
         }
         let caption = b"QR Studio - Error\0";
-        // MB_ICONERROR = 0x10, MB_OK = 0
         MessageBoxA(0, msg.as_ptr(), caption.as_ptr(), 0x10);
     }
 }
 
 #[cfg(all(windows, feature = "gui"))]
 fn init_windows_panic_hook() {
-    // Without a console window, panics are invisible on Windows.
-    // Install a hook that shows a MessageBox and appends to qr_studio.log.
     std::panic::set_hook(Box::new(|info| {
-        let msg = format!("QR Studio crashed:\n\n{}", info);
-        eprintln!("{}", msg);
-
-        // Also write directly to qr_studio.log (append) in case
-        // the stderr redirect hasn't captured this yet
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
-                let log_path = dir.join("qr_studio.log");
-                let _ = std::fs::OpenOptions::new()
-                    .append(true)
-                    .create(true)
-                    .open(&log_path)
-                    .and_then(|mut f| std::io::Write::write_all(&mut f, msg.as_bytes()));
-            }
-        }
-
-        show_windows_error_message(&msg);
+        let msg = format!("PANIC: {}", info);
+        windows_log(&msg);
+        show_windows_error_message(&format!("QR Studio crashed:\n\n{}", info));
     }));
 }
 
 #[cfg(not(all(windows, feature = "gui")))]
 #[allow(dead_code)]
-fn init_windows_panic_hook() {
-    // No-op on non-Windows or non-GUI builds
-}
+fn init_windows_panic_hook() {}
 
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
-    // ── Windows: early diagnostics (before any GTK init) ────────────
-    // Redirect C stderr → qr_studio.log so GTK/GLib errors are captured
-    // even when GTK calls exit(1) (bypasses Rust's panic hook).
-    init_windows_stderr_log();
-    // Install panic handler (on Windows GUI: shows MessageBox on crash)
-    init_windows_panic_hook();
+    // ── Windows: early diagnostics ──────────────────────────────────
+    windows_log(&format!(
+        "QR Studio v{} starting",
+        env!("CARGO_PKG_VERSION")
+    ));
+    windows_log(&format!("exe: {:?}", std::env::current_exe()));
+    windows_log(&format!("cwd: {:?}", std::env::current_dir()));
 
-    // On Windows, force the Win32 GDK backend to avoid "No such backend:
-    // wayland/x11" warnings in non-standard environments (Wine, RDP…)
+    init_windows_panic_hook();
+    windows_log("panic hook installed");
+
+    // On Windows, force the Win32 GDK backend
     #[cfg(all(windows, feature = "gui"))]
     if std::env::var("GDK_BACKEND").is_err() {
-        // SAFETY: setting GDK_BACKEND before GTK init is safe —
-        // no other thread is accessing the environment yet.
         unsafe {
             std::env::set_var("GDK_BACKEND", "win32");
         }
+        windows_log("set GDK_BACKEND=win32");
     }
 
     // Check for CLI mode BEFORE GTK initialization
@@ -173,12 +137,16 @@ fn main() {
     }
 
     // Register compiled GResources (includes shortcuts overlay)
+    windows_log("registering GResources...");
     gtk4::gio::resources_register_include!("io.github.SlobCoder.qr_studio.gresource")
         .expect("Failed to register GResource");
+    windows_log("GResources registered");
 
+    windows_log("building adw::Application...");
     let app = adw::Application::builder()
         .application_id("io.github.SlobCoder.qr_studio")
         .build();
+    windows_log("adw::Application built");
     app.connect_activate(|app| {
         // Pre-fetch OpenFreeMap TileJSON in background so style switching is instant
         map_styles::prefetch_tilejson();
@@ -455,33 +423,24 @@ fn main() {
 
         ui::build_ui(app);
     });
+    windows_log("calling app.run()...");
     #[allow(unused_variables)]
     let exit_status = app.run();
+    windows_log(&format!("app.run() returned: {:?}", exit_status));
 
     // On Windows GUI, a non-zero exit code usually means GTK failed
     // to open a display (e.g. missing GPU drivers, RDP session, Wine).
     // Show a MessageBox so the user knows what happened.
     #[cfg(all(windows, feature = "gui"))]
     if exit_status != gtk4::glib::ExitCode::SUCCESS {
-        let code = match exit_status {
-            gtk4::glib::ExitCode::FAILURE => 1u8,
-            _ => 2u8,
-        };
-        let log_hint = if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
-                format!("\n\nDetails: {}", dir.join("qr_studio.log").display())
-            } else {
-                String::new()
-            }
-        } else {
-            String::new()
-        };
-        show_windows_error_message(&format!(
-            "QR Studio exited with error code {}.\n\
+        let msg = format!(
+            "QR Studio exited with error.\n\
              This usually means GTK4 could not open a display.\n\
              Make sure you are running on a real Windows desktop\n\
-             (Wine / headless RDP are not supported).{}",
-            code, log_hint
-        ));
+             (Wine / headless RDP are not supported).\n\
+             See qr_studio.log for details."
+        );
+        windows_log(&msg);
+        show_windows_error_message(&msg);
     }
 }
