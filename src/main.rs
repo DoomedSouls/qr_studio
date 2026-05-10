@@ -150,7 +150,11 @@ fn main() {
     // wayland/x11" warnings in non-standard environments (Wine, RDP…)
     #[cfg(all(windows, feature = "gui"))]
     if std::env::var("GDK_BACKEND").is_err() {
-        std::env::set_var("GDK_BACKEND", "win32");
+        // SAFETY: setting GDK_BACKEND before GTK init is safe —
+        // no other thread is accessing the environment yet.
+        unsafe {
+            std::env::set_var("GDK_BACKEND", "win32");
+        }
     }
 
     // Check for CLI mode BEFORE GTK initialization
