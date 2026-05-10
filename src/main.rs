@@ -50,20 +50,39 @@ fn main() {
 // so we can see exactly how far startup gets.
 // A Win32 MessageBox is shown on panic or app.run() failure.
 
-/// Append a timestamped message to qr_studio.log next to the executable.
+/// Get the log file path (next to the executable).
+#[cfg(all(windows, feature = "gui"))]
+fn windows_log_path() -> Option<std::path::PathBuf> {
+    std::env::current_exe()
+        .ok()?
+        .parent()
+        .map(|dir| dir.join("qr_studio.log"))
+}
+
+/// Append a message to qr_studio.log next to the executable.
+/// If writing fails, show a MessageBox with the error (once).
 #[cfg(all(windows, feature = "gui"))]
 fn windows_log(msg: &str) {
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let log_path = dir.join("qr_studio.log");
-            let _ = std::fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(&log_path)
-                .and_then(|mut f| {
-                    use std::io::Write;
-                    writeln!(f, "{}", msg)
-                });
+    use std::io::Write;
+    if let Some(log_path) = windows_log_path() {
+        match std::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&log_path)
+        {
+            Ok(mut f) => {
+                if writeln!(f, "{}", msg).is_err() {
+                    // Can't log — nothing more we can do
+                }
+            }
+            Err(e) => {
+                // Show ONE MessageBox about log failure so the user knows
+                show_windows_error_message(&format!(
+                    "Cannot write log file:\n{}\n\nError: {}",
+                    log_path.display(),
+                    e
+                ));
+            }
         }
     }
 }
@@ -71,6 +90,12 @@ fn windows_log(msg: &str) {
 #[cfg(not(all(windows, feature = "gui")))]
 #[allow(dead_code)]
 fn windows_log(_msg: &str) {}
+
+#[cfg(not(all(windows, feature = "gui")))]
+#[allow(dead_code)]
+fn windows_log_path() -> Option<std::path::PathBuf> {
+    None
+}
 
 /// Show a Win32 error MessageBox.
 #[cfg(all(windows, feature = "gui"))]
@@ -101,11 +126,12 @@ fn init_windows_panic_hook() {}
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
-    // ── Windows: early diagnostics ──────────────────────────────────
-    windows_log(&format!(
-        "QR Studio v{} starting",
-        env!("CARGO_PKG_VERSION")
-    ));
+    // ── Windows: clear old log and write fresh diagnostics ─────────
+    #[cfg(all(windows, feature = "gui"))]
+    if let Some(log_path) = windows_log_path() {
+        let _ = std::fs::remove_file(&log_path); // clear old log from previous build
+    }
+    windows_log(&format!("=== QR Studio v{} ===", env!("CARGO_PKG_VERSION")));
     windows_log(&format!("exe: {:?}", std::env::current_exe()));
     windows_log(&format!("cwd: {:?}", std::env::current_dir()));
 
