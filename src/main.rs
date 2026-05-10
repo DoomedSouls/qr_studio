@@ -146,11 +146,11 @@ fn main() {
         let log_path_clone2 = windows_log_path();
 
         // Capture legacy g_log() messages
-        glib::log_set_handler(
-            None,                   // all domains
-            glib::LogLevels::all(), // all levels
-            true,                   // handle fatal
-            true,                   // handle recursion
+        gtk4::glib::log_set_handler(
+            None,                         // all domains
+            gtk4::glib::LogLevels::all(), // all levels
+            true,                         // handle fatal
+            true,                         // handle recursion
             move |domain, level, message| {
                 let domain_str = domain.unwrap_or("GLib");
                 let line = format!("[GLib/{}] [{:?}] {}\n", domain_str, level, message);
@@ -168,7 +168,7 @@ fn main() {
         );
 
         // Capture structured g_log_structured() messages (used by modern GLib/GTK)
-        glib::log_set_writer_func(move |level, fields| {
+        gtk4::glib::log_set_writer_func(move |level, fields| {
             let domain = fields
                 .iter()
                 .find(|f| f.key == "GLIB_DOMAIN")
@@ -190,7 +190,7 @@ fn main() {
                     let _ = f.write_all(line.as_bytes());
                 }
             }
-            glib::LogWriterOutput::Handled
+            gtk4::glib::LogWriterOutput::Handled
         });
 
         windows_log("GLib log handlers installed");
