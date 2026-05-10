@@ -180,7 +180,13 @@ jobs:
             cp "${MINGW}/share/glib-2.0/schemas/gschemas.compiled" "${LAYOUT}/share/glib-2.0/schemas/"
           fi
 
-          # Compile schemas
+          # Copy app's own GSettings schema so Settings::new() doesn't crash
+          if [ -f "data/io.github.SlobCoder.qr_studio.gschema.xml" ]; then
+            cp data/io.github.SlobCoder.qr_studio.gschema.xml "${LAYOUT}/share/glib-2.0/schemas/"
+            echo "Copied app GSettings schema"
+          fi
+
+          # Compile schemas (includes our app schema now)
           cp "${MINGW}/bin/glib-compile-schemas.exe" "${LAYOUT}/"
           cd "${LAYOUT}/share/glib-2.0/schemas"
           "${LAYOUT}/glib-compile-schemas.exe" . 2>/dev/null || true

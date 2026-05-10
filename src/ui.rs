@@ -921,17 +921,22 @@ pub fn build_ui(app: &Application) {
     main_box.append(&content_overlay);
 
     // ── GSettings: restore persistent window geometry and sidebar width ──
-    let gsettings = gtk4::gio::Settings::new("io.github.SlobCoder.qr_studio");
-    {
-        let w = gsettings.int("window-width");
-        let h = gsettings.int("window-height");
+    // On Windows (portable ZIP), the GSettings schema may not be installed.
+    // gio::Settings::new() panics if the schema is missing, so we catch that.
+    let gsettings = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        gtk4::gio::Settings::new("io.github.SlobCoder.qr_studio")
+    }))
+    .ok();
+    if let Some(ref gs) = gsettings {
+        let w = gs.int("window-width");
+        let h = gs.int("window-height");
         if w > 0 && h > 0 {
             window.set_default_size(w, h);
         }
-        if gsettings.boolean("window-maximized") {
+        if gs.boolean("window-maximized") {
             window.maximize();
         }
-        let pos = gsettings.int("sidebar-width");
+        let pos = gs.int("sidebar-width");
         if pos > 0 {
             paned.set_position(pos);
         }
@@ -942,12 +947,14 @@ pub fn build_ui(app: &Application) {
         let paned_save = paned.clone();
         let win = window.clone();
         window.connect_close_request(move |_| {
-            let w = win.width();
-            let h = win.height();
-            let _ = gsettings.set_int("window-width", w);
-            let _ = gsettings.set_int("window-height", h);
-            let _ = gsettings.set_boolean("window-maximized", win.is_maximized());
-            let _ = gsettings.set_int("sidebar-width", paned_save.position());
+            if let Some(ref gs) = gsettings {
+                let w = win.width();
+                let h = win.height();
+                let _ = gs.set_int("window-width", w);
+                let _ = gs.set_int("window-height", h);
+                let _ = gs.set_boolean("window-maximized", win.is_maximized());
+                let _ = gs.set_int("sidebar-width", paned_save.position());
+            }
             gtk4::glib::Propagation::Proceed
         });
     }
