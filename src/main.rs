@@ -64,7 +64,7 @@ fn init_windows_panic_hook() {
         #[cfg(target_os = "windows")]
         unsafe {
             #[link(name = "user32")]
-            extern "system" {
+            unsafe extern "system" {
                 fn MessageBoxA(hwnd: usize, text: *const u8, caption: *const u8, mb: u32) -> i32;
             }
             let caption = b"QR Studio - Error\0";
