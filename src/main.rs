@@ -1,3 +1,11 @@
+//! QR Studio — styled QR code generator
+//!
+//! On Windows GUI builds, hide the console window and show panics
+//! in a message box so errors are visible even without a terminal.
+
+// Hide console window on Windows GUI builds (prevents the brief black CMD flash)
+#![cfg_attr(all(windows, feature = "gui"), windows_subsystem = "windows")]
+
 mod cli;
 #[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod country_codes;
@@ -35,9 +43,49 @@ fn main() {
     std::process::exit(exit_code);
 }
 
+#[cfg(all(windows, feature = "gui"))]
+fn init_windows_panic_hook() {
+    // Without a console window, panics are invisible on Windows.
+    // Install a hook that shows a MessageBox with the panic info
+    // and also writes to a log file next to the executable.
+    std::panic::set_hook(Box::new(|info| {
+        let msg = format!("QR Studio crashed:\n\n{}", info);
+        eprintln!("{}", msg);
+
+        // Try to write crash log next to the executable
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                let log_path = dir.join("qr_studio_crash.log");
+                let _ = std::fs::write(&log_path, &msg);
+            }
+        }
+
+        // Show Win32 MessageBox (user32 is always linked on Windows)
+        #[cfg(target_os = "windows")]
+        unsafe {
+            #[link(name = "user32")]
+            extern "system" {
+                fn MessageBoxA(hwnd: usize, text: *const u8, caption: *const u8, mb: u32) -> i32;
+            }
+            let caption = b"QR Studio - Error\0";
+            // MB_ICONERROR = 0x10, MB_OK = 0
+            MessageBoxA(0, msg.as_ptr(), caption.as_ptr(), 0x10);
+        }
+    }));
+}
+
+#[cfg(not(all(windows, feature = "gui")))]
+#[allow(dead_code)]
+fn init_windows_panic_hook() {
+    // No-op on non-Windows or non-GUI builds
+}
+
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
+    // Install panic handler early (on Windows GUI, shows MessageBox on crash)
+    init_windows_panic_hook();
+
     // Check for CLI mode BEFORE GTK initialization
     // This allows headless QR generation without a display server
     let cli_args: Vec<String> = std::env::args().collect();
