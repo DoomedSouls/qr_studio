@@ -1,10 +1,9 @@
 //! QR Studio — styled QR code generator
 //!
-//! On Windows GUI builds, hide the console window and show panics
-//! in a message box so errors are visible even without a terminal.
-
-// Hide console window on Windows GUI builds (prevents the brief black CMD flash)
-#![cfg_attr(all(windows, feature = "gui"), windows_subsystem = "windows")]
+//! On Windows GUI builds, we close the console window early via FreeConsole()
+//! so no black CMD window is visible. We keep the console subsystem (not
+//! windows_subsystem = "windows") so the C runtime initializes stderr/stdout
+//! to valid handles — GTK/GLib requires valid stderr or it crashes silently.
 
 mod cli;
 #[cfg_attr(not(feature = "gui"), allow(dead_code))]
@@ -137,6 +136,22 @@ fn main() {
 
     init_windows_panic_hook();
     windows_log("panic hook installed");
+
+    // ── Windows: close the console window immediately ───────────
+    // We build as a console subsystem app (not windows_subsystem=windows)
+    // so the C runtime initializes stderr/stdout to valid handles.
+    // GTK/GLib writes to stderr during init — if it's NULL (as with
+    // windows_subsystem=windows), GTK crashes silently. FreeConsole()
+    // closes the console window but leaves the CRT handles valid.
+    #[cfg(all(windows, feature = "gui"))]
+    unsafe {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn FreeConsole() -> i32;
+        }
+        FreeConsole();
+    }
+    windows_log("console freed (hidden)");
 
     // On Windows, force the Win32 GDK backend
     #[cfg(all(windows, feature = "gui"))]
@@ -450,21 +465,7 @@ fn main() {
         ui::build_ui(app);
     });
 
-    // ── Windows diagnostics: allocate console before GTK main loop ──
-    // GTK's GLib writes errors to C stderr, which is invisible with
-    // windows_subsystem = "windows". AllocConsole() creates a console
-    // so we can see what GTK prints before crashing.
-    #[cfg(all(windows, feature = "gui"))]
-    unsafe {
-        #[link(name = "kernel32")]
-        unsafe extern "system" {
-            fn AllocConsole() -> i32;
-        }
-        AllocConsole();
-    }
-    windows_log("console allocated for GTK diagnostics");
-
-    // Enable verbose GLib logging so we see everything
+    // Enable verbose GLib logging on Windows
     #[cfg(all(windows, feature = "gui"))]
     unsafe {
         std::env::set_var("G_MESSAGES_DEBUG", "all");
@@ -474,16 +475,6 @@ fn main() {
     #[allow(unused_variables)]
     let exit_status = app.run();
     windows_log(&format!("app.run() returned: {:?}", exit_status));
-
-    // If app.run() actually returned, free the diagnostic console
-    #[cfg(all(windows, feature = "gui"))]
-    unsafe {
-        #[link(name = "kernel32")]
-        unsafe extern "system" {
-            fn FreeConsole() -> i32;
-        }
-        FreeConsole();
-    }
 
     // On Windows GUI, a non-zero exit code usually means GTK failed
     // to open a display (e.g. missing GPU drivers, RDP session, Wine).
