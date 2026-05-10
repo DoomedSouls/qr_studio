@@ -72,6 +72,7 @@ jobs:
             mingw-w64-x86_64-gstreamer
             mingw-w64-x86_64-gst-plugins-good
             mingw-w64-x86_64-gst-plugins-bad
+            mingw-w64-x86_64-glib-networking
 
       - name: Configure cargo linker flags for Windows
         shell: msys2 {0}
@@ -225,6 +226,22 @@ jobs:
               cp "${MINGW}/lib/girepository-1.0/${typelib}" "${LAYOUT}/lib/girepository-1.0/"
             fi
           done 2>/dev/null || true
+
+          # Copy GIO modules (TLS backend from glib-networking)
+          # Without this, GLib uses GDummyTlsBackend and HTTPS connections fail,
+          # which breaks map tile fetching (OpenFreeMap, CartoDB).
+          mkdir -p "${LAYOUT}/lib/gio/modules"
+          for gio_mod in "${MINGW}/lib/gio/modules/"*.dll; do
+            if [ -f "${gio_mod}" ]; then
+              cp "${gio_mod}" "${LAYOUT}/lib/gio/modules/"
+              echo "  Copied GIO module: $(basename "${gio_mod}")"
+            fi
+          done
+          # Copy or generate giomodule.cache so GLib discovers the TLS module
+          if [ -f "${MINGW}/lib/gio/modules/giomodule.cache" ]; then
+            cp "${MINGW}/lib/gio/modules/giomodule.cache" "${LAYOUT}/lib/gio/modules/"
+          fi
+          echo "GIO modules: $(ls "${LAYOUT}/lib/gio/modules/" 2>/dev/null | wc -l) files"
 
           # Copy GTK4 settings
           mkdir -p "${LAYOUT}/share/gtk-4.0"

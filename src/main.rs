@@ -199,6 +199,10 @@ fn main() {
     // ── Windows: help GLib find our compiled GSettings schema ──────
     // In a portable ZIP, GLib doesn't know where share/glib-2.0/schemas/ is.
     // Set GSETTINGS_SCHEMA_DIR so Settings::new() can find our schema.
+    //
+    // Also set GIO_MODULE_DIR so GLib finds the TLS module (giognutls.dll)
+    // from glib-networking. Without it, GLib falls back to GDummyTlsBackend
+    // and all HTTPS connections fail — breaking map tile fetching.
     #[cfg(all(windows, feature = "gui"))]
     {
         if let Ok(exe) = std::env::current_exe() {
@@ -211,6 +215,19 @@ fn main() {
                     windows_log(&format!("Set GSETTINGS_SCHEMA_DIR={:?}", schema_dir));
                 } else {
                     windows_log(&format!("WARNING: schema dir not found: {:?}", schema_dir));
+                }
+
+                let gio_module_dir = dir.join("lib").join("gio").join("modules");
+                if gio_module_dir.exists() {
+                    unsafe {
+                        std::env::set_var("GIO_MODULE_DIR", &gio_module_dir);
+                    }
+                    windows_log(&format!("Set GIO_MODULE_DIR={:?}", gio_module_dir));
+                } else {
+                    windows_log(&format!(
+                        "WARNING: GIO module dir not found: {:?}",
+                        gio_module_dir
+                    ));
                 }
             }
         }
