@@ -458,7 +458,11 @@ fn main() {
     // to open a display (e.g. missing GPU drivers, RDP session, Wine).
     // Show a MessageBox so the user knows what happened.
     #[cfg(all(windows, feature = "gui"))]
-    if exit_status != 0 {
+    if exit_status != gtk4::glib::ExitCode::SUCCESS {
+        let code = match exit_status {
+            gtk4::glib::ExitCode::FAILURE => 1u8,
+            _ => 2u8,
+        };
         let log_hint = if let Ok(exe) = std::env::current_exe() {
             if let Some(dir) = exe.parent() {
                 format!("\n\nDetails: {}", dir.join("qr_studio.log").display())
@@ -473,7 +477,7 @@ fn main() {
              This usually means GTK4 could not open a display.\n\
              Make sure you are running on a real Windows desktop\n\
              (Wine / headless RDP are not supported).{}",
-            exit_status, log_hint
+            code, log_hint
         ));
     }
 }
