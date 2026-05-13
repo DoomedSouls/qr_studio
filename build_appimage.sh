@@ -24,36 +24,24 @@ WORK_DIR="${PROJECT_DIR}/build"
 APPDIR="${WORK_DIR}/${APP_NAME}.AppDir"
 OUTPUT="${WORK_DIR}/${APP_NAME}-${VERSION}-${ARCH}.AppImage"
 
-# System/glibc libraries to EXCLUDE from bundling
-# (these must come from the host system to avoid ABI conflicts)
-EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss'
+# ═══════════════════════════════════════════════════════════
+# Libraries to EXCLUDE from bundling.
+#
+# Strategy: "Bundle all, prefer system when compatible"
+# The AppRun launcher detects whether the host has a
+# compatible GTK4 stack and adjusts LD_LIBRARY_PATH.
+#
+# Only GPU/display/compositor libs are excluded — they
+# MUST match the running kernel and hardware drivers.
+# ═══════════════════════════════════════════════════════════
 
-# GLib/GObject/GIO — must match host's GTK4/gstreamer/etc.
-EXCLUDE_RE+='|libglib-2.0|libgio-2.0|libgobject-2.0|libgmodule-2.0|libgthread-2.0'
+# System runtime (glibc, compiler runtime)
+EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss|libgcc_s|libstdc\+\+'
 
-# GLib/GIO transitive dependencies — must also match host versions
-EXCLUDE_RE+='|libmount|libpcre2|libffi|libselinux|libsystemd'
-
-# GTK4/libadwaita core (must match host display compositor)
-EXCLUDE_RE+='|libgtk-4|libadwaita-1|libshumate'
-
-# Rendering pipeline (must match host GPU drivers)
-EXCLUDE_RE+='|libgraphene-1|libepoxy|libcairo|libpixman-1'
-
-# Text/font rendering (must match host Pango/Harfbuzz)
-EXCLUDE_RE+='|libpango|libharfbuzz|libfribidi|libthai|libdatrie|libfreetype|libfontconfig|libgraphite2'
-
-# Image/SVG loading (must match host GTK4's gdk-pixbuf/librsvg)
-EXCLUDE_RE+='|libgdk_pixbuf|librsvg|libtiff|libjpeg|libpng|libjbig|libsharpyuv|libwebp'
-
-# Network/data
-EXCLUDE_RE+='|libsoup-3|libjson-glib|libprotobuf-c|libsqlite3|libxml2|libxmlb'
-
-# GPU/display
-EXCLUDE_RE+='|libEGL|libGL|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libwayland-client|libwayland-cursor'
-
-# X11/Wayland display
+# GPU/display/compositor — must match kernel/hardware drivers
+EXCLUDE_RE+='|libEGL|libGL[._]|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm'
 EXCLUDE_RE+='|libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfixes|libXinerama|libXi|libxkbcommon|libXrandr|libXrender'
+EXCLUDE_RE+='|libwayland-client|libwayland-cursor|libwayland-egl'
 
 STEP=0
 step()  { STEP=$((STEP + 1)); printf '\n▸ [%d/8] %s\n' "$STEP" "$1"; }
@@ -189,28 +177,7 @@ fi
 # ── 7. Create AppRun entry point ─────────────────────────────
 step "Creating AppRun"
 
-cat > "${APPDIR}/AppRun" << 'APPRUN'
-#!/bin/sh
-HERE="$(dirname "$(readlink -f "$0")")"
-
-# Bundled libraries take priority
-export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-
-# gdk-pixbuf: use bundled loaders
-export GDK_PIXBUF_MODULEDIR="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-export GDK_PIXBUF_MODULE_FILE="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-
-# GSettings: use bundled compiled schemas
-export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
-
-# Icons and themes (hicolor icon theme for our app icon)
-export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
-
-# GTK4 module path
-export GTK_PATH="${HERE}/usr/lib/gtk-4.0${GTK_PATH:+:${GTK_PATH}}"
-
-exec "${HERE}/usr/bin/qr_studio" "$@"
-APPRUN
+cp "${PROJECT_DIR}/data/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
 ok "AppRun"
 

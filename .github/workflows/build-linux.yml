@@ -67,6 +67,8 @@ jobs:
 
           mkdir -p "${APPDIR}"/usr/{bin,lib,share/{glib-2.0/schemas,icons/hicolor/scalable/apps}}
           mkdir -p "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+          mkdir -p "${APPDIR}/usr/lib/gio/modules"
+          mkdir -p "${APPDIR}/usr/lib/gtk-4.0/4.0/media"
 
           # ── Binary ──
           cp "${BINARY}" "${APPDIR}/usr/bin/"
@@ -87,61 +89,66 @@ jobs:
           cp data/io.github.SlobCoder.qr_studio.svg "${APPDIR}/io.github.SlobCoder.qr_studio.svg"
           cp data/io.github.SlobCoder.qr_studio.svg "${APPDIR}/usr/share/icons/hicolor/scalable/apps/"
 
-          # ── Shared libraries (resolved via ldd) ──
+          # ═══════════════════════════════════════════════════════════
+          # Shared libraries — bundle EVERYTHING except GPU/display.
+          #
+          # Strategy: "Bundle all, prefer system when compatible"
+          # The AppRun launcher detects whether the host has a
+          # compatible GTK4 stack. If yes, system libs are preferred
+          # (bundled as fallback). If no, bundled libs are preferred.
+          #
+          # Only GPU/display/compositor libs are excluded — they
+          # MUST match the running kernel and hardware drivers.
+          # ═══════════════════════════════════════════════════════════
+
           DEPS_FILE=$(mktemp /tmp/qr_studio_deps.XXXXXX)
+
+          # Direct binary deps (resolves transitive tree via ldd)
           ldd "${BINARY}" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
 
-          # Note: librsvg and gdk-pixbuf loaders are NOT bundled because
-          # the entire GTK4 rendering stack comes from the host system.
+          # librsvg — loaded dynamically by gdk-pixbuf for SVG support
+          if [ -f "${LIB_DIR}/librsvg-2.so.2" ]; then
+            echo "${LIB_DIR}/librsvg-2.so.2" >> "$DEPS_FILE"
+            ldd "${LIB_DIR}/librsvg-2.so.2" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+          fi
 
-          # ═══════════════════════════════════════════════════════════
-          # Exclude libraries that must come from the host system.
-          #
-          # GTK4/libadwaita and their entire rendering dependency tree
-          # are tightly coupled with the host's GPU/display compositor.
-          # Bundling Ubuntu 24.04 versions causes EGL/Vulkan init
-          # failures, broken text rendering, missing icons/flags, and
-          # CSS parse errors on other distros (Arch, Fedora, etc.).
-          #
-          # Strategy: only bundle portable utility libs (compression,
-          # crypto, image formats). Let the host provide GTK4 and its
-          # entire dependency chain (pango, cairo, harfbuzz, etc.).
-          # ═══════════════════════════════════════════════════════════
+          # gdk-pixbuf loaders (dynamically dlopen'd)
+          LOADERS_SRC="${LIB_DIR}/gdk-pixbuf-2.0/2.10.0/loaders"
+          if [ -d "$LOADERS_SRC" ]; then
+            for loader in "${LOADERS_SRC}"/*.so; do
+              [ -f "$loader" ] || continue
+              echo "$loader" >> "$DEPS_FILE"
+              ldd "$loader" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+            done
+          fi
 
-          # GLib/GObject/GIO — foundation for GTK4 and all GLib-based libs.
-          # Must match the host's GTK4/gstreamer/etc. to avoid symbol errors
-          # like "undefined symbol: g_sort_array" or "MOUNT_2_40 not found".
-          EXCLUDE_GLIB='libglib-2.0|libgio-2.0|libgobject-2.0|libgmodule-2.0|libgthread-2.0'
+          # GIO modules (TLS, proxy, etc. — dynamically loaded)
+          GIO_MOD_SRC="${LIB_DIR}/gio/modules"
+          if [ -d "$GIO_MOD_SRC" ]; then
+            for mod in "${GIO_MOD_SRC}"/*.so; do
+              [ -f "$mod" ] || continue
+              echo "$mod" >> "$DEPS_FILE"
+              ldd "$mod" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+            done
+          fi
 
-          # GLib/GIO transitive dependencies — must also match host versions
-          EXCLUDE_GLIB_DEPS='libmount|libpcre2|libffi|libselinux|libsystemd'
+          # GTK4 media backends (gstreamer, etc.)
+          GTK_MEDIA_SRC="${LIB_DIR}/gtk-4.0/4.0/media"
+          if [ -d "$GTK_MEDIA_SRC" ]; then
+            for mod in "${GTK_MEDIA_SRC}"/*.so; do
+              [ -f "$mod" ] || continue
+              echo "$mod" >> "$DEPS_FILE"
+              ldd "$mod" 2>/dev/null | awk '/=>/{print $3}' >> "$DEPS_FILE"
+            done
+          fi
 
-          # GTK4/libadwaita core (must match host display compositor)
-          EXCLUDE_GTK='libgtk-4|libadwaita-1|libshumate'
-
-          # Rendering pipeline (must match host GPU drivers)
-          EXCLUDE_RENDER='libgraphene-1|libepoxy|libcairo|libpixman-1'
-
-          # Text/font rendering (must match host Pango/Harfbuzz)
-          EXCLUDE_TEXT='libpango|libharfbuzz|libfribidi|libthai|libdatrie|libfreetype|libfontconfig|libgraphite2'
-
-          # Image/SVG loading (must match host GTK4's gdk-pixbuf/librsvg)
-          EXCLUDE_IMAGE='libgdk_pixbuf|librsvg|libtiff|libjpeg|libpng|libjbig|libsharpyuv|libwebp'
-
-          # Network/data (dependencies of libshumate etc.)
-          EXCLUDE_NET='libsoup-3|libjson-glib|libprotobuf-c|libsqlite3|libxml2|libxmlb'
-
-          # GPU/display (must come from host system drivers)
-          EXCLUDE_GPU='libEGL|libGL|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libwayland-client|libwayland-cursor'
-
-          # X11/Wayland display
-          EXCLUDE_DISPLAY='libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfixes|libXinerama|libXi|libxkbcommon|libXrandr|libXrender'
-
-          # Combine all exclusions
-          EXCLUDE_ALL="${EXCLUDE_GLIB}|${EXCLUDE_GLIB_DEPS}|${EXCLUDE_GTK}|${EXCLUDE_RENDER}|${EXCLUDE_TEXT}|${EXCLUDE_IMAGE}|${EXCLUDE_NET}|${EXCLUDE_GPU}|${EXCLUDE_DISPLAY}"
+          # Only exclude GPU/display/compositor — must match kernel/hardware
+          EXCLUDE_GPU='libEGL|libGL[._]|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm'
+          EXCLUDE_DISPLAY='libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfixes|libXinerama|libXi|libxkbcommon|libXrandr|libXrender|libwayland-client|libwayland-cursor|libwayland-egl'
+          EXCLUDE_RUNTIME='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss|libgcc_s|libstdc\+\+'
+          EXCLUDE_ALL="${EXCLUDE_RUNTIME}|${EXCLUDE_GPU}|${EXCLUDE_DISPLAY}"
 
           sort -u "$DEPS_FILE" \
-            | grep -vE 'ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss' \
             | grep -vE "${EXCLUDE_ALL}" \
             | while IFS= read -r lib; do
                   [ -f "$lib" ] && cp -Ln "$lib" "${APPDIR}/usr/lib/" 2>/dev/null || true
@@ -149,6 +156,34 @@ jobs:
           rm -f "$DEPS_FILE"
 
           echo "Bundled $(find "${APPDIR}/usr/lib" -maxdepth 1 -name '*.so*' | wc -l) libraries"
+
+          # ── gdk-pixbuf loaders (bundled, remap paths) ──
+          LOADERS_DST="${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+          if [ -d "$LOADERS_SRC" ] && ls "${LOADERS_SRC}"/*.so &>/dev/null; then
+            cp -Ln "${LOADERS_SRC}"/*.so "$LOADERS_DST/" 2>/dev/null || true
+            GDK_PIXBUF_MODULEDIR="$LOADERS_DST" gdk-pixbuf-query-loaders 2>/dev/null \
+              > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" || true
+            echo "Bundled $(ls "$LOADERS_DST"/*.so 2>/dev/null | wc -l) gdk-pixbuf loaders"
+          else
+            : > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+          fi
+
+          # ── GIO modules (bundled) ──
+          GIO_MOD_DST="${APPDIR}/usr/lib/gio/modules"
+          if [ -d "$GIO_MOD_SRC" ]; then
+            cp -Ln "${GIO_MOD_SRC}"/*.so "$GIO_MOD_DST/" 2>/dev/null || true
+            if [ -f "${GIO_MOD_SRC}/giomodule.cache" ]; then
+              cp "${GIO_MOD_SRC}/giomodule.cache" "$GIO_MOD_DST/" 2>/dev/null || true
+            fi
+            echo "Bundled $(ls "$GIO_MOD_DST"/*.so 2>/dev/null | wc -l) GIO modules"
+          fi
+
+          # ── GTK4 media backends (bundled) ──
+          GTK_MEDIA_DST="${APPDIR}/usr/lib/gtk-4.0/4.0/media"
+          if [ -d "$GTK_MEDIA_SRC" ]; then
+            cp -Ln "${GTK_MEDIA_SRC}"/*.so "$GTK_MEDIA_DST/" 2>/dev/null || true
+            echo "Bundled $(ls "$GTK_MEDIA_DST"/*.so 2>/dev/null | wc -l) GTK4 media backends"
+          fi
 
           # ── GSettings schemas ──
           SCHEMA_DST="${APPDIR}/usr/share/glib-2.0/schemas"
@@ -164,20 +199,17 @@ jobs:
 
           glib-compile-schemas "$SCHEMA_DST" 2>/dev/null || true
 
-          # ── gdk-pixbuf loaders ──
-          # Since we exclude libgdk_pixbuf from bundling (host provides it),
-          # we also don't bundle loaders — they must match the host's pixbuf version.
-          # The host's GDK_PIXBUF_MODULEDIR and loaders.cache are used automatically.
-          mkdir -p "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-          : > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-
-          # ── AppRun entry point ──
-          printf '#!/bin/sh\n' > "${APPDIR}/AppRun"
-          printf 'HERE="$(dirname "$(readlink -f "$0")")"\n' >> "${APPDIR}/AppRun"
-          printf 'export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"\n' >> "${APPDIR}/AppRun"
-          printf 'export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"\n' >> "${APPDIR}/AppRun"
-          printf 'export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"\n' >> "${APPDIR}/AppRun"
-          printf 'exec "${HERE}/usr/bin/qr_studio" "$@"\n' >> "${APPDIR}/AppRun"
+          # ═══════════════════════════════════════════════════════════
+          # AppRun — smart launcher with system/bundled detection
+          #
+          # Detects whether the host has a compatible GTK4 stack:
+          #   YES → system libs preferred (bundled as fallback)
+          #   NO  → bundled libs preferred (truly portable)
+          #
+          # Override: QR_STUDIO_SYSTEM_LIBS=1 forces system mode
+          #           QR_STUDIO_BUNDLED_LIBS=1 forces bundled mode
+          # ═══════════════════════════════════════════════════════════
+          cp data/AppRun "${APPDIR}/AppRun"
           chmod +x "${APPDIR}/AppRun"
 
       - name: Download and extract appimagetool
