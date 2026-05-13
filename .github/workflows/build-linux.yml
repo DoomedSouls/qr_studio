@@ -110,8 +110,11 @@ jobs:
 
           # GLib/GObject/GIO — foundation for GTK4 and all GLib-based libs.
           # Must match the host's GTK4/gstreamer/etc. to avoid symbol errors
-          # like "undefined symbol: g_sort_array".
+          # like "undefined symbol: g_sort_array" or "MOUNT_2_40 not found".
           EXCLUDE_GLIB='libglib-2.0|libgio-2.0|libgobject-2.0|libgmodule-2.0|libgthread-2.0'
+
+          # GLib/GIO transitive dependencies — must also match host versions
+          EXCLUDE_GLIB_DEPS='libmount|libpcre2|libffi|libselinux|libsystemd'
 
           # GTK4/libadwaita core (must match host display compositor)
           EXCLUDE_GTK='libgtk-4|libadwaita-1|libshumate'
@@ -135,7 +138,7 @@ jobs:
           EXCLUDE_DISPLAY='libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfixes|libXinerama|libXi|libxkbcommon|libXrandr|libXrender'
 
           # Combine all exclusions
-          EXCLUDE_ALL="${EXCLUDE_GLIB}|${EXCLUDE_GTK}|${EXCLUDE_RENDER}|${EXCLUDE_TEXT}|${EXCLUDE_IMAGE}|${EXCLUDE_NET}|${EXCLUDE_GPU}|${EXCLUDE_DISPLAY}"
+          EXCLUDE_ALL="${EXCLUDE_GLIB}|${EXCLUDE_GLIB_DEPS}|${EXCLUDE_GTK}|${EXCLUDE_RENDER}|${EXCLUDE_TEXT}|${EXCLUDE_IMAGE}|${EXCLUDE_NET}|${EXCLUDE_GPU}|${EXCLUDE_DISPLAY}"
 
           sort -u "$DEPS_FILE" \
             | grep -vE 'ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss' \

@@ -31,6 +31,9 @@ EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/
 # GLib/GObject/GIO — must match host's GTK4/gstreamer/etc.
 EXCLUDE_RE+='|libglib-2.0|libgio-2.0|libgobject-2.0|libgmodule-2.0|libgthread-2.0'
 
+# GLib/GIO transitive dependencies — must also match host versions
+EXCLUDE_RE+='|libmount|libpcre2|libffi|libselinux|libsystemd'
+
 # GTK4/libadwaita core (must match host display compositor)
 EXCLUDE_RE+='|libgtk-4|libadwaita-1|libshumate'
 
