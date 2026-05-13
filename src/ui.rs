@@ -7099,9 +7099,14 @@ pub fn build_ui(app: &Application) {
     // Uses gtk4::DropTargetAsync (not DropTarget) so that drag events
     // are received even over child widgets (Entry/TextView have their
     // own DropTargets for STRING that would steal the drag).
-    // Content is read via gdk::Drop::read_value_async().
+    //
+    // Accepts both text/uri-list (Linux/X11/Wayland) and GFile
+    // (Windows — the GDK Win32 backend translates CF_HDROP to GFile
+    // objects, not text/uri-list strings).
     {
-        let formats = gdk::ContentFormats::new(&["text/uri-list"]);
+        let formats_uri = gdk::ContentFormats::new(&["text/uri-list"]);
+        let formats_gfile = gdk::ContentFormats::for_type(gtk4::gio::File::static_type());
+        let formats = formats_uri.union(&formats_gfile);
         let dnd_target = gtk4::DropTargetAsync::new(Some(formats), gdk::DragAction::COPY);
         main_box.add_controller(dnd_target.clone());
 
@@ -7141,11 +7146,53 @@ pub fn build_ui(app: &Application) {
             dzr_leave.remove_css_class("drop-zone-hover");
         });
 
-        // ── accept: only accept drops that contain file URIs ──
-        dnd_target
-            .connect_accept(move |_tgt, drop| drop.formats().contain_mime_type("text/uri-list"));
+        // ── accept: accept drops that contain file URIs or GFile ──
+        dnd_target.connect_accept(move |_tgt, drop| {
+            drop.formats().contain_mime_type("text/uri-list")
+                || drop.formats().contains_type(gtk4::gio::File::static_type())
+        });
 
-        // ── drop: read URI list async, then apply logo or background ──
+        // ── apply_dropped_image: shared logic for logo/background ──
+        fn apply_dropped_image(
+            path: PathBuf,
+            is_logo: bool,
+            state: &Rc<RefCell<AppState>>,
+            ec_level_dd: &DropDown,
+        ) {
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            let is_image = matches!(ext, "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp");
+            if !is_image || !path.exists() {
+                return;
+            }
+            if is_logo {
+                save_undo_state(&state.borrow());
+                state.borrow().logo_path.replace(Some(path));
+                if *state.borrow().ec_level.borrow() != ErrorCorrectionLevel::High {
+                    *state.borrow().ec_level.borrow_mut() = ErrorCorrectionLevel::High;
+                    ec_level_dd.set_selected(3);
+                }
+                schedule_preview(&state);
+                let msg = state.borrow().i18n.borrow().t("dnd_logo_imported");
+                state.borrow().update_status_typed(&msg, ToastType::Success);
+                // Animation 8: Logo drop bounce
+                {
+                    let pic = state.borrow().preview_picture.clone();
+                    pic.add_css_class("preview-bounce");
+                    glib::timeout_add_local(Duration::from_millis(450), move || {
+                        pic.remove_css_class("preview-bounce");
+                        glib::ControlFlow::Break
+                    });
+                }
+            } else {
+                save_undo_state(&state.borrow());
+                state.borrow().bg_image_path.replace(Some(path));
+                schedule_preview(&state);
+                let msg = state.borrow().i18n.borrow().t("dnd_bg_imported");
+                state.borrow().update_status_typed(&msg, ToastType::Success);
+            }
+        }
+
+        // ── drop: read file from drop, apply as logo or background ──
         let state = state.clone();
         let ec_level_dd = ec_level_dd.clone();
         let dzv_drop = drop_zone_view.clone();
@@ -7164,96 +7211,72 @@ pub fn build_ui(app: &Application) {
             let is_logo =
                 { main_box_drop.width() as f64 > 0.0 && x < main_box_drop.width() as f64 / 2.0 };
 
-            // Read the dropped content as STRING (text/uri-list)
             let state = state.clone();
             let ec_level_dd = ec_level_dd.clone();
-            let drop_clone = drop.clone();
-            drop.read_value_async(
-                glib::Type::STRING,
+            let drop_gfile = drop.clone();
+            let drop_uri = drop.clone();
+            let drop_finish_gfile = drop.clone();
+            let drop_finish_uri = drop.clone();
+
+            // Try GFile first (Windows preferred, also works on Linux).
+            // On Windows, the GDK Win32 backend translates CF_HDROP to
+            // GFile objects — reading as STRING often fails even though
+            // text/uri-list is advertised in the formats list.
+            drop_gfile.read_value_async(
+                gtk4::gio::File::static_type(),
                 glib::Priority::DEFAULT,
                 None::<&gtk4::gio::Cancellable>,
                 move |result| {
-                    // Finish the drop to satisfy GDK state machine
-                    // (prevents gdk_drop_finalize runtime warning)
-                    drop_clone.finish(gdk::DragAction::COPY);
                     if let Ok(value) = result {
-                        if let Ok(uri_list) = value.get::<String>() {
-                            // Parse first file:// URI from the list
-                            let path = uri_list
-                                .lines()
-                                .filter(|l| !l.is_empty())
-                                .filter_map(|l| {
-                                    let l = l.trim();
-                                    if l.starts_with("file://") {
-                                        // Decode file:// URI to path
-                                        let without_scheme = &l[7..]; // strip "file://"
-                                        // Handle host: skip if localhost or empty
-                                        let path_part = if without_scheme.starts_with('/') {
-                                            without_scheme // no host
-                                        } else if let Some(slash) = without_scheme.find('/') {
-                                            &without_scheme[slash..] // skip host
-                                        } else {
-                                            return None;
-                                        };
-                                        Some(PathBuf::from(path_part))
-                                    } else if l.starts_with('/') {
-                                        Some(PathBuf::from(l))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .next();
-
-                            if let Some(path) = path {
-                                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                                let is_image = matches!(
-                                    ext,
-                                    "png" | "jpg" | "jpeg" | "gif" | "svg" | "bmp" | "webp"
-                                );
-                                if is_image && path.exists() {
-                                    if is_logo {
-                                        // Insert as Logo
-                                        save_undo_state(&state.borrow());
-                                        state.borrow().logo_path.replace(Some(path));
-                                        if *state.borrow().ec_level.borrow()
-                                            != ErrorCorrectionLevel::High
-                                        {
-                                            *state.borrow().ec_level.borrow_mut() =
-                                                ErrorCorrectionLevel::High;
-                                            ec_level_dd.set_selected(3);
-                                        }
-                                        schedule_preview(&state);
-                                        let msg =
-                                            state.borrow().i18n.borrow().t("dnd_logo_imported");
-                                        state
-                                            .borrow()
-                                            .update_status_typed(&msg, ToastType::Success);
-                                        // Animation 8: Logo drop bounce
-                                        {
-                                            let pic = state.borrow().preview_picture.clone();
-                                            pic.add_css_class("preview-bounce");
-                                            glib::timeout_add_local(
-                                                Duration::from_millis(450),
-                                                move || {
-                                                    pic.remove_css_class("preview-bounce");
-                                                    glib::ControlFlow::Break
-                                                },
-                                            );
-                                        }
-                                    } else {
-                                        // Insert as Background
-                                        save_undo_state(&state.borrow());
-                                        state.borrow().bg_image_path.replace(Some(path));
-                                        schedule_preview(&state);
-                                        let msg = state.borrow().i18n.borrow().t("dnd_bg_imported");
-                                        state
-                                            .borrow()
-                                            .update_status_typed(&msg, ToastType::Success);
-                                    }
-                                }
+                        if let Ok(file) = value.get::<gtk4::gio::File>() {
+                            if let Some(path) = file.path() {
+                                apply_dropped_image(path, is_logo, &state, &ec_level_dd);
+                                drop_finish_gfile.finish(gdk::DragAction::COPY);
+                                return;
                             }
                         }
                     }
+                    // GFile failed — fall back to text/uri-list string
+                    let state = state.clone();
+                    let ec_level_dd = ec_level_dd.clone();
+                    drop_uri.read_value_async(
+                        glib::Type::STRING,
+                        glib::Priority::DEFAULT,
+                        None::<&gtk4::gio::Cancellable>,
+                        move |result| {
+                            drop_finish_uri.finish(gdk::DragAction::COPY);
+                            if let Ok(value) = result {
+                                if let Ok(uri_list) = value.get::<String>() {
+                                    let path = uri_list
+                                        .lines()
+                                        .filter(|l| !l.is_empty())
+                                        .filter_map(|l| {
+                                            let l = l.trim();
+                                            if l.starts_with("file://") {
+                                                let without_scheme = &l[7..];
+                                                let path_part = if without_scheme.starts_with('/') {
+                                                    without_scheme
+                                                } else if let Some(slash) = without_scheme.find('/')
+                                                {
+                                                    &without_scheme[slash..]
+                                                } else {
+                                                    return None;
+                                                };
+                                                Some(PathBuf::from(path_part))
+                                            } else if l.starts_with('/') {
+                                                Some(PathBuf::from(l))
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .next();
+                                    if let Some(path) = path {
+                                        apply_dropped_image(path, is_logo, &state, &ec_level_dd);
+                                    }
+                                }
+                            }
+                        },
+                    );
                 },
             );
 
