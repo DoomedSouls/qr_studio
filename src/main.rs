@@ -42,59 +42,13 @@ fn main() {
     std::process::exit(exit_code);
 }
 
-// ── Windows GUI: error diagnostics ─────────────────────────────────
+// ── Windows GUI: error reporting ───────────────────────────────────
 //
-// With `windows_subsystem = "windows"` there is no console window.
-// We write diagnostic messages directly to qr_studio.log via std::fs
-// so we can see exactly how far startup gets.
 // A Win32 MessageBox is shown on panic or app.run() failure.
 
-/// Get the log file path (next to the executable).
-#[cfg(all(windows, feature = "gui"))]
-fn windows_log_path() -> Option<std::path::PathBuf> {
-    std::env::current_exe()
-        .ok()?
-        .parent()
-        .map(|dir| dir.join("qr_studio.log"))
-}
-
-/// Append a message to qr_studio.log next to the executable.
-/// If writing fails, show a MessageBox with the error (once).
-#[cfg(all(windows, feature = "gui"))]
-fn windows_log(msg: &str) {
-    use std::io::Write;
-    if let Some(log_path) = windows_log_path() {
-        match std::fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(&log_path)
-        {
-            Ok(mut f) => {
-                if writeln!(f, "{}", msg).is_err() {
-                    // Can't log — nothing more we can do
-                }
-            }
-            Err(e) => {
-                // Show ONE MessageBox about log failure so the user knows
-                show_windows_error_message(&format!(
-                    "Cannot write log file:\n{}\n\nError: {}",
-                    log_path.display(),
-                    e
-                ));
-            }
-        }
-    }
-}
-
-#[cfg(not(all(windows, feature = "gui")))]
-#[allow(dead_code)]
-fn windows_log(_msg: &str) {}
-
-#[cfg(not(all(windows, feature = "gui")))]
-#[allow(dead_code)]
-fn windows_log_path() -> Option<std::path::PathBuf> {
-    None
-}
+// Diagnostic log file removed — was only needed during early Windows
+// debugging. MSIX installs to a read-only directory where writing
+// qr_studio.log fails with "Access denied".
 
 /// Show a Win32 error MessageBox.
 #[cfg(all(windows, feature = "gui"))]
@@ -112,8 +66,6 @@ fn show_windows_error_message(msg: &str) {
 #[cfg(all(windows, feature = "gui"))]
 fn init_windows_panic_hook() {
     std::panic::set_hook(Box::new(|info| {
-        let msg = format!("PANIC: {}", info);
-        windows_log(&msg);
         show_windows_error_message(&format!("QR Studio crashed:\n\n{}", info));
     }));
 }
@@ -125,76 +77,7 @@ fn init_windows_panic_hook() {}
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
-    // ── Windows: clear old log and write fresh diagnostics ─────────
-    #[cfg(all(windows, feature = "gui"))]
-    if let Some(log_path) = windows_log_path() {
-        let _ = std::fs::remove_file(&log_path); // clear old log from previous build
-    }
-    windows_log(&format!("=== QR Studio v{} ===", env!("CARGO_PKG_VERSION")));
-    windows_log(&format!("exe: {:?}", std::env::current_exe()));
-    windows_log(&format!("cwd: {:?}", std::env::current_dir()));
-
     init_windows_panic_hook();
-    windows_log("panic hook installed");
-
-    // ── Windows: redirect GLib log messages to qr_studio.log ────
-    // This captures all GTK/GLib debug/info/warning/error messages
-    // so we can diagnose why the GUI might not appear.
-    #[cfg(all(windows, feature = "gui"))]
-    {
-        let log_path_clone = windows_log_path();
-        let log_path_clone2 = windows_log_path();
-
-        // Capture legacy g_log() messages
-        gtk4::glib::log_set_handler(
-            None,                         // all domains
-            gtk4::glib::LogLevels::all(), // all levels
-            true,                         // handle fatal
-            true,                         // handle recursion
-            move |domain, level, message| {
-                let domain_str = domain.unwrap_or("GLib");
-                let line = format!("[GLib/{}] [{:?}] {}\n", domain_str, level, message);
-                if let Some(ref path) = log_path_clone {
-                    use std::io::Write;
-                    if let Ok(mut f) = std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open(path)
-                    {
-                        let _ = f.write_all(line.as_bytes());
-                    }
-                }
-            },
-        );
-
-        // Capture structured g_log_structured() messages (used by modern GLib/GTK)
-        gtk4::glib::log_set_writer_func(move |level, fields| {
-            let domain = fields
-                .iter()
-                .find(|f| f.key() == "GLIB_DOMAIN")
-                .and_then(|f| f.value_str())
-                .unwrap_or("GLib");
-            let message = fields
-                .iter()
-                .find(|f| f.key() == "MESSAGE")
-                .and_then(|f| f.value_str())
-                .unwrap_or("");
-            let line = format!("[STRUCT/{}] [{:?}] {}\n", domain, level, message);
-            if let Some(ref path) = log_path_clone2 {
-                use std::io::Write;
-                if let Ok(mut f) = std::fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(path)
-                {
-                    let _ = f.write_all(line.as_bytes());
-                }
-            }
-            gtk4::glib::LogWriterOutput::Handled
-        });
-
-        windows_log("GLib log handlers installed");
-    }
 
     // ── Windows: help GLib find our compiled GSettings schema ──────
     // In a portable ZIP, GLib doesn't know where share/glib-2.0/schemas/ is.
@@ -212,9 +95,6 @@ fn main() {
                     unsafe {
                         std::env::set_var("GSETTINGS_SCHEMA_DIR", &schema_dir);
                     }
-                    windows_log(&format!("Set GSETTINGS_SCHEMA_DIR={:?}", schema_dir));
-                } else {
-                    windows_log(&format!("WARNING: schema dir not found: {:?}", schema_dir));
                 }
 
                 let gio_module_dir = dir.join("lib").join("gio").join("modules");
@@ -222,12 +102,6 @@ fn main() {
                     unsafe {
                         std::env::set_var("GIO_MODULE_DIR", &gio_module_dir);
                     }
-                    windows_log(&format!("Set GIO_MODULE_DIR={:?}", gio_module_dir));
-                } else {
-                    windows_log(&format!(
-                        "WARNING: GIO module dir not found: {:?}",
-                        gio_module_dir
-                    ));
                 }
             }
         }
@@ -249,18 +123,12 @@ fn main() {
     }
 
     // Register compiled GResources (includes shortcuts overlay)
-    windows_log("registering GResources...");
     gtk4::gio::resources_register_include!("io.github.SlobCoder.qr_studio.gresource")
         .expect("Failed to register GResource");
-    windows_log("GResources registered");
-
-    windows_log("building adw::Application...");
     let app = adw::Application::builder()
         .application_id("io.github.SlobCoder.qr_studio")
         .build();
-    windows_log("adw::Application built");
     app.connect_activate(|app| {
-        windows_log("connect_activate called — building UI...");
 
         // Pre-fetch OpenFreeMap TileJSON in background so style switching is instant
         map_styles::prefetch_tilejson();
@@ -538,24 +406,18 @@ fn main() {
         ui::build_ui(app);
     });
 
-    windows_log("calling app.run()...");
     #[allow(unused_variables)]
     let exit_status = app.run();
-    windows_log(&format!("app.run() returned: {:?}", exit_status));
 
     // On Windows GUI, a non-zero exit code usually means GTK failed
     // to open a display (e.g. missing GPU drivers, RDP session, Wine).
     // Show a MessageBox so the user knows what happened.
     #[cfg(all(windows, feature = "gui"))]
     if exit_status != gtk4::glib::ExitCode::SUCCESS {
-        let msg = format!(
-            "QR Studio exited with error.\n\
+        let msg = "QR Studio exited with error.\n\
              This usually means GTK4 could not open a display.\n\
              Make sure you are running on a real Windows desktop\n\
-             (Wine / headless RDP are not supported).\n\
-             See qr_studio.log for details."
-        );
-        windows_log(&msg);
-        show_windows_error_message(&msg);
+             (Wine / headless RDP are not supported).";
+        show_windows_error_message(msg);
     }
 }
