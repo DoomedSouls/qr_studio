@@ -1440,14 +1440,17 @@ pub fn color_harmonies(color: Rgba<u8>) -> Vec<(String, Rgba<u8>)> {
 }
 
 // ============================================================
-// COLOR PICKER (PIPETTE) — pick a color from the screen via XDG portal
-// Linux-only: requires ashpd + tokio (not available on Windows/macOS)
+// COLOR PICKER (PIPETTE) — pick a color from the screen
+// Linux: XDG Desktop Portal (ashpd)
+// Windows: Win32 GDI screenshot + GTK overlay
 // ============================================================
 
-/// Create a pipette (color picker) button, or return None if the pipette feature is disabled.
+/// Create a pipette (color picker) button.
+/// Returns `Some(button)` on Linux (with `pipette` feature) and on Windows.
+/// Returns `None` on other platforms or when both are disabled.
 #[cfg(feature = "gui")]
 pub fn make_pipette_btn(tooltip: &str) -> Option<gtk4::Button> {
-    #[cfg(feature = "pipette")]
+    #[cfg(any(feature = "pipette", target_os = "windows"))]
     {
         let btn = gtk4::Button::new();
         btn.set_icon_name("color-select-symbolic");
@@ -1456,15 +1459,17 @@ pub fn make_pipette_btn(tooltip: &str) -> Option<gtk4::Button> {
         btn.set_valign(gtk4::Align::Center);
         Some(btn)
     }
-    #[cfg(not(feature = "pipette"))]
+    #[cfg(not(any(feature = "pipette", target_os = "windows")))]
     {
         let _ = tooltip;
         None
     }
 }
 
+// ── Linux: XDG Desktop Portal ──────────────────────────────
+
 /// Tokio runtime for ashpd D-Bus calls. Lazy-init, shared across all pipette clicks.
-#[cfg(feature = "pipette")]
+#[cfg(all(feature = "pipette", not(target_os = "windows")))]
 static ASHPD_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
 
 /// Pick a color from the screen using the XDG Screenshot portal's PickColor method.
@@ -1472,7 +1477,7 @@ static ASHPD_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::
 /// Returns the picked color as `gdk::RGBA` on success, or an error message string on failure.
 /// The portal may not be available on all desktop environments (requires xdg-desktop-portal
 /// with a backend that implements PickColor, e.g. GNOME 44+).
-#[cfg(feature = "pipette")]
+#[cfg(all(feature = "pipette", not(target_os = "windows")))]
 pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
     use ashpd::desktop::screenshot;
 
@@ -1497,4 +1502,284 @@ pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
             Err(err) => Err(format!("{err}")),
         }
     })
+}
+
+// ── Windows: Win32 GDI screenshot + GTK overlay ────────────
+//
+// Strategy:
+// 1. Capture the entire screen to a pixel buffer using Win32 GDI (BitBlt)
+// 2. Show a fullscreen GTK overlay window with the screenshot as background
+// 3. User moves the crosshair cursor and clicks to pick a pixel
+// 4. Read the color from the captured buffer at the click position
+// 5. Close the overlay and return the color
+//
+// Uses a nested `glib::MainLoop` to block until the user picks or cancels,
+// similar to how modal dialogs work in GTK.
+
+#[cfg(all(feature = "gui", target_os = "windows"))]
+pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    // ── Win32 FFI declarations ─────────────────────────────
+    #[link(name = "user32")]
+    #[link(name = "gdi32")]
+    extern "system" {
+        fn GetDC(hwnd: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+        fn ReleaseDC(hwnd: *mut std::ffi::c_void, hdc: *mut std::ffi::c_void) -> i32;
+        fn GetSystemMetrics(n: i32) -> i32;
+        fn CreateCompatibleDC(hdc: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+        fn CreateCompatibleBitmap(
+            hdc: *mut std::ffi::c_void,
+            w: i32,
+            h: i32,
+        ) -> *mut std::ffi::c_void;
+        fn SelectObject(
+            hdc: *mut std::ffi::c_void,
+            h: *mut std::ffi::c_void,
+        ) -> *mut std::ffi::c_void;
+        fn BitBlt(
+            hdc: *mut std::ffi::c_void,
+            x: i32,
+            y: i32,
+            w: i32,
+            h: i32,
+            hdc_src: *mut std::ffi::c_void,
+            x1: i32,
+            y1: i32,
+            rop: u32,
+        ) -> i32;
+        fn DeleteDC(hdc: *mut std::ffi::c_void) -> i32;
+        fn DeleteObject(h: *mut std::ffi::c_void) -> i32;
+        fn GetDIBits(
+            hdc: *mut std::ffi::c_void,
+            hbmp: *mut std::ffi::c_void,
+            start: u32,
+            lines: u32,
+            buf: *mut u8,
+            bi: *mut BITMAPINFO,
+            usage: u32,
+        ) -> i32;
+    }
+
+    const SRCCOPY: u32 = 0x00CC0020;
+    const SM_CXSCREEN: i32 = 0;
+    const SM_CYSCREEN: i32 = 1;
+    const DIB_RGB_COLORS: u32 = 0;
+
+    #[repr(C)]
+    struct BITMAPINFOHEADER {
+        bi_size: u32,
+        bi_width: i32,
+        bi_height: i32,
+        bi_planes: u16,
+        bi_bit_count: u16,
+        bi_compression: u32,
+        bi_size_image: u32,
+        bi_x_pels_per_meter: i32,
+        bi_y_pels_per_meter: i32,
+        bi_clr_used: u32,
+        bi_clr_important: u32,
+    }
+
+    #[repr(C)]
+    struct BITMAPINFO {
+        bmi_header: BITMAPINFOHEADER,
+    }
+
+    // ── Capture screen ────────────────────────────────────
+    let (screen_w, screen_h, rgba_pixels) = unsafe {
+        let w = GetSystemMetrics(SM_CXSCREEN);
+        let h = GetSystemMetrics(SM_CYSCREEN);
+        if w <= 0 || h <= 0 {
+            return Err("Failed to get screen dimensions".to_string());
+        }
+
+        let hdc_screen = GetDC(std::ptr::null_mut());
+        if hdc_screen.is_null() {
+            return Err("Failed to get screen DC".to_string());
+        }
+
+        let hdc_mem = CreateCompatibleDC(hdc_screen);
+        if hdc_mem.is_null() {
+            ReleaseDC(std::ptr::null_mut(), hdc_screen);
+            return Err("Failed to create compatible DC".to_string());
+        }
+
+        let hbitmap = CreateCompatibleBitmap(hdc_screen, w, h);
+        if hbitmap.is_null() {
+            DeleteDC(hdc_mem);
+            ReleaseDC(std::ptr::null_mut(), hdc_screen);
+            return Err("Failed to create compatible bitmap".to_string());
+        }
+
+        SelectObject(hdc_mem, hbitmap);
+
+        let ok = BitBlt(hdc_mem, 0, 0, w, h, hdc_screen, 0, 0, SRCCOPY);
+        if ok == 0 {
+            DeleteObject(hbitmap);
+            DeleteDC(hdc_mem);
+            ReleaseDC(std::ptr::null_mut(), hdc_screen);
+            return Err("BitBlt failed".to_string());
+        }
+
+        // Extract pixel data as BGRA bottom-up
+        let row_stride = (w * 4) as usize;
+        let buf_size = row_stride * h as usize;
+        let mut bgr_buf = vec![0u8; buf_size];
+
+        let mut bi = BITMAPINFO {
+            bmi_header: BITMAPINFOHEADER {
+                bi_size: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                bi_width: w,
+                bi_height: h, // positive = bottom-up rows
+                bi_planes: 1,
+                bi_bit_count: 32,
+                bi_compression: 0, // BI_RGB
+                bi_size_image: 0,
+                bi_x_pels_per_meter: 0,
+                bi_y_pels_per_meter: 0,
+                bi_clr_used: 0,
+                bi_clr_important: 0,
+            },
+        };
+
+        let scanlines = GetDIBits(
+            hdc_mem,
+            hbitmap,
+            0,
+            h as u32,
+            bgr_buf.as_mut_ptr(),
+            &mut bi,
+            DIB_RGB_COLORS,
+        );
+
+        // Cleanup GDI objects
+        DeleteObject(hbitmap);
+        DeleteDC(hdc_mem);
+        ReleaseDC(std::ptr::null_mut(), hdc_screen);
+
+        if scanlines == 0 {
+            return Err("GetDIBits failed".to_string());
+        }
+
+        // Convert BGRA bottom-up → RGBA top-down
+        let mut rgba = Vec::with_capacity(buf_size);
+        for row in 0..h as usize {
+            let src_row = (h as usize - 1) - row; // flip vertically
+            let src_offset = src_row * row_stride;
+            for col in 0..w as usize {
+                let idx = src_offset + col * 4;
+                rgba.push(bgr_buf[idx + 2]); // R (from BGR)
+                rgba.push(bgr_buf[idx + 1]); // G
+                rgba.push(bgr_buf[idx]); // B
+                rgba.push(255); // A (opaque)
+            }
+        }
+
+        (w, h, rgba)
+    };
+
+    // ── Build GDK texture from captured pixels ────────────
+    let bytes = gtk4::glib::Bytes::from_owned(rgba_pixels.clone());
+    let pixbuf = gdk_pixbuf::Pixbuf::from_bytes(
+        &bytes,
+        gdk_pixbuf::Colorspace::Rgb,
+        true, // has_alpha
+        8,    // bits_per_sample
+        screen_w,
+        screen_h,
+        screen_w * 4, // rowstride
+    );
+    let texture = gdk::Texture::for_pixbuf(&pixbuf);
+
+    // ── Fullscreen overlay window ─────────────────────────
+    let overlay = gtk4::Window::new();
+    overlay.set_decorated(false);
+    overlay.set_title("QR Studio — Color Picker");
+
+    // Show the screenshot as the window content
+    let picture = gtk4::Picture::for_paintable(&texture);
+    overlay.set_child(Some(&picture));
+
+    // Set crosshair cursor
+    overlay.set_cursor_from_name(Some("crosshair"));
+
+    // Shared result state
+    let picked: Rc<RefCell<Option<Result<gdk::RGBA, String>>>> = Rc::new(RefCell::new(None));
+    let main_loop = Rc::new(glib::MainLoop::new(None, false));
+
+    // Clone pixel buffer dimensions for closures
+    let pw = screen_w as usize;
+    let ph = screen_h as usize;
+    let pixels_for_click = rgba_pixels.clone();
+
+    // ── Left-click: pick color at cursor ─────────────────
+    let click = gtk4::GestureClick::new();
+    click.set_button(gdk::BUTTON_PRIMARY);
+    {
+        let picked = picked.clone();
+        let main_loop = main_loop.clone();
+        click.connect_released(move |_gesture, _n_press, x, y| {
+            let col = x.round() as usize;
+            let row = y.round() as usize;
+            if col < pw && row < ph {
+                let idx = (row * pw + col) * 4;
+                let r = pixels_for_click[idx] as f32 / 255.0;
+                let g = pixels_for_click[idx + 1] as f32 / 255.0;
+                let b = pixels_for_click[idx + 2] as f32 / 255.0;
+                *picked.borrow_mut() =
+                    Some(Ok(gdk::RGBA::builder().red(r).green(g).blue(b).build()));
+            } else {
+                *picked.borrow_mut() = Some(Err("Click outside screen bounds".to_string()));
+            }
+            main_loop.quit();
+        });
+    }
+    overlay.add_controller(click.clone());
+
+    // ── Right-click: cancel ──────────────────────────────
+    let click_right = gtk4::GestureClick::new();
+    click_right.set_button(gdk::BUTTON_SECONDARY);
+    {
+        let picked = picked.clone();
+        let main_loop = main_loop.clone();
+        click_right.connect_released(move |_gesture, _n_press, _x, _y| {
+            *picked.borrow_mut() = Some(Err("Cancelled".to_string()));
+            main_loop.quit();
+        });
+    }
+    overlay.add_controller(click_right);
+
+    // ── Escape key: cancel ───────────────────────────────
+    let key_controller = gtk4::EventControllerKey::new();
+    {
+        let picked = picked.clone();
+        let main_loop = main_loop.clone();
+        key_controller.connect_key_pressed(move |_ctrl, keyval, _keycode, _state| {
+            if keyval == gdk::Key::Escape {
+                *picked.borrow_mut() = Some(Err("Cancelled".to_string()));
+                main_loop.quit();
+                return glib::ControlFlow::Stop;
+            }
+            glib::ControlFlow::Continue
+        });
+    }
+    overlay.add_controller(key_controller);
+
+    // ── Present overlay fullscreen ───────────────────────
+    overlay.present();
+    // Fullscreen after present (some window managers require this order)
+    overlay.fullscreen();
+
+    // ── Run nested main loop until pick or cancel ────────
+    main_loop.run();
+
+    // ── Cleanup ──────────────────────────────────────────
+    overlay.close();
+
+    picked
+        .borrow_mut()
+        .take()
+        .unwrap_or_else(|| Err("No color picked".to_string()))
 }

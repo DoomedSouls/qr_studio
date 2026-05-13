@@ -1031,7 +1031,7 @@ pub fn build_ui(app: &Application) {
             gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
     }
-    #[cfg(feature = "pipette")]
+    #[cfg(any(feature = "pipette", target_os = "windows"))]
     {
         let pipette_css = gtk4::CssProvider::new();
         pipette_css.load_from_data(
@@ -2645,67 +2645,102 @@ pub fn build_ui(app: &Application) {
     // ============================================================
     // PIPETTE (COLOR PICKER) SIGNAL CONNECTIONS
     // Connect each pipette button to pick_screen_color() and apply
-    // the result to the adjacent ColorButton.
-    // Only compiled when the pipette feature is enabled (Linux).
+    // the result to the adjacent ColorButton AND the AppState field.
+    // Note: ColorButton.set_rgba() does NOT emit "color-set", so we
+    // must manually update the AppState field for each button.
+    // Compiled on Linux (pipette feature) and Windows (gui feature).
     // ============================================================
-    #[cfg(feature = "pipette")]
+    #[cfg(any(feature = "pipette", all(feature = "gui", target_os = "windows")))]
     {
-        // Helper closure to connect a pipette button to a color button
-        let connect_pipette =
-            |pipette: &Button, color_btn: &ColorButton, st: &Rc<RefCell<AppState>>| {
-                let cb = color_btn.clone();
-                let st = st.clone();
-                pipette.connect_clicked(move |_| match pick_screen_color() {
-                    Ok(rgba) => {
-                        cb.set_rgba(&rgba);
-                        save_undo_state(&*st.borrow());
-                        cb.add_css_class("color-btn-pop");
-                        let b = cb.clone();
-                        glib::timeout_add_local(Duration::from_millis(220), move || {
-                            b.remove_css_class("color-btn-pop");
-                            glib::ControlFlow::Break
-                        });
-                        st.borrow().update_status_typed(
-                            &st.borrow().i18n.borrow().t("status_color_picked"),
-                            ToastType::Success,
-                        );
-                        schedule_preview(&st);
-                    }
-                    Err(_) => {
-                        st.borrow().update_status_typed(
-                            &st.borrow().i18n.borrow().t("status_color_pick_error"),
-                            ToastType::Error,
-                        );
-                    }
-                });
-            };
+        // Helper closure: connects a pipette button to a color button.
+        // The `setter` closure writes the picked color into the correct AppState field.
+        let connect_pipette = |pipette: &Button,
+                               color_btn: &ColorButton,
+                               st: &Rc<RefCell<AppState>>,
+                               setter: std::boxed::Box<
+            dyn Fn(&Rc<RefCell<AppState>>, &gdk::RGBA) + 'static,
+        >| {
+            let cb = color_btn.clone();
+            let st = st.clone();
+            pipette.connect_clicked(move |_| match pick_screen_color() {
+                Ok(rgba) => {
+                    cb.set_rgba(&rgba);
+                    setter(&st, &rgba);
+                    save_undo_state(&*st.borrow());
+                    cb.add_css_class("color-btn-pop");
+                    let b = cb.clone();
+                    glib::timeout_add_local(Duration::from_millis(220), move || {
+                        b.remove_css_class("color-btn-pop");
+                        glib::ControlFlow::Break
+                    });
+                    st.borrow().update_status_typed(
+                        &st.borrow().i18n.borrow().t("status_color_picked"),
+                        ToastType::Success,
+                    );
+                    schedule_preview(&st);
+                }
+                Err(_) => {
+                    st.borrow().update_status_typed(
+                        &st.borrow().i18n.borrow().t("status_color_pick_error"),
+                        ToastType::Error,
+                    );
+                }
+            });
+        };
 
         if let Some(ref btn) = fg_pipette_btn {
-            connect_pipette(btn, &fg_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().fg_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &fg_color_btn, &state, setter);
         }
         if let Some(ref btn) = bg_pipette_btn {
-            connect_pipette(btn, &bg_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().bg_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &bg_color_btn, &state, setter);
         }
         if let Some(ref btn) = corner_pipette_btn {
-            connect_pipette(btn, &corner_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().corner_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &corner_color_btn, &state, setter);
         }
         if let Some(ref btn) = grad_pipette_btn {
-            connect_pipette(btn, &grad_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().gradient_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &grad_color_btn, &state, setter);
         }
         if let Some(ref btn) = logo_color_pipette {
-            connect_pipette(btn, &logo_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().logo_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &logo_color_btn, &state, setter);
         }
         if let Some(ref btn) = logo_border_color_pipette {
-            connect_pipette(btn, &logo_border_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().logo_border_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &logo_border_color_btn, &state, setter);
         }
         if let Some(ref btn) = logo_vecbg_pipette {
-            connect_pipette(btn, &logo_vectorize_bg_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().logo_vectorize_bg_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &logo_vectorize_bg_color_btn, &state, setter);
         }
         if let Some(ref btn) = text_color_pipette {
-            connect_pipette(btn, &text_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().outer_text_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &text_color_btn, &state, setter);
         }
         if let Some(ref btn) = frame_color_pipette {
-            connect_pipette(btn, &frame_color_btn, &state);
+            let setter = std::boxed::Box::new(|st: &Rc<RefCell<AppState>>, rgba: &gdk::RGBA| {
+                *st.borrow().frame_color.borrow_mut() = gdk_to_image_rgba(rgba);
+            });
+            connect_pipette(btn, &frame_color_btn, &state, setter);
         }
     }
 

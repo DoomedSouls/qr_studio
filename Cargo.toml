@@ -39,7 +39,7 @@ tokio = { version = "1", features = ["rt"], optional = true }
 glib-build-tools = "0.20"
 
 [features]
-default = ["gui"]
+default = ["gui", "pipette"]
 gui = [
     "dep:gtk4",
     "dep:adw",
