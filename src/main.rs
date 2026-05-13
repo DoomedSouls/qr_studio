@@ -1,9 +1,4 @@
 //! QR Studio — styled QR code generator
-//!
-//! On Windows GUI builds, we close the console window early via FreeConsole()
-//! so no black CMD window is visible. We keep the console subsystem (not
-//! windows_subsystem = "windows") so the C runtime initializes stderr/stdout
-//! to valid handles — GTK/GLib requires valid stderr or it crashes silently.
 
 mod cli;
 #[cfg_attr(not(feature = "gui"), allow(dead_code))]
@@ -77,6 +72,24 @@ fn init_windows_panic_hook() {}
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
+    // ── Windows: close the console window immediately ───────────
+    // We use the CONSOLE subsystem (not windows_subsystem = "windows")
+    // so the C runtime initializes stderr/stdout to valid handles.
+    // GTK/GLib writes diagnostic output to stderr; with the windows
+    // subsystem those handles are NULL which can cause silent crashes.
+    // FreeConsole() closes the visible CMD window while keeping the
+    // handles valid for the rest of the process.
+    #[cfg(all(windows, feature = "gui"))]
+    {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn FreeConsole() -> i32;
+        }
+        unsafe {
+            FreeConsole();
+        }
+    }
+
     init_windows_panic_hook();
 
     // ── Windows: help GLib find our compiled GSettings schema ──────
