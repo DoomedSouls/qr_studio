@@ -1524,7 +1524,7 @@ pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
     // ── Win32 FFI declarations ─────────────────────────────
     #[link(name = "user32")]
     #[link(name = "gdi32")]
-    extern "system" {
+    unsafe extern "system" {
         fn GetDC(hwnd: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
         fn ReleaseDC(hwnd: *mut std::ffi::c_void, hdc: *mut std::ffi::c_void) -> i32;
         fn GetSystemMetrics(n: i32) -> i32;
@@ -1681,22 +1681,21 @@ pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
     };
 
     // ── Build GDK texture from captured pixels ────────────
+    // Use MemoryTexture to avoid gdk-pixbuf version mismatch
+    // (gtk4 depends on gdk-pixbuf 0.22, our direct dep is 0.20)
     let bytes = gtk4::glib::Bytes::from_owned(rgba_pixels.clone());
-    let pixbuf = gdk_pixbuf::Pixbuf::from_bytes(
-        &bytes,
-        gdk_pixbuf::Colorspace::Rgb,
-        true, // has_alpha
-        8,    // bits_per_sample
+    let texture = gdk::MemoryTexture::new(
         screen_w,
         screen_h,
-        screen_w * 4, // rowstride
+        gdk::MemoryFormat::R8g8b8a8,
+        &bytes,
+        (screen_w * 4) as usize, // rowstride
     );
-    let texture = gdk::Texture::for_pixbuf(&pixbuf);
 
     // ── Fullscreen overlay window ─────────────────────────
     let overlay = gtk4::Window::new();
     overlay.set_decorated(false);
-    overlay.set_title("QR Studio — Color Picker");
+    overlay.set_title(Some("QR Studio — Color Picker"));
 
     // Show the screenshot as the window content
     let picture = gtk4::Picture::for_paintable(&texture);
@@ -1760,9 +1759,9 @@ pub fn pick_screen_color() -> Result<gdk::RGBA, String> {
             if keyval == gdk::Key::Escape {
                 *picked.borrow_mut() = Some(Err("Cancelled".to_string()));
                 main_loop.quit();
-                return glib::ControlFlow::Stop;
+                return glib::Propagation::Stop;
             }
-            glib::ControlFlow::Continue
+            glib::Propagation::Proceed
         });
     }
     overlay.add_controller(key_controller);
