@@ -2,23 +2,67 @@
 HERE="$(dirname "$(readlink -f "$0")")"
 BUNDLED_LIB="${HERE}/usr/lib"
 
-# ── Detect system GTK4 + libadwaita ───────────────────
-# Both must be present and from the same stack.
-# If the system has GTK4 but not libadwaita (or vice versa),
-# falling back to bundled mode avoids version mismatches
-# that cause CSS parse errors and transparent GUIs.
+# ── Detect system GTK4 + libadwaita with version check ──
+#
+# The bundled libadwaita CSS requires GTK4 >= 4.14 for:
+#   - oklab() color functions
+#   - Custom CSS properties (--accent-bg-color, --window-radius, etc.)
+#   - @container rules
+#   - :dir() pseudo-class
+#
+# If system GTK4 is older, the CSS parser chokes on all of these,
+# causing massive parse errors and a completely transparent GUI.
+#
+# Strategy:
+#   1. Check if system GTK4 AND libadwaita are present
+#   2. Check if system GTK4 >= 4.14 (supports modern CSS)
+#   3. If both checks pass → system mode (system libs preferred)
+#   4. Otherwise → bundled mode (bundled GTK4 + libadwaita together)
+
 SYSTEM_GTK4=0
 SYSTEM_LIBADWAITA=0
+GTK4_NEW_ENOUGH=0
+SYSTEM_GTK4_PATH=""
+
 for dir in /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib /usr/local/lib; do
-  if [ -f "${dir}/libgtk-4.so.1" ]; then
+  if [ -f "${dir}/libgtk-4.so.1" ] && [ "$SYSTEM_GTK4" = "0" ]; then
     SYSTEM_GTK4=1
+    SYSTEM_GTK4_PATH="${dir}/libgtk-4.so.1"
   fi
-  if [ -f "${dir}/libadwaita-1.so.0" ]; then
+  if [ -f "${dir}/libadwaita-1.so.0" ] && [ "$SYSTEM_LIBADWAITA" = "0" ]; then
     SYSTEM_LIBADWAITA=1
   fi
 done
+
+# ── Version check: GTK4 >= 4.14 required for modern CSS ──
+if [ "$SYSTEM_GTK4" = "1" ]; then
+  # Resolve symlink to get real library path with version
+  # e.g. /usr/lib/x86_64-linux-gnu/libgtk-4.so.1.14.6
+  REAL_PATH=$(readlink -f "$SYSTEM_GTK4_PATH" 2>/dev/null || echo "$SYSTEM_GTK4_PATH")
+
+  # Extract version numbers from filename
+  # Try pattern like "libgtk-4.so.1.MAJOR.MINOR" or "libgtk-4.so.1.MAJOR.MINOR.PATCH"
+  V_MAJOR=$(echo "$REAL_PATH" | sed -n 's/.*libgtk-4\.so\.[0-9]*\.\([0-9]*\)\..*/\1/p')
+  V_MINOR=$(echo "$REAL_PATH" | sed -n 's/.*libgtk-4\.so\.[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/p')
+
+  # Fallback: try pkg-config if available
+  if [ -z "$V_MAJOR" ] && command -v pkg-config >/dev/null 2>&1; then
+    V_MAJOR=$(pkg-config --modversion gtk4 2>/dev/null | cut -d. -f2)
+    V_MINOR=$(pkg-config --modversion gtk4 2>/dev/null | cut -d. -f3)
+  fi
+
+  # GTK4 soversion scheme: libgtk-4.so.1.MINOR.MICRO
+  # The MINOR number is the actual minor version (e.g., 14 = GTK 4.14)
+  # We need MINOR >= 14 (i.e., GTK 4.14+)
+  if [ -n "$V_MAJOR" ]; then
+    if [ "$V_MAJOR" -ge 14 ] 2>/dev/null; then
+      GTK4_NEW_ENOUGH=1
+    fi
+  fi
+fi
+
 USE_SYSTEM=0
-if [ "$SYSTEM_GTK4" = "1" ] && [ "$SYSTEM_LIBADWAITA" = "1" ]; then
+if [ "$SYSTEM_GTK4" = "1" ] && [ "$SYSTEM_LIBADWAITA" = "1" ] && [ "$GTK4_NEW_ENOUGH" = "1" ]; then
   USE_SYSTEM=1
 fi
 
@@ -31,15 +75,15 @@ fi
 
 if [ "$USE_SYSTEM" = "1" ]; then
   # ── System mode ────────────────────────────────
+  # System GTK4 >= 4.14 + system libadwaita found.
   # System libs first, bundled as fallback.
-  # Use system GIO modules, gdk-pixbuf, etc.
   export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}${BUNDLED_LIB}"
   export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
   export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
 else
   # ── Bundled mode (portable) ────────────────────
-  # Bundled libs first, system as fallback.
-  # Use bundled modules to ensure version consistency.
+  # Use bundled GTK4 + libadwaita (both from Ubuntu 24.04,
+  # guaranteed compatible). Bundled libs first.
   export LD_LIBRARY_PATH="${BUNDLED_LIB}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
   export GDK_PIXBUF_MODULEDIR="${BUNDLED_LIB}/gdk-pixbuf-2.0/2.10.0/loaders"
   export GDK_PIXBUF_MODULE_FILE="${BUNDLED_LIB}/gdk-pixbuf-2.0/2.10.0/loaders.cache"
