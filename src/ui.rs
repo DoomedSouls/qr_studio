@@ -2123,6 +2123,7 @@ pub fn build_ui(app: &Application) {
 
     let logo_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
     logo_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_color")));
+    logo_color_btn.add_css_class("color-btn-hover");
     let logo_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let logo_color_row = Box::new(Orientation::Horizontal, 4);
     logo_color_row.append(&logo_color_btn);
@@ -2143,6 +2144,7 @@ pub fn build_ui(app: &Application) {
 
     let logo_border_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(1.0, 1.0, 1.0, 1.0));
     logo_border_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_border_color")));
+    logo_border_color_btn.add_css_class("color-btn-hover");
     let logo_border_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let logo_border_color_row = Box::new(Orientation::Horizontal, 4);
     logo_border_color_row.append(&logo_border_color_btn);
@@ -2159,6 +2161,7 @@ pub fn build_ui(app: &Application) {
     let logo_vectorize_bg_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
     logo_vectorize_bg_color_btn.set_use_alpha(true);
     logo_vectorize_bg_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_logo_vectorize_bg")));
+    logo_vectorize_bg_color_btn.add_css_class("color-btn-hover");
     let logo_vecbg_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let logo_vecbg_row = Box::new(Orientation::Horizontal, 4);
     logo_vecbg_row.append(&logo_vectorize_bg_color_btn);
@@ -2210,6 +2213,7 @@ pub fn build_ui(app: &Application) {
 
     let text_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0));
     text_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_text_color")));
+    text_color_btn.add_css_class("color-btn-hover");
     let text_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let text_color_row = Box::new(Orientation::Horizontal, 4);
     text_color_row.append(&text_color_btn);
@@ -2297,6 +2301,7 @@ pub fn build_ui(app: &Application) {
 
     let frame_color_btn = ColorButton::with_rgba(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0));
     frame_color_btn.set_tooltip_text(Some(&i18n.t("tooltip_frame_color")));
+    frame_color_btn.add_css_class("color-btn-hover");
     let frame_color_pipette = make_pipette_btn(&i18n.t("tooltip_pick_color"));
     let frame_color_row = Box::new(Orientation::Horizontal, 4);
     frame_color_row.append(&frame_color_btn);

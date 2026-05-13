@@ -13,30 +13,30 @@ serde_json = "1"
 vtracer = "0.6.5"
 dirs = "6"
 rayon = "1"
-printpdf = { version = "0.8", features = ["png", "jpeg"] }
-rqrr = "0.9"
+printpdf = { version = "0.9", features = ["png", "jpeg"] }
+rqrr = "0.10"
 clap = { version = "4", features = ["derive"] }
 
 # ── Headless SVG rasterization (no gdk-pixbuf dependency) ──
-resvg = { version = "0.44", optional = true }
-usvg = { version = "0.44", optional = true }
-tiny-skia = { version = "0.11", optional = true }
+resvg = { version = "0.47", optional = true }
+usvg = { version = "0.47", optional = true }
+tiny-skia = { version = "0.12", optional = true }
 
 # ── GUI-only dependencies ──
 gtk4 = { version = "0.11", package = "gtk4", optional = true }
 adw = { version = "0.9", package = "libadwaita", optional = true }
-gdk-pixbuf = { version = "0.20", optional = true }
+gdk-pixbuf = { version = "0.22", optional = true }
 libshumate = { version = "0.8", optional = true }
-reqwest = { version = "0.12", features = ["blocking", "json"], optional = true }
+reqwest = { version = "0.13", features = ["blocking", "json"], optional = true }
 once_cell = { version = "1.21.4", optional = true }
-hotpath = { version = "0.14", optional = true }
+hotpath = { version = "0.16", optional = true }
 
 # ── Linux-only: color picker pipette via XDG portal ──
 ashpd = { version = "0.13", default-features = false, features = ["tokio", "screenshot"], optional = true }
 tokio = { version = "1", features = ["rt"], optional = true }
 
 [build-dependencies]
-glib-build-tools = "0.20"
+glib-build-tools = "0.22"
 
 [features]
 default = ["gui", "pipette"]

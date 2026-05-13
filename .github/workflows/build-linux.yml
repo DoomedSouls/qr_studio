@@ -93,9 +93,9 @@ jobs:
           # Shared libraries — bundle EVERYTHING except GPU/display.
           #
           # Strategy: "Bundle all, prefer system when compatible"
-          # The AppRun launcher detects whether the host has a
-          # compatible GTK4 stack. If yes, system libs are preferred
-          # (bundled as fallback). If no, bundled libs are preferred.
+          # The AppRun launcher detects whether the host has BOTH
+          # GTK4 AND libadwaita. System mode is only used when both
+          # are present, avoiding CSS version mismatches.
           #
           # Only GPU/display/compositor libs are excluded — they
           # MUST match the running kernel and hardware drivers.
@@ -202,9 +202,9 @@ jobs:
           # ═══════════════════════════════════════════════════════════
           # AppRun — smart launcher with system/bundled detection
           #
-          # Detects whether the host has a compatible GTK4 stack:
+          # Detects whether the host has BOTH GTK4 and libadwaita:
           #   YES → system libs preferred (bundled as fallback)
-          #   NO  → bundled libs preferred (truly portable)
+          #   NO  → bundled libs preferred (avoids CSS version mismatch)
           #
           # Override: QR_STUDIO_SYSTEM_LIBS=1 forces system mode
           #           QR_STUDIO_BUNDLED_LIBS=1 forces bundled mode

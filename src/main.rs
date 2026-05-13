@@ -291,14 +291,13 @@ fn main() {
             spinbutton.value-flash { animation: value-flash 400ms ease-out; }
 
             /* ---- Calendar rounded corners ---- */
-            calendar.calendar-rounded { border-radius: 8px; overflow: hidden; }
+            calendar.calendar-rounded { border-radius: 8px; }
 
             /* ---- GPS map rounded corners ---- */
-            .gps-map { border-radius: 8px; overflow: hidden; }
+            .gps-map { border-radius: 8px; }
 
             /* ---- GPS suggestion list ---- */
             .gps-suggestions { background: @card_bg_color; border: 1px solid alpha(currentColor, 0.15); border-radius: 8px; }
-            .gps-suggestions:empty { border: none; }
             .gps-suggestion-row { border-radius: 6px; margin: 1px 2px; transition: background 120ms ease-out; }
             .gps-suggestion-row:hover { background: alpha(@accent_color, 0.1); }
             .gps-suggestion-row:active { background: alpha(@accent_color, 0.18); }
@@ -352,7 +351,6 @@ fn main() {
             .navigation-sidebar row {
                 transition: background 150ms ease-out, box-shadow 150ms ease-out;
                 border-radius: 8px;
-                outline-radius: 8px;
                 margin: 1px 4px;
                 padding: 6px 10px;
             }

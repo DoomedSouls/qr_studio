@@ -2,23 +2,34 @@
 HERE="$(dirname "$(readlink -f "$0")")"
 BUNDLED_LIB="${HERE}/usr/lib"
 
-# ── Detect system GTK4 ──────────────────────────────
+# ── Detect system GTK4 + libadwaita ───────────────────
+# Both must be present and from the same stack.
+# If the system has GTK4 but not libadwaita (or vice versa),
+# falling back to bundled mode avoids version mismatches
+# that cause CSS parse errors and transparent GUIs.
 SYSTEM_GTK4=0
+SYSTEM_LIBADWAITA=0
 for dir in /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib /usr/local/lib; do
   if [ -f "${dir}/libgtk-4.so.1" ]; then
     SYSTEM_GTK4=1
-    break
+  fi
+  if [ -f "${dir}/libadwaita-1.so.0" ]; then
+    SYSTEM_LIBADWAITA=1
   fi
 done
+USE_SYSTEM=0
+if [ "$SYSTEM_GTK4" = "1" ] && [ "$SYSTEM_LIBADWAITA" = "1" ]; then
+  USE_SYSTEM=1
+fi
 
 # Allow user override
 if [ "${QR_STUDIO_SYSTEM_LIBS}" = "1" ]; then
-  SYSTEM_GTK4=1
+  USE_SYSTEM=1
 elif [ "${QR_STUDIO_BUNDLED_LIBS}" = "1" ]; then
-  SYSTEM_GTK4=0
+  USE_SYSTEM=0
 fi
 
-if [ "$SYSTEM_GTK4" = "1" ]; then
+if [ "$USE_SYSTEM" = "1" ]; then
   # ── System mode ────────────────────────────────
   # System libs first, bundled as fallback.
   # Use system GIO modules, gdk-pixbuf, etc.

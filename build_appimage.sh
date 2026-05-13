@@ -28,8 +28,10 @@ OUTPUT="${WORK_DIR}/${APP_NAME}-${VERSION}-${ARCH}.AppImage"
 # Libraries to EXCLUDE from bundling.
 #
 # Strategy: "Bundle all, prefer system when compatible"
-# The AppRun launcher detects whether the host has a
-# compatible GTK4 stack and adjusts LD_LIBRARY_PATH.
+# The AppRun launcher detects whether the host has BOTH
+# a compatible GTK4 AND libadwaita and adjusts LD_LIBRARY_PATH.
+# If only one is present, bundled mode is used to avoid
+# version mismatches that break CSS parsing.
 #
 # Only GPU/display/compositor libs are excluded — they
 # MUST match the running kernel and hardware drivers.
