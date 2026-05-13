@@ -1,5 +1,11 @@
 //! QR Studio — styled QR code generator
 
+// On Windows GUI builds, use the Windows subsystem so no CMD window
+// is ever created. The original crash with this setting was caused
+// by a missing GSettings schema (now handled with a pre-check),
+// not by NULL stderr handles.
+#![cfg_attr(all(windows, feature = "gui"), windows_subsystem = "windows")]
+
 mod cli;
 #[cfg_attr(not(feature = "gui"), allow(dead_code))]
 mod country_codes;
@@ -72,24 +78,6 @@ fn init_windows_panic_hook() {}
 #[cfg(feature = "gui")]
 #[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
-    // ── Windows: close the console window immediately ───────────
-    // We use the CONSOLE subsystem (not windows_subsystem = "windows")
-    // so the C runtime initializes stderr/stdout to valid handles.
-    // GTK/GLib writes diagnostic output to stderr; with the windows
-    // subsystem those handles are NULL which can cause silent crashes.
-    // FreeConsole() closes the visible CMD window while keeping the
-    // handles valid for the rest of the process.
-    #[cfg(all(windows, feature = "gui"))]
-    {
-        #[link(name = "kernel32")]
-        unsafe extern "system" {
-            fn FreeConsole() -> i32;
-        }
-        unsafe {
-            FreeConsole();
-        }
-    }
-
     init_windows_panic_hook();
 
     // ── Windows: help GLib find our compiled GSettings schema ──────
