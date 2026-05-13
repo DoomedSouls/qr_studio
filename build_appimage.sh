@@ -26,7 +26,31 @@ OUTPUT="${WORK_DIR}/${APP_NAME}-${VERSION}-${ARCH}.AppImage"
 
 # System/glibc libraries to EXCLUDE from bundling
 # (these must come from the host system to avoid ABI conflicts)
-EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss|libEGL|libGL[._]|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libepoxy'
+EXCLUDE_RE='ld-linux|linux-vdso|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libresolv\.so|/libnss'
+
+# GLib/GObject/GIO — must match host's GTK4/gstreamer/etc.
+EXCLUDE_RE+='|libglib-2.0|libgio-2.0|libgobject-2.0|libgmodule-2.0|libgthread-2.0'
+
+# GTK4/libadwaita core (must match host display compositor)
+EXCLUDE_RE+='|libgtk-4|libadwaita-1|libshumate'
+
+# Rendering pipeline (must match host GPU drivers)
+EXCLUDE_RE+='|libgraphene-1|libepoxy|libcairo|libpixman-1'
+
+# Text/font rendering (must match host Pango/Harfbuzz)
+EXCLUDE_RE+='|libpango|libharfbuzz|libfribidi|libthai|libdatrie|libfreetype|libfontconfig|libgraphite2'
+
+# Image/SVG loading (must match host GTK4's gdk-pixbuf/librsvg)
+EXCLUDE_RE+='|libgdk_pixbuf|librsvg|libtiff|libjpeg|libpng|libjbig|libsharpyuv|libwebp'
+
+# Network/data
+EXCLUDE_RE+='|libsoup-3|libjson-glib|libprotobuf-c|libsqlite3|libxml2|libxmlb'
+
+# GPU/display
+EXCLUDE_RE+='|libEGL|libGL|libGLdispatch|libGLX|libGLES|libglapi|libvulkan|libdrm|libgbm|libwayland-egl|libwayland-client|libwayland-cursor'
+
+# X11/Wayland display
+EXCLUDE_RE+='|libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfixes|libXinerama|libXi|libxkbcommon|libXrandr|libXrender'
 
 STEP=0
 step()  { STEP=$((STEP + 1)); printf '\n▸ [%d/8] %s\n' "$STEP" "$1"; }
