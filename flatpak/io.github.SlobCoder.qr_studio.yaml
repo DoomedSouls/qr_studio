@@ -9,6 +9,8 @@ build-options:
     CARGO_HOME: /run/build/qr_studio/cargo
     RUST_BACKTRACE: "1"
 
+appstream-compose: false
+
 finish-args:
   # X11 + Wayland
   - --socket=fallback-x11
