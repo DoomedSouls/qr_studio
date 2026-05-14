@@ -17,6 +17,7 @@ jobs:
       - name: Install build tools
         run: |
           zypper --non-interactive install \
+            bash \
             git \
             curl \
             wget \
