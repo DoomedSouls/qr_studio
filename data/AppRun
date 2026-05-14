@@ -125,6 +125,14 @@ else
   export LD_LIBRARY_PATH="${BUNDLED_LIB}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
   export GDK_PIXBUF_MODULEDIR="${BUNDLED_LIB}/gdk-pixbuf-2.0/2.10.0/loaders"
   export GDK_PIXBUF_MODULE_FILE="${BUNDLED_LIB}/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+  # Patch loaders.cache: replace @MODULEDIR@ placeholder with runtime path.
+  # The cache was generated at build time with @MODULEDIR@ instead of the
+  # build-time path. Now replace it with the actual mounted AppImage path.
+  if [ -f "${GDK_PIXBUF_MODULE_FILE}" ]; then
+    CACHE_TMP="$(mktemp /tmp/qr_studio_loaders.XXXXXX)"
+    sed "s|@MODULEDIR@|${GDK_PIXBUF_MODULEDIR}|g" "${GDK_PIXBUF_MODULE_FILE}" > "${CACHE_TMP}"
+    export GDK_PIXBUF_MODULE_FILE="${CACHE_TMP}"
+  fi
   export GIO_MODULE_DIR="${BUNDLED_LIB}/gio/modules"
   export GTK_PATH="${BUNDLED_LIB}/gtk-4.0"
   export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"

@@ -185,6 +185,10 @@ if [ -d "$LOADERS_SRC" ] && ls "${LOADERS_SRC}"/*.so &>/dev/null; then
     # Regenerate loaders.cache with our bundled paths
     GDK_PIXBUF_MODULEDIR="$LOADERS_DST" gdk-pixbuf-query-loaders 2>/dev/null \
         > "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" || true
+    # Fix absolute paths: replace build-time path with @MODULEDIR@ placeholder.
+    # At runtime, AppRun replaces @MODULEDIR@ with the mounted AppImage path.
+    sed -i "s|\"${LOADERS_DST}/|\"@MODULEDIR@/|g" \
+      "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" 2>/dev/null || true
 
     ok "$(ls "$LOADERS_DST"/*.so 2>/dev/null | wc -l) loaders"
 else
