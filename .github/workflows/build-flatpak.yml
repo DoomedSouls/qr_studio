@@ -25,9 +25,10 @@ jobs:
         run: |
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-      - name: Install GNOME SDK runtime
+      - name: Install GNOME SDK runtime and Rust extension
         run: |
           flatpak install --user -y flathub org.gnome.Sdk//50 org.gnome.Platform//50
+          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
 
       - name: Download flatpak-cargo-generator.py
         run: |
