@@ -115,6 +115,7 @@ modules:
       - -Ddemos=false
       - -Dvapi=false
       - -Dvector_renderer=true
+      - --libdir=lib
     sources:
       - type: archive
         url: https://download.gnome.org/sources/libshumate/1.5/libshumate-1.5.3.tar.xz
