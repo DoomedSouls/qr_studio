@@ -42,18 +42,24 @@ modules:
   # ── Rust toolchain (standalone installer) ──────────────────────
   - name: rust
     buildsystem: simple
-    no-debuginfo: true
     build-commands:
       - ./install.sh --prefix=${FLATPAK_DEST} --disable-ldconfig --verbose
-      # Pre-strip with binutils strip to remove debug sections before
-      # flatpak-builder runs eu-strip, which corrupts Rust's custom LLVM.
-      - find ${FLATPAK_DEST}/lib -type f -name '*.so*' -exec strip --strip-debug {} + 2>/dev/null || true
-      - find ${FLATPAK_DEST}/bin -type f -exec strip --strip-unneeded {} + 2>/dev/null || true
+      # Archive shared libraries into a tarball and remove from /app.
+      # eu-strip (run by flatpak-builder after build-commands) corrupts
+      # Rust's custom libLLVM.so by removing PT_LOAD segments. By hiding
+      # the .so files in a non-ELF tarball, eu-strip skips them entirely.
+      - cd ${FLATPAK_DEST}/lib && tar czf ${FLATPAK_DEST}/rust-libs.tar.gz libLLVM* librustc* rustlib
+      - rm -rf ${FLATPAK_DEST}/lib/libLLVM* ${FLATPAK_DEST}/lib/librustc* ${FLATPAK_DEST}/lib/rustlib
     cleanup:
+      - /bin/cargo
+      - /bin/rust*
+      - /lib/libLLVM*
+      - /lib/librustc*
+      - /lib/rustlib
       - /share/doc
       - /share/man
       - /etc/bash_completion.d
-      - /lib/rustlib/uninstall.sh
+      - /rust-libs.tar.gz
     sources:
       - type: archive
         url: https://static.rust-lang.org/dist/2026-04-16/rust-1.95.0-x86_64-unknown-linux-gnu.tar.xz
@@ -133,6 +139,9 @@ modules:
   - name: qr_studio
     buildsystem: simple
     build-commands:
+      # Restore Rust shared libraries from archive
+      - tar xzf ${FLATPAK_DEST}/rust-libs.tar.gz -C ${FLATPAK_DEST}/lib
+      - rm -f ${FLATPAK_DEST}/rust-libs.tar.gz
       # Tell cargo to use vendored sources
       - mkdir -p .cargo
       - |
@@ -163,6 +172,9 @@ modules:
       # Country flag SVGs (for phone/vCard country code dropdowns)
       - mkdir -p ${FLATPAK_DEST}/share/qr_studio/flags
       - install -Dm644 flags/*.svg ${FLATPAK_DEST}/share/qr_studio/flags/
+      # Remove Rust toolchain from /app (not needed in final Flatpak)
+      - rm -rf ${FLATPAK_DEST}/lib/libLLVM* ${FLATPAK_DEST}/lib/librustc* ${FLATPAK_DEST}/lib/rustlib
+      - rm -rf ${FLATPAK_DEST}/bin/rust* ${FLATPAK_DEST}/bin/cargo
 
     sources:
       # Project sources
