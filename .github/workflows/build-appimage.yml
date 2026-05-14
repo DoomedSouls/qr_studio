@@ -18,6 +18,7 @@ jobs:
         run: |
           zypper --non-interactive install \
             bash \
+            gawk \
             git \
             curl \
             wget \
