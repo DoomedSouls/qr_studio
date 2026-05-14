@@ -16,22 +16,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install flatpak-builder 1.4.8
+      - name: Install flatpak and add Flathub remote
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends elfutils appstream-compose
-          # Download flatpak-builder 1.4.8 from Ubuntu 26.04 (1.4.2 in 24.04 lacks --no-appstream)
-          curl -fsSL -o /tmp/flatpak-builder.deb \
-            https://mirrors.mit.edu/ubuntu/pool/universe/f/flatpak-builder/flatpak-builder_1.4.8-1_amd64.deb
-          sudo dpkg -i --force-depends /tmp/flatpak-builder.deb
-          flatpak-builder --version
-
-      - name: Add GNOME runtime remote
-        run: |
+          sudo apt-get install -y --no-install-recommends flatpak
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-      - name: Install GNOME SDK runtime
+      - name: Install org.flatpak.Builder and GNOME SDK
         run: |
+          flatpak install --user -y flathub org.flatpak.Builder
           flatpak install --user -y flathub org.gnome.Sdk//50 org.gnome.Platform//50
 
       - name: Download flatpak-cargo-generator.py
@@ -50,9 +43,8 @@ jobs:
       - name: Build Flatpak
         run: |
           cd flatpak
-          flatpak-builder \
+          flatpak run org.flatpak.Builder \
             --user \
-            --disable-rofiles-fuse \
             --force-clean \
             --no-appstream \
             --repo=repo \
