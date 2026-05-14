@@ -38,7 +38,7 @@ jobs:
       - name: Regenerate cargo-sources.json
         run: |
           cd flatpak
-          pip3 install toml aiohttp
+          pip3 install toml tomlkit aiohttp
           python3 flatpak-cargo-generator.py ../Cargo.lock -o cargo-sources.json
           echo "cargo-sources.json regenerated ($(wc -l < cargo-sources.json) lines)"
 
