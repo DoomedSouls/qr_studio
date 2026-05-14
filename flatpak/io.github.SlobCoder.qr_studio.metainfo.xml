@@ -1,87 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>io.github.SlobCoder.qr_studio</id>
-
-  <name>QR Studio</name>
-  <summary>Create and customize QR codes</summary>
-  <summary xml:lang="de">QR-Codes erstellen und anpassen</summary>
-  <summary xml:lang="es">Crear y personalizar códigos QR</summary>
-  <summary xml:lang="fr">Créer et personnaliser des codes QR</summary>
-  <summary xml:lang="it">Creare e personalizzare codici QR</summary>
-  <summary xml:lang="pt_BR">Criar e personalizar códigos QR</summary>
-  <summary xml:lang="ja">QRコードを作成・カスタマイズ</summary>
-  <summary xml:lang="ko">QR 코드 생성 및 맞춤 설정</summary>
-  <summary xml:lang="zh_CN">创建和自定义二维码</summary>
-
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-
+  <name>QR Studio</name>
+  <summary>Create and customize QR codes</summary>
   <description>
-    <p>
-      QR Studio is a feature-rich QR code generator with a modern GTK4/libadwaita
-      interface. Create customized QR codes for text, URLs, Wi-Fi credentials,
-      vCards, calendar events, GPS locations, and SMS messages.
-    </p>
-    <p xml:lang="de">
-      QR Studio ist ein funktionsreicher QR-Code-Generator mit moderner
-      GTK4/libadwaita-Oberfläche. Erstellen Sie angepasste QR-Codes für Text,
-      URLs, WLAN-Zugangsdaten, vCards, Kalendereinträge, GPS-Standorte und SMS.
-    </p>
-    <ul>
-      <li>Multiple QR content types: Text, URL, Wi-Fi, vCard, Calendar, GPS, SMS</li>
-      <li>Customizable dot styles: Rounded, Square, Dots, Diamond, Custom shapes</li>
-      <li>Logo embedding with transparent background support</li>
-      <li>Gradient and solid color options for foreground, background, and frame</li>
-      <li>Frame styles with customizable corner radius</li>
-      <li>Background images with adjustable opacity</li>
-      <li>Built-in color picker (pipette) for screen color sampling</li>
-      <li>Interactive map for GPS coordinates (OpenFreeMap)</li>
-      <li>Export as PNG, SVG, JPEG, BMP, GIF, PDF</li>
-      <li>Import existing QR codes from images</li>
-      <li>Drag &amp; drop support for images and files</li>
-      <li>9 interface languages</li>
-    </ul>
+    <p>QR Studio is a feature-rich QR code generator with a modern GTK4/libadwaita interface. Create customized QR codes for text, URLs, Wi-Fi credentials, vCards, calendar events, GPS locations, and SMS messages.</p>
   </description>
-
   <launchable type="desktop-id">io.github.SlobCoder.qr_studio.desktop</launchable>
-
-  <!-- Screenshots will be added before Flathub submission -->
-  <screenshots />
-
   <url type="homepage">https://github.com/SlobCoder/qr_studio</url>
   <url type="bugtracker">https://github.com/SlobCoder/qr_studio/issues</url>
-  <url type="vcs-browser">https://github.com/SlobCoder/qr_studio</url>
-
-  <recommends>
-    <control>pointing</control>
-    <control>keyboard</control>
-    <control>touch</control>
-  </recommends>
-
-  <content_rating type="oars-1.1" />
-
+  <content_rating type="oars-1.1"/>
   <releases>
     <release version="0.4.0" date="2025-05-13">
       <description>
         <p>Initial Flatpak release.</p>
-        <ul>
-          <li>Multiple QR content types</li>
-          <li>Customizable dot styles and colors</li>
-          <li>Logo embedding</li>
-          <li>Gradient support</li>
-          <li>Frame styles</li>
-          <li>Interactive map for GPS coordinates</li>
-          <li>Export as PNG, SVG, JPEG, BMP, GIF, PDF</li>
-          <li>Import existing QR codes</li>
-          <li>Color picker (pipette)</li>
-          <li>9 languages: de, en, es, fr, it, pt-br, ja, ko, zh-cn</li>
-        </ul>
       </description>
     </release>
   </releases>
-
-  <developer id="io.github.SlobCoder">
-    <name>SlobCoder</name>
-  </developer>
-  <update_contact>https://github.com/SlobCoder</update_contact>
+  <developer_name>SlobCoder</developer_name>
 </component>
