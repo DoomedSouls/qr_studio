@@ -16,15 +16,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install flatpak and add Flathub remote
+      - name: Install flatpak-builder
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak
+          sudo apt-get install -y --no-install-recommends flatpak-builder elfutils
+
+      - name: Add GNOME runtime remote
+        run: |
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-      - name: Install org.flatpak.Builder and GNOME SDK
+      - name: Install GNOME SDK runtime
         run: |
-          flatpak install --user -y flathub org.flatpak.Builder
           flatpak install --user -y flathub org.gnome.Sdk//50 org.gnome.Platform//50
 
       - name: Download flatpak-cargo-generator.py
@@ -43,8 +45,9 @@ jobs:
       - name: Build Flatpak
         run: |
           cd flatpak
-          flatpak run org.flatpak.Builder \
+          flatpak-builder \
             --user \
+            --disable-rofiles-fuse \
             --force-clean \
             --repo=repo \
             build-dir \
