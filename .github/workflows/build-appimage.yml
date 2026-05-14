@@ -22,6 +22,7 @@ jobs:
             wget \
             gcc \
             make \
+            file \
             pkgconf-pkg-config \
             squashfs-tools
 

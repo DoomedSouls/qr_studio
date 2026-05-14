@@ -1,0 +1,43 @@
+﻿2026-05-14T16:34:34.3451675Z ##[group]Checking docker version
+2026-05-14T16:34:34.3464354Z ##[command]/usr/bin/docker version --format '{{.Server.APIVersion}}'
+2026-05-14T16:34:34.4471331Z '1.48'
+2026-05-14T16:34:34.4481279Z Docker daemon API version: '1.48'
+2026-05-14T16:34:34.4481958Z ##[command]/usr/bin/docker version --format '{{.Client.APIVersion}}'
+2026-05-14T16:34:34.4645570Z '1.48'
+2026-05-14T16:34:34.4658729Z Docker client API version: '1.48'
+2026-05-14T16:34:34.4664390Z ##[endgroup]
+2026-05-14T16:34:34.4667722Z ##[group]Clean up resources from previous jobs
+2026-05-14T16:34:34.4672975Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter "label=826ff7"
+2026-05-14T16:34:34.4808377Z ##[command]/usr/bin/docker network prune --force --filter "label=826ff7"
+2026-05-14T16:34:34.5134228Z ##[endgroup]
+2026-05-14T16:34:34.5135228Z ##[group]Create local container network
+2026-05-14T16:34:34.5148789Z ##[command]/usr/bin/docker network create --label 826ff7 github_network_c60c303d835e4918a9cb26e5b4d3d1c9
+2026-05-14T16:34:34.5644525Z 2c55eba533bd2b98893bf9e11b7b5916b88b03970ead18aee6ec98f3df0a6d08
+2026-05-14T16:34:34.5662928Z ##[endgroup]
+2026-05-14T16:34:34.5687009Z ##[group]Starting job container
+2026-05-14T16:34:34.5708821Z ##[command]/usr/bin/docker pull fedora:42
+2026-05-14T16:34:35.5003037Z 42: Pulling from library/fedora
+2026-05-14T16:34:35.7571129Z accf5bbc0c67: Pulling fs layer
+2026-05-14T16:34:36.2330181Z accf5bbc0c67: Verifying Checksum
+2026-05-14T16:34:36.2330910Z accf5bbc0c67: Download complete
+2026-05-14T16:34:38.2212187Z accf5bbc0c67: Pull complete
+2026-05-14T16:34:38.2281134Z Digest: sha256:99e203b80b1c3d8f7e161ec10a68fd02b081ef83a3963553e513c82846b97814
+2026-05-14T16:34:38.2299662Z Status: Downloaded newer image for fedora:42
+2026-05-14T16:34:38.2307183Z docker.io/library/fedora:42
+2026-05-14T16:34:38.2390456Z ##[command]/usr/bin/docker create --name 7197c16b8971486e97388c6b2290a4fd_fedora42_4479c0 --label 826ff7 --workdir /__w/qr_studio/qr_studio --network github_network_c60c303d835e4918a9cb26e5b4d3d1c9  -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/actions-runner/cached/2.334.0/externals":"/__e":ro -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "tail" fedora:42 "-f" "/dev/null"
+2026-05-14T16:34:38.4728624Z 7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a
+2026-05-14T16:34:38.4749811Z ##[command]/usr/bin/docker start 7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a
+2026-05-14T16:34:38.6520027Z 7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a
+2026-05-14T16:34:38.6537858Z ##[command]/usr/bin/docker ps --all --filter id=7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a --filter status=running --no-trunc --format "{{.ID}} {{.Status}}"
+2026-05-14T16:34:38.6658596Z 7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a Up Less than a second
+2026-05-14T16:34:38.6676686Z ##[command]/usr/bin/docker inspect --format "{{range .Config.Env}}{{println .}}{{end}}" 7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a
+2026-05-14T16:34:38.6794113Z HOME=/github/home
+2026-05-14T16:34:38.6794557Z GITHUB_ACTIONS=true
+2026-05-14T16:34:38.6795311Z CI=true
+2026-05-14T16:34:38.6797035Z PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+2026-05-14T16:34:38.6797816Z DISTTAG=f42container
+2026-05-14T16:34:38.6798188Z FGC=f42
+2026-05-14T16:34:38.6798457Z FBR=f42
+2026-05-14T16:34:38.6815038Z ##[endgroup]
+2026-05-14T16:34:38.6824333Z ##[group]Waiting for all services to be ready
+2026-05-14T16:34:38.6826363Z ##[endgroup]

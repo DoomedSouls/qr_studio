@@ -1,0 +1,8 @@
+2026-05-14T16:34:29.2600000Z Evaluating build.if
+2026-05-14T16:34:29.2600000Z Evaluating: success()
+2026-05-14T16:34:29.2600000Z Result: true
+2026-05-14T16:34:29.2650000Z Requested labels: ubuntu-24.04
+2026-05-14T16:34:29.2650000Z Job defined at: SlobCoder/qr_studio/.github/workflows/build-appimage.yml@refs/heads/main
+2026-05-14T16:34:29.2650000Z Waiting for a runner to pick up this job...
+2026-05-14T16:34:29.5320000Z Job is waiting for a hosted runner to come online.
+2026-05-14T16:34:29.5320000Z Job is about to start running on the hosted runner: GitHub Actions 1000000112

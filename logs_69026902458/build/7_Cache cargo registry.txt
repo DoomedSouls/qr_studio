@@ -1,0 +1,18 @@
+﻿2026-05-14T16:35:31.1628503Z ##[group]Run actions/cache@v4
+2026-05-14T16:35:31.1628816Z with:
+2026-05-14T16:35:31.1629027Z   path: ~/.cargo/registry
+~/.cargo/git
+
+2026-05-14T16:35:31.1629548Z   key: fedora42-cargo-4f35d784ba10423b23c7fbd93f41db03594660fb66ce91429ef825e6c5420128
+2026-05-14T16:35:31.1630076Z   restore-keys: fedora42-cargo-
+2026-05-14T16:35:31.1630360Z   enableCrossOsArchive: false
+2026-05-14T16:35:31.1630628Z   fail-on-cache-miss: false
+2026-05-14T16:35:31.1630876Z   lookup-only: false
+2026-05-14T16:35:31.1631105Z   save-always: false
+2026-05-14T16:35:31.1631310Z env:
+2026-05-14T16:35:31.1631505Z   CARGO_HOME: /github/home/.cargo
+2026-05-14T16:35:31.1631768Z   CARGO_INCREMENTAL: 0
+2026-05-14T16:35:31.1632000Z   CARGO_TERM_COLOR: always
+2026-05-14T16:35:31.1632230Z ##[endgroup]
+2026-05-14T16:35:31.1636997Z ##[command]/usr/bin/docker exec  7541b06f230b872f144e649cb746aa0eecf4d7800ecc76b61ca76719bc8ac52a sh -c "cat /etc/*release | grep ^ID"
+2026-05-14T16:35:31.6599632Z Cache not found for input keys: fedora42-cargo-4f35d784ba10423b23c7fbd93f41db03594660fb66ce91429ef825e6c5420128, fedora42-cargo-

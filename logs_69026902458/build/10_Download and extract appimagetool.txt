@@ -1,0 +1,12 @@
+﻿2026-05-14T16:41:25.7343155Z ##[group]Run wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" \
+2026-05-14T16:41:25.7345065Z [36;1mwget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" \[0m
+2026-05-14T16:41:25.7346069Z [36;1m  -O /tmp/appimagetool[0m
+2026-05-14T16:41:25.7346518Z [36;1mchmod +x /tmp/appimagetool[0m
+2026-05-14T16:41:25.7347108Z [36;1mcd /tmp && ./appimagetool --appimage-extract >/dev/null 2>&1[0m
+2026-05-14T16:41:25.7347836Z [36;1mmv /tmp/squashfs-root /tmp/appimagetool-extracted[0m
+2026-05-14T16:41:25.7348435Z shell: sh -e {0}
+2026-05-14T16:41:25.7348731Z env:
+2026-05-14T16:41:25.7349027Z   CARGO_HOME: /github/home/.cargo
+2026-05-14T16:41:25.7349430Z   CARGO_INCREMENTAL: 0
+2026-05-14T16:41:25.7349778Z   CARGO_TERM_COLOR: always
+2026-05-14T16:41:25.7350112Z ##[endgroup]
