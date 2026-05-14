@@ -30,6 +30,10 @@ finish-args:
   - --filesystem=home:ro
   # Bundled adw-gtk3 theme
   - --env=GTK_DATA_PREFIX=/app
+  # Read user GTK themes and CSS overrides (matugen, adw-gtk3, etc.)
+  - --filesystem=xdg-config/gtk-3.0:ro
+  - --filesystem=xdg-config/gtk-4.0:ro
+  - --filesystem=xdg-data/themes:ro
 
 cleanup:
   - /include
