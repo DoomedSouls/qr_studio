@@ -2,12 +2,9 @@ app-id: io.github.SlobCoder.qr_studio
 runtime: org.gnome.Platform
 runtime-version: "50"
 sdk: org.gnome.Sdk
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
 command: qr_studio
 
 build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin
   env:
     CARGO_HOME: /run/build/qr_studio/cargo
     RUST_BACKTRACE: "1"
@@ -42,6 +39,21 @@ cleanup:
   - "*.a"
 
 modules:
+  # ── Rust toolchain (standalone installer) ──────────────────────
+  - name: rust
+    buildsystem: simple
+    build-commands:
+      - ./install.sh --prefix=/usr --disable-ldconfig --verbose
+    cleanup:
+      - /share/doc
+      - /share/man
+      - /etc/bash_completion.d
+      - /lib/rustlib/uninstall.sh
+    sources:
+      - type: archive
+        url: https://static.rust-lang.org/dist/2026-04-16/rust-1.95.0-x86_64-unknown-linux-gnu.tar.xz
+        sha256: 2e0338f18ecbaa4a0f631b9e80e8b8e26bb6fe77dd5454fba8a70cf96c1e84a1
+
   # ── abseil-cpp (C++ library, needed by protobuf) ───────────────
   - name: abseil-cpp
     buildsystem: cmake
