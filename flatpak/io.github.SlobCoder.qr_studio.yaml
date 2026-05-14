@@ -45,6 +45,10 @@ modules:
     no-debuginfo: true
     build-commands:
       - ./install.sh --prefix=${FLATPAK_DEST} --disable-ldconfig --verbose
+      # Pre-strip with binutils strip to remove debug sections before
+      # flatpak-builder runs eu-strip, which corrupts Rust's custom LLVM.
+      - find ${FLATPAK_DEST}/lib -type f -name '*.so*' -exec strip --strip-debug {} + 2>/dev/null || true
+      - find ${FLATPAK_DEST}/bin -type f -exec strip --strip-unneeded {} + 2>/dev/null || true
     cleanup:
       - /share/doc
       - /share/man
