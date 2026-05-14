@@ -2,17 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.4.0] — 2025-05-10
+## [0.4.0] — 2026-05-14
 
 ### Added
-- **CLI mode** — Headless QR code generation without GUI. Supports all content types (text, URL, WiFi, vCard, Calendar, GPS, SMS) and all style options (dot style, colors, gradient, frame, logo, etc.). Output formats: PNG, SVG, PDF. Usage: `qr_studio --cli --text "Hello" --output qr.png --dot-style rounded --fg-color "#ff0000"`. Ideal for scripting, automation, and batch processing.
-- **Unit tests (97 tests)** — Comprehensive test suite covering: `format_qr_data()` for all 7 content types, parsing helpers with English/German input, SVG helpers (rgba_to_svg, base64_encode, xml_escape, parse_svg_viewbox), i18n completeness (all 9 languages checked for missing keys), contrast ratio, and color harmonies.
-- **Keyboard shortcuts overlay** — Press `Ctrl+?` to show all keyboard shortcuts in a GTK ShortcutsWindow. Integrated via GResource bundle with `gtk/help-overlay.ui` (standard GNOME pattern).
-- **GSettings schema** — Persistent user settings via `io.github.SlobCoder.qr_studio` GSettings schema. Window size, maximized state, sidebar width, and other preferences are saved on close and restored on startup.
+- **Flatpak build (CI)** — Full Flatpak CI workflow with GNOME 50 SDK. Bundles libshumate 1.5.3 (vector renderer), protobuf, abseil-cpp, adw-gtk3 v6.5 theme. Rust 1.95.0 standalone toolchain.
+- **Windows MSIX packaging** — Self-signed MSIX installer with automatic code signing certificate generation. Includes PFX + CER for user trust setup. Also provides a portable ZIP distribution.
+- **Windows color picker (pipette)** — Screen color picker via Win32 API (`GetPixel`). 9 pipette buttons for quick color sampling.
+- **Headless CLI mode** — QR code generation without GUI via `--cli` flag. Supports all content types and style options. Output: PNG, SVG, PDF. Ideal for scripting and batch processing.
+- **SVG snapshot tests** — 25 test cases covering all dot/corner styles, gradients, frames, transparency, and text overlays.
+- **GSettings schema** — Persistent preferences (window size, sidebar width, etc.) via `io.github.SlobCoder.qr_studio` GSettings schema.
+- **Keyboard shortcuts overlay** — Press `Ctrl+?` to show all shortcuts in a GTK ShortcutsWindow.
+- **GResource compilation** — `build.rs` with `glib-build-tools` for UI resources.
+- **97 unit tests** — Comprehensive test suite covering formatting, SVG helpers, i18n completeness, contrast ratio, and color harmonies.
 
 ### Changed
-- **GResource compilation** — Added `build.rs` with `glib-build-tools` for compiling UI resources at build time.
-- **AppImage** — Build script now bundles the app's own GSettings schema.
+- **AppImage CI: openSUSE Tumbleweed** — Switched from Ubuntu 24.04 → Fedora 42 → openSUSE Tumbleweed (rolling release). GTK 4.22, libadwaita 1.9. Fixes transparent GUI on older GTK 4.14.
+- **AppImage: smart launcher** — AppRun detects system GTK4 + libadwaita. System mode when available (version-checked), bundled mode as fallback. Env var `QR_STUDIO_DEBUG=1` for diagnostics.
+- **AppImage: direct mksquashfs** — Replaced appimagetool (hung in CI) with direct mksquashfs 4.7.5 + type2 runtime. Full control over compression.
+- **AppImage: gdk-pixbuf fix** — loaders.cache uses `@MODULEDIR@` placeholder, patched at runtime via sed. Fixes QR code rendering + symbolic icons.
+- **adw-gtk3 v6.5** — Bundled in all builds (AppImage, Flatpak, Windows) for consistent theming with matugen.
+- **Flatpak: matugen support** — Read-only filesystem permissions for `~/.config/gtk-3.0/`, `~/.config/gtk-4.0/`, and `~/.local/share/themes/` so matugen/adw-gtk3 colors are applied.
+- **App ID** — `com.example.qr_studio` → `io.github.SlobCoder.qr_studio`.
+
+### Fixed
+- **AppImage: transparent GUI** — Caused by GTK 4.14 (Ubuntu 24.04) not supporting modern libadwaita CSS. Fixed by building on openSUSE Tumbleweed (GTK 4.22).
+- **AppImage: QR code not rendered** — gdk-pixbuf SVG loader couldn't find `.so` files due to absolute build-time paths in loaders.cache.
+- **AppImage: "Missing Symbol" icons** — Same root cause: SVG gdk-pixbuf loader not working.
+- **Windows: GSettings crash** — `Settings::new()` crashed because GLib couldn't find the compiled schema. Fixed with `GSETTINGS_SCHEMA_DIR` env var.
+- **Windows: HTTPS connections failing** — GLib used `GDummyTlsBackend` without `glib-networking`. Fixed by bundling GIO TLS module.
+- **Windows: CMD window visible** — Replaced `FreeConsole()` with `#![windows_subsystem = "windows"]`.
+- **Windows: DnD file import** — Try GFile first with `text/uri-list` fallback for broader file manager compatibility.
+- **Linux: pipette not visible** — Color picker pipette was hidden; fixed visibility and color application.
+- **Flatpak CI: bwrap in Docker** — `flatpak-builder` needs user namespaces, blocked in Docker containers. Flatpak build stays on `ubuntu-24.04` runner (host OS is irrelevant for Flatpak).
+- **Flatpak CI: Cargo.lock path** — `${{ github.workspace }}` resolves to host path, not container path. Fixed with relative path `../Cargo.lock`.
+- **Flatpak CI: eu-strip corruption** — Rust's `libLLVM.so` corrupted by `eu-strip`. Fixed by archiving `.so` files in tarball during build, restoring after strip phase.
 
 ## [0.3.0] — 2025-05-06
 
