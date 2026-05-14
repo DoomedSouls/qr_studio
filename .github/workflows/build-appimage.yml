@@ -11,12 +11,12 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container: fedora:42
+    container: opensuse/tumbleweed:latest
 
     steps:
       - name: Install build tools
         run: |
-          dnf install -y \
+          zypper --non-interactive install \
             git \
             curl \
             wget \
@@ -24,31 +24,31 @@ jobs:
             make \
             file \
             pkgconf-pkg-config \
-            squashfs-tools
+            squashfs
 
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install system dependencies
         run: |
-          dnf install -y \
+          zypper --non-interactive install \
             gtk4-devel \
             libadwaita-devel \
             libshumate-devel \
-            gdk-pixbuf2-devel \
+            gdk-pixbuf-devel \
             librsvg2-devel \
             pango-devel \
             cairo-devel \
-            sqlite-devel \
+            sqlite3-devel \
             protobuf-c-devel \
             libsoup3-devel \
             json-glib-devel \
             graphene-devel \
-            openssl-devel \
+            libopenssl-devel \
             libxml2-devel \
             libepoxy-devel \
             harfbuzz-devel \
-            freetype-devel \
+            libfreetype-devel \
             fontconfig-devel
 
       - name: Setup Rust
@@ -60,8 +60,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: fedora42-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: fedora42-cargo-
+          key: tumbleweed-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: tumbleweed-cargo-
 
       - name: Build release
         run: cargo build --release
