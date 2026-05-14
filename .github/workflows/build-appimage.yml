@@ -11,37 +11,44 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    container: fedora:42
 
     steps:
+      - name: Install build tools
+        run: |
+          dnf install -y \
+            git \
+            curl \
+            wget \
+            gcc \
+            make \
+            pkgconf-pkg-config \
+            squashfs-tools
+
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            pkg-config \
-            libgtk-4-dev \
-            libadwaita-1-dev \
-            libshumate-dev \
-            libgdk-pixbuf2.0-dev \
-            librsvg2-dev \
-            libpango1.0-dev \
-            libcairo2-dev \
-            libsqlite3-dev \
-            libprotobuf-c-dev \
-            libsoup-3.0-dev \
-            libjson-glib-dev \
-            libgraphene-1.0-dev \
-            libssl-dev \
-            libxml2-dev \
-            libepoxy-dev \
-            libharfbuzz-dev \
-            libfreetype-dev \
-            libfontconfig1-dev \
-            squashfs-tools \
-            libfuse2t64
+          dnf install -y \
+            gtk4-devel \
+            libadwaita-devel \
+            libshumate-devel \
+            gdk-pixbuf2-devel \
+            librsvg2-devel \
+            pango-devel \
+            cairo-devel \
+            sqlite-devel \
+            protobuf-c-devel \
+            libsoup3-devel \
+            json-glib-devel \
+            graphene-devel \
+            openssl-devel \
+            libxml2-devel \
+            libepoxy-devel \
+            harfbuzz-devel \
+            freetype-devel \
+            fontconfig-devel
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -52,8 +59,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: fedora42-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: fedora42-cargo-
 
       - name: Build release
         run: cargo build --release
@@ -63,7 +70,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME:-0.1.0}"
           APPDIR="build/QR_Studio.AppDir"
           BINARY="target/release/qr_studio"
-          LIB_DIR="/usr/lib/x86_64-linux-gnu"
+          LIB_DIR="/usr/lib64"
 
           mkdir -p "${APPDIR}"/usr/{bin,lib,share/{glib-2.0/schemas,icons/hicolor/scalable/apps}}
           mkdir -p "${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
@@ -217,6 +224,7 @@ jobs:
           #
           # Override: QR_STUDIO_SYSTEM_LIBS=1 forces system mode
           #           QR_STUDIO_BUNDLED_LIBS=1 forces bundled mode
+          #           QR_STUDIO_DEBUG=1 shows detection debug output
           # ═══════════════════════════════════════════════════════════
           cp data/AppRun "${APPDIR}/AppRun"
           chmod +x "${APPDIR}/AppRun"

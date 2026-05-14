@@ -2,6 +2,21 @@
 HERE="$(dirname "$(readlink -f "$0")")"
 BUNDLED_LIB="${HERE}/usr/lib"
 
+# ── Debug mode ──────────────────────────────────────────────
+# Set QR_STUDIO_DEBUG=1 to see runtime detection info on stderr.
+DEBUG=0
+if [ "${QR_STUDIO_DEBUG}" = "1" ]; then
+  DEBUG=1
+fi
+
+debug() {
+  [ "$DEBUG" = "1" ] && echo "[QR Studio] $*" >&2
+}
+
+debug "=== AppRun debug info ==="
+debug "AppImage mount: ${HERE}"
+debug "Bundled lib dir: ${BUNDLED_LIB}"
+
 # ── Detect system GTK4 + libadwaita with version check ──
 #
 # The bundled libadwaita CSS requires GTK4 >= 4.14 for:
@@ -23,22 +38,29 @@ SYSTEM_GTK4=0
 SYSTEM_LIBADWAITA=0
 GTK4_NEW_ENOUGH=0
 SYSTEM_GTK4_PATH=""
+DETECTED_GTK4_VERSION=""
 
 for dir in /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib /usr/local/lib; do
   if [ -f "${dir}/libgtk-4.so.1" ] && [ "$SYSTEM_GTK4" = "0" ]; then
     SYSTEM_GTK4=1
     SYSTEM_GTK4_PATH="${dir}/libgtk-4.so.1"
+    debug "Found system GTK4: ${dir}/libgtk-4.so.1"
   fi
   if [ -f "${dir}/libadwaita-1.so.0" ] && [ "$SYSTEM_LIBADWAITA" = "0" ]; then
     SYSTEM_LIBADWAITA=1
+    debug "Found system libadwaita: ${dir}/libadwaita-1.so.0"
   fi
 done
+
+debug "System GTK4 found: ${SYSTEM_GTK4}"
+debug "System libadwaita found: ${SYSTEM_LIBADWAITA}"
 
 # ── Version check: GTK4 >= 4.14 required for modern CSS ──
 if [ "$SYSTEM_GTK4" = "1" ]; then
   # Resolve symlink to get real library path with version
-  # e.g. /usr/lib/x86_64-linux-gnu/libgtk-4.so.1.14.6
+  # e.g. /usr/lib64/libgtk-4.so.1.18.6
   REAL_PATH=$(readlink -f "$SYSTEM_GTK4_PATH" 2>/dev/null || echo "$SYSTEM_GTK4_PATH")
+  debug "GTK4 real path: ${REAL_PATH}"
 
   # Extract version numbers from filename
   # Try pattern like "libgtk-4.so.1.MAJOR.MINOR" or "libgtk-4.so.1.MAJOR.MINOR.PATCH"
@@ -49,6 +71,12 @@ if [ "$SYSTEM_GTK4" = "1" ]; then
   if [ -z "$V_MAJOR" ] && command -v pkg-config >/dev/null 2>&1; then
     V_MAJOR=$(pkg-config --modversion gtk4 2>/dev/null | cut -d. -f2)
     V_MINOR=$(pkg-config --modversion gtk4 2>/dev/null | cut -d. -f3)
+    debug "GTK4 version from pkg-config: 4.${V_MAJOR}.${V_MINOR}"
+  fi
+
+  if [ -n "$V_MAJOR" ]; then
+    DETECTED_GTK4_VERSION="4.${V_MAJOR}.${V_MINOR:-0}"
+    debug "Detected GTK4 version: ${DETECTED_GTK4_VERSION} (soversion minor=${V_MAJOR})"
   fi
 
   # GTK4 soversion scheme: libgtk-4.so.1.MINOR.MICRO
@@ -57,8 +85,15 @@ if [ "$SYSTEM_GTK4" = "1" ]; then
   if [ -n "$V_MAJOR" ]; then
     if [ "$V_MAJOR" -ge 14 ] 2>/dev/null; then
       GTK4_NEW_ENOUGH=1
+      debug "GTK4 version check: PASS (${V_MAJOR} >= 14)"
+    else
+      debug "GTK4 version check: FAIL (${V_MAJOR} < 14)"
     fi
+  else
+    debug "GTK4 version check: COULD NOT DETERMINE VERSION"
   fi
+else
+  debug "No system GTK4 found — skipping version check"
 fi
 
 USE_SYSTEM=0
@@ -69,12 +104,15 @@ fi
 # Allow user override
 if [ "${QR_STUDIO_SYSTEM_LIBS}" = "1" ]; then
   USE_SYSTEM=1
+  debug "User override: QR_STUDIO_SYSTEM_LIBS=1 → forcing system mode"
 elif [ "${QR_STUDIO_BUNDLED_LIBS}" = "1" ]; then
   USE_SYSTEM=0
+  debug "User override: QR_STUDIO_BUNDLED_LIBS=1 → forcing bundled mode"
 fi
 
 if [ "$USE_SYSTEM" = "1" ]; then
   # ── System mode ────────────────────────────────
+  debug ">>> MODE: SYSTEM (system GTK4/libadwaita preferred)"
   # System GTK4 >= 4.14 + system libadwaita found.
   # System libs first, bundled as fallback.
   export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}${BUNDLED_LIB}"
@@ -82,8 +120,8 @@ if [ "$USE_SYSTEM" = "1" ]; then
   export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
 else
   # ── Bundled mode (portable) ────────────────────
-  # Use bundled GTK4 + libadwaita (both from Ubuntu 24.04,
-  # guaranteed compatible). Bundled libs first.
+  debug ">>> MODE: BUNDLED (bundled GTK4/libadwaita from build system)"
+  # Use bundled GTK4 + libadwaita. Bundled libs first.
   export LD_LIBRARY_PATH="${BUNDLED_LIB}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
   export GDK_PIXBUF_MODULEDIR="${BUNDLED_LIB}/gdk-pixbuf-2.0/2.10.0/loaders"
   export GDK_PIXBUF_MODULE_FILE="${BUNDLED_LIB}/gdk-pixbuf-2.0/2.10.0/loaders.cache"
@@ -92,6 +130,12 @@ else
   export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:${GSETTINGS_SCHEMA_DIR}}"
   export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
 fi
+
+debug "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
+debug "XDG_DATA_DIRS=${XDG_DATA_DIRS}"
+debug "GSETTINGS_SCHEMA_DIR=${GSETTINGS_SCHEMA_DIR}"
+debug "GTK_DATA_PREFIX=${HERE}/usr"
+debug "=== End debug info ==="
 
 # ── Bundled theme (both modes) ───────────────────
 # adw-gtk3 v6.5 theme is bundled in usr/share/themes/.
