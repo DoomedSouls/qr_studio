@@ -45,12 +45,8 @@
 
   <launchable type="desktop-id">io.github.SlobCoder.qr_studio.desktop</launchable>
 
-  <screenshots>
-    <screenshot type="default">
-      <caption>Main window with URL QR code</caption>
-      <image type="source" width="1200" height="800">https://raw.githubusercontent.com/SlobCoder/qr_studio/main/preview/qr_studio_main.png</image>
-    </screenshot>
-  </screenshots>
+  <!-- Screenshots will be added before Flathub submission -->
+  <screenshots />
 
   <url type="homepage">https://github.com/SlobCoder/qr_studio</url>
   <url type="bugtracker">https://github.com/SlobCoder/qr_studio/issues</url>
@@ -61,10 +57,6 @@
     <control>keyboard</control>
     <control>touch</control>
   </recommends>
-
-  <supports>
-    <control>console</control>
-  </supports>
 
   <content_rating type="oars-1.1" />
 
@@ -88,6 +80,8 @@
     </release>
   </releases>
 
-  <developer_name>SlobCoder</developer_name>
+  <developer id="io.github.SlobCoder">
+    <name>SlobCoder</name>
+  </developer>
   <update_contact>https://github.com/SlobCoder</update_contact>
 </component>
