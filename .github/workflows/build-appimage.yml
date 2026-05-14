@@ -55,7 +55,6 @@ jobs:
       - name: Setup Rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -67,7 +66,7 @@ jobs:
           restore-keys: tumbleweed-cargo-
 
       - name: Build release
-        run: cargo build --release
+        run: . "$HOME/.cargo/env" && cargo build --release
 
       - name: Create AppDir
         run: |
