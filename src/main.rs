@@ -104,6 +104,16 @@ fn main() {
                         std::env::set_var("GIO_MODULE_DIR", &gio_module_dir);
                     }
                 }
+
+                // ── Bundled adw-gtk3 theme ─────────────────────────
+                // Set GTK_DATA_PREFIX so GTK finds our bundled themes
+                // in share/themes/adw-gtk3/ and share/themes/adw-gtk3-dark/
+                let share_dir = dir.join("share");
+                if share_dir.exists() {
+                    unsafe {
+                        std::env::set_var("GTK_DATA_PREFIX", dir);
+                    }
+                }
             }
         }
     }

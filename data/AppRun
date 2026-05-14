@@ -93,4 +93,9 @@ else
   export XDG_DATA_DIRS="${HERE}/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}"
 fi
 
+# ── Bundled theme (both modes) ───────────────────
+# adw-gtk3 v6.5 theme is bundled in usr/share/themes/.
+# GTK_DATA_PREFIX tells GTK to look for themes in /app.
+export GTK_DATA_PREFIX="${HERE}/usr"
+
 exec "${HERE}/usr/bin/qr_studio" "$@"

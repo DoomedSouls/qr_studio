@@ -247,6 +247,13 @@ jobs:
           mkdir -p "${LAYOUT}/share/gtk-4.0"
           cp "${MINGW}/share/gtk-4.0/settings.ini" "${LAYOUT}/share/gtk-4.0/" 2>/dev/null || true
 
+          # ── adw-gtk3 theme ──
+          mkdir -p "${LAYOUT}/share/themes"
+          curl -fsSL https://github.com/lassekongo83/adw-gtk3/releases/download/v6.5/adw-gtk3v6.5.tar.xz -o /tmp/adw-gtk3.tar.xz
+          tar -xJf /tmp/adw-gtk3.tar.xz -C "${LAYOUT}/share/themes/"
+          rm -f /tmp/adw-gtk3.tar.xz
+          echo "Bundled adw-gtk3 + adw-gtk3-dark themes"
+
       - name: Generate MSIX icons
         shell: powershell
         run: |

@@ -89,6 +89,15 @@ jobs:
           cp data/io.github.SlobCoder.qr_studio.svg "${APPDIR}/io.github.SlobCoder.qr_studio.svg"
           cp data/io.github.SlobCoder.qr_studio.svg "${APPDIR}/usr/share/icons/hicolor/scalable/apps/"
 
+          # ── adw-gtk3 theme ──
+          curl -fsSL https://github.com/lassekongo83/adw-gtk3/releases/download/v6.5/adw-gtk3v6.5.tar.xz \
+            -o /tmp/adw-gtk3.tar.xz
+          echo "a81780fadfc432be0fc3d89c4ebb41aa28e4f032d42c36f9789c57dd10cfa41c  /tmp/adw-gtk3.tar.xz" \
+            | sha256sum -c -
+          mkdir -p "${APPDIR}/usr/share/themes"
+          tar -xJf /tmp/adw-gtk3.tar.xz -C "${APPDIR}/usr/share/themes/"
+          echo "Bundled adw-gtk3 themes: $(ls "${APPDIR}/usr/share/themes/")"
+
           # ═══════════════════════════════════════════════════════════
           # Shared libraries — bundle EVERYTHING except GPU/display.
           #

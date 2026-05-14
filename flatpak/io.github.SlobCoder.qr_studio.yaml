@@ -1,0 +1,153 @@
+app-id: io.github.SlobCoder.qr_studio
+runtime: org.gnome.Platform
+runtime-version: "50"
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: qr_studio
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/qr_studio/cargo
+    RUST_BACKTRACE: "1"
+
+finish-args:
+  # X11 + Wayland
+  - --socket=fallback-x11
+  - --socket=wayland
+  # GPU acceleration
+  - --device=dri
+  # X11 shared memory
+  - --share=ipc
+  # Network for map tiles (OpenFreeMap via libshumate)
+  - --share=network
+  # Color picker pipette (ashpd XDG Desktop Portal)
+  - --talk-name=org.freedesktop.portal.Desktop
+  # Open/Save QR codes
+  - --filesystem=xdg-download
+  - --filesystem=xdg-pictures
+  # File dnd from outside sandbox
+  - --filesystem=home:ro
+  # Bundled adw-gtk3 theme
+  - --env=GTK_DATA_PREFIX=/app
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/pkgconfig
+  - /share/gtk-doc
+  - /share/man
+  - "*.la"
+  - "*.a"
+
+modules:
+  # ── abseil-cpp (C++ library, needed by protobuf) ───────────────
+  - name: abseil-cpp
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DABSL_BUILD_TESTING=OFF
+    sources:
+      - type: archive
+        url: https://github.com/abseil/abseil-cpp/releases/download/20240722.0/abseil-cpp-20240722.0.tar.gz
+        sha256: f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3
+
+  # ── protobuf (C++ library, needed by protobuf-c and libshumate) ─
+  - name: protobuf
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -Dprotobuf_BUILD_TESTS=OFF
+      - -Dprotobuf_BUILD_EXAMPLES=OFF
+      - -Dprotobuf_ABSL_PROVIDER=package
+    sources:
+      - type: archive
+        url: https://github.com/protocolbuffers/protobuf/releases/download/v29.5/protobuf-29.5.tar.gz
+        sha256: a191d2afdd75997ba59f62019425016703daed356a9d92f7425f4741439ae544
+    cleanup:
+      - /bin
+      - /lib/cmake
+
+  # ── protobuf-c (C bindings for protobuf) ────────────────────────
+  - name: protobuf-c
+    buildsystem: autotools
+    sources:
+      - type: archive
+        url: https://github.com/protobuf-c/protobuf-c/releases/download/v1.5.2/protobuf-c-1.5.2.tar.gz
+        sha256: e2c86271873a79c92b58fef7ebf8de1aa0df4738347a8bd5d4e65a80a16d0d24
+    cleanup:
+      - /bin
+      - /share/doc
+
+  # ── libshumate (map widget with vector renderer) ────────────────
+  - name: libshumate
+    buildsystem: meson
+    config-opts:
+      - -Dgtk_doc=false
+      - -Ddemos=false
+      - -Dvapi=false
+      - -Dvector_renderer=true
+    sources:
+      - type: archive
+        url: https://download.gnome.org/sources/libshumate/1.5/libshumate-1.5.3.tar.xz
+        sha256: 35f013b25391856e1b5c3d4409a5c4a640c6ccb5f5296ff982ec7bed39f56d4c
+    cleanup:
+      - /bin
+
+  # ── adw-gtk3 theme ─────────────────────────────────────────────
+  - name: adw-gtk3
+    buildsystem: simple
+    build-commands:
+      - mkdir -p ${FLATPAK_DEST}/share/themes
+      - cp -r adw-gtk3 ${FLATPAK_DEST}/share/themes/
+      - cp -r adw-gtk3-dark ${FLATPAK_DEST}/share/themes/
+    sources:
+      - type: archive
+        url: https://github.com/lassekongo83/adw-gtk3/releases/download/v6.5/adw-gtk3v6.5.tar.xz
+        sha256: a81780fadfc432be0fc3d89c4ebb41aa28e4f032d42c36f9789c57dd10cfa41c
+        strip-components: 0
+
+  # ── QR Studio ──────────────────────────────────────────────────
+  - name: qr_studio
+    buildsystem: simple
+    build-commands:
+      # Tell cargo to use vendored sources
+      - mkdir -p .cargo
+      - |
+        cat > .cargo/config.toml << 'CARGOEOF'
+        [source.vendored-sources]
+        directory = "cargo/vendor"
+
+        [source.crates-io]
+        replace-with = "vendored-sources"
+        CARGOEOF
+      # Build with cargo (offline, vendored)
+      - cargo --offline build --release --verbose
+      # Install binary
+      - install -Dm755 target/release/qr_studio ${FLATPAK_DEST}/bin/qr_studio
+      # Desktop file
+      - install -Dm644 data/io.github.SlobCoder.qr_studio.desktop
+        ${FLATPAK_DEST}/share/applications/io.github.SlobCoder.qr_studio.desktop
+      # Icon
+      - install -Dm644 data/io.github.SlobCoder.qr_studio.svg
+        ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.SlobCoder.qr_studio.svg
+      # GSettings schema
+      - install -Dm644 data/io.github.SlobCoder.qr_studio.gschema.xml
+        ${FLATPAK_DEST}/share/glib-2.0/schemas/io.github.SlobCoder.qr_studio.gschema.xml
+      - glib-compile-schemas ${FLATPAK_DEST}/share/glib-2.0/schemas
+      # AppStream metainfo
+      - install -Dm644 flatpak/io.github.SlobCoder.qr_studio.metainfo.xml
+        ${FLATPAK_DEST}/share/metainfo/io.github.SlobCoder.qr_studio.metainfo.xml
+      # Country flag SVGs (for phone/vCard country code dropdowns)
+      - mkdir -p ${FLATPAK_DEST}/share/qr_studio/flags
+      - install -Dm644 flags/*.svg ${FLATPAK_DEST}/share/qr_studio/flags/
+
+    sources:
+      # Project sources
+      - type: dir
+        path: ..
+      # Cargo vendor sources (generated from Cargo.lock)
+      - cargo-sources.json

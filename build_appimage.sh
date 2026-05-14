@@ -46,7 +46,7 @@ EXCLUDE_RE+='|libX11|libXau|libxcb|libXcursor|libXdamage|libXdmcp|libXext|libXfi
 EXCLUDE_RE+='|libwayland-client|libwayland-cursor|libwayland-egl'
 
 STEP=0
-step()  { STEP=$((STEP + 1)); printf '\n▸ [%d/8] %s\n' "$STEP" "$1"; }
+step()  { STEP=$((STEP + 1)); printf '\n▸ [%d/9] %s\n' "$STEP" "$1"; }
 ok()    { printf '  ✓ %s\n' "$1"; }
 die()   { printf '  ✗ ERROR: %s\n' "$1" >&2; exit 1; }
 
@@ -102,7 +102,23 @@ if [ -f "$ICON_SRC" ]; then
     ok "icon"
 fi
 
-# ── 4. Bundle shared libraries ────────────────────────────────
+# ── 4. adw-gtk3 theme ──────────────────────────────────────────
+step "Bundling adw-gtk3 theme"
+
+THEME_DIR="${APPDIR}/usr/share/themes"
+mkdir -p "${THEME_DIR}"
+
+THEME_TAR="/tmp/adw-gtk3.tar.xz"
+wget -q --show-progress \
+    "https://github.com/lassekongo83/adw-gtk3/releases/download/v6.5/adw-gtk3v6.5.tar.xz" \
+    -O "${THEME_TAR}" || die "adw-gtk3 download failed"
+
+tar -xJf "${THEME_TAR}" -C "${THEME_DIR}/" || die "adw-gtk3 extraction failed"
+rm -f "${THEME_TAR}"
+
+ok "adw-gtk3 + adw-gtk3-dark themes"
+
+# ── 5. Bundle shared libraries ────────────────────────────────
 step "Bundling shared libraries"
 
 DEPS_FILE=$(mktemp /tmp/qr_studio_deps.XXXXXX)
@@ -137,7 +153,7 @@ sort -u "$DEPS_FILE" \
 LIB_COUNT=$(find "${APPDIR}/usr/lib" -maxdepth 1 -name '*.so*' | wc -l)
 ok "${LIB_COUNT} libraries"
 
-# ── 5. GSettings schemas ─────────────────────────────────────
+# ── 6. GSettings schemas ─────────────────────────────────────
 step "Copying GSettings schemas"
 
 SCHEMA_SRC="/usr/share/glib-2.0/schemas"
@@ -158,7 +174,7 @@ fi
 glib-compile-schemas "$SCHEMA_DST" 2>/dev/null || true
 ok "$(ls "$SCHEMA_DST"/*.xml 2>/dev/null | wc -l) schemas compiled"
 
-# ── 6. gdk-pixbuf loaders ────────────────────────────────────
+# ── 7. gdk-pixbuf loaders ────────────────────────────────────
 step "Configuring gdk-pixbuf loaders"
 
 LOADERS_DST="${APPDIR}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders"
@@ -176,14 +192,14 @@ else
     ok "built-in only (no external loaders)"
 fi
 
-# ── 7. Create AppRun entry point ─────────────────────────────
+# ── 8. Create AppRun entry point ─────────────────────────────
 step "Creating AppRun"
 
 cp "${PROJECT_DIR}/data/AppRun" "${APPDIR}/AppRun"
 chmod +x "${APPDIR}/AppRun"
 ok "AppRun"
 
-# ── 8. Package into AppImage ─────────────────────────────────
+# ── 9. Package into AppImage ─────────────────────────────────
 step "Packaging AppImage"
 mkdir -p "$(dirname "$OUTPUT")"
 

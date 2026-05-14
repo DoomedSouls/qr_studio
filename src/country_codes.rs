@@ -1271,6 +1271,7 @@ pub fn country_index_by_code(code: &str) -> u32 {
 /// 2. `{exe_dir}/flags/{iso_code}.svg` next to executable (installed mode)
 /// 3. `{exe_dir}/../../flags/{iso_code}.svg` when exe is in `target/release|debug/`
 ///    (covers .desktop launches where CWD is not the project root)
+/// 4. `{data_dir}/qr_studio/flags/{iso_code}.svg` (Flatpak / XDG data dirs)
 pub fn flag_svg_path(iso_code: &str) -> PathBuf {
     let filename = format!("{}.svg", iso_code);
 
@@ -1298,6 +1299,28 @@ pub fn flag_svg_path(iso_code: &str) -> PathBuf {
             if project_path.exists() {
                 return project_path;
             }
+        }
+    }
+
+    // 4. Flatpak / XDG data dirs: {prefix}/share/qr_studio/flags/
+    //    Flatpak installs to /app/share/qr_studio/flags/
+    if let Some(data_dirs) = std::env::var_os("XDG_DATA_DIRS") {
+        for data_dir in std::env::split_paths(&data_dirs) {
+            let xdg_path = data_dir.join("qr_studio").join("flags").join(&filename);
+            if xdg_path.exists() {
+                return xdg_path;
+            }
+        }
+    }
+    // Also check the exe's parent ../share/qr_studio/flags/ (Flatpak: /app/bin -> /app/share)
+    if let Some(parent) = exe_dir.parent() {
+        let flatpak_path = parent
+            .join("share")
+            .join("qr_studio")
+            .join("flags")
+            .join(&filename);
+        if flatpak_path.exists() {
+            return flatpak_path;
         }
     }
 
