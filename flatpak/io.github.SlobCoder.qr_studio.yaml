@@ -42,6 +42,7 @@ modules:
   # ── Rust toolchain (standalone installer) ──────────────────────
   - name: rust
     buildsystem: simple
+    no-debuginfo: true
     build-commands:
       - ./install.sh --prefix=${FLATPAK_DEST} --disable-ldconfig --verbose
     cleanup:
