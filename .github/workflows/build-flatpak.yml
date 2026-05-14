@@ -49,6 +49,7 @@ jobs:
             --user \
             --disable-rofiles-fuse \
             --force-clean \
+            --no-appstream \
             --repo=repo \
             build-dir \
             io.github.SlobCoder.qr_studio.yaml
