@@ -36,19 +36,19 @@ jobs:
             libadwaita-devel \
             libshumate-devel \
             gdk-pixbuf-devel \
-            librsvg2-devel \
+            librsvg-devel \
             pango-devel \
             cairo-devel \
             sqlite3-devel \
             protobuf-c-devel \
-            libsoup3-devel \
+            libsoup-devel \
             json-glib-devel \
-            graphene-devel \
+            libgraphene-devel \
             libopenssl-devel \
             libxml2-devel \
             libepoxy-devel \
             harfbuzz-devel \
-            libfreetype-devel \
+            freetype2-devel \
             fontconfig-devel
 
       - name: Setup Rust
