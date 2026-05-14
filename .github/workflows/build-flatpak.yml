@@ -46,7 +46,7 @@ jobs:
         run: |
           cd flatpak
           pip3 install --break-system-packages toml tomlkit aiohttp
-          python3 flatpak-cargo-generator.py ${{ github.workspace }}/Cargo.lock -o cargo-sources.json
+          python3 flatpak-cargo-generator.py ../Cargo.lock -o cargo-sources.json
           echo "cargo-sources.json regenerated ($(wc -l < cargo-sources.json) lines)"
 
       - name: Build Flatpak
