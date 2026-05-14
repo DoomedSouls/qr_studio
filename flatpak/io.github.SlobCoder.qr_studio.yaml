@@ -43,7 +43,7 @@ modules:
   - name: rust
     buildsystem: simple
     build-commands:
-      - ./install.sh --prefix=/usr --disable-ldconfig --verbose
+      - ./install.sh --prefix=${FLATPAK_DEST} --disable-ldconfig --verbose
     cleanup:
       - /share/doc
       - /share/man
