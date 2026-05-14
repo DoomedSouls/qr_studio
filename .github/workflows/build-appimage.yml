@@ -240,9 +240,12 @@ jobs:
 
       - name: Download appimagetool
         run: |
-          wget --tries=3 --retry-connrefused "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64" \
-            -O /tmp/appimagetool
-          chmod +x /tmp/appimagetool
+          wget --tries=3 --retry-connrefused "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage" \
+            -O /tmp/appimagetool.AppImage
+          chmod +x /tmp/appimagetool.AppImage
+          # Extract AppImage (no FUSE available in container)
+          cd /tmp && ./appimagetool.AppImage --appimage-extract > /dev/null
+          mv squashfs-root appimagetool-extracted
 
       - name: Package AppImage
         run: |
@@ -250,7 +253,7 @@ jobs:
           ARCH=x86_64
           OUTPUT="build/QR_Studio-${VERSION}-${ARCH}.AppImage"
           mkdir -p build/dist
-          ARCH=x86_64 /tmp/appimagetool build/QR_Studio.AppDir "$OUTPUT"
+          ARCH=x86_64 /tmp/appimagetool-extracted/AppRun build/QR_Studio.AppDir "$OUTPUT"
           mv "$OUTPUT" build/dist/
 
       - name: Upload artifact
