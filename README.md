@@ -13,8 +13,9 @@ A modern QR code generator built with GTK4 and libadwaita, featuring a Material 
 
 ### Content Types
 - **Plain Text** — Freeform text with full QR capacity indicator
+- **URL** — Dedicated "Website" tab with auto-prepended `https://` for domains
 - **WiFi** — Network name, password, encryption type
-- **vCard** — Contact cards with name, phone, email, organization
+- **vCard** — Contact cards with name, phone, email, organization, URL
 - **Calendar** — Events with title, location, start/end datetime
 - **GPS** — Interactive map with search autocomplete (Photon API), marker placement, coordinates
 - **SMS** — Phone number with country code dropdown (153 countries with flag emojis)
@@ -44,10 +45,14 @@ A modern QR code generator built with GTK4 and libadwaita, featuring a Material 
 - **Batch export** — CSV-driven bulk QR code generation
 - **Clipboard** — Copy as PNG or SVG directly
 
+### Import
+- **QR code import** — Import and decode existing QR codes from image files (PNG, JPEG, SVG). Auto-detects content type (WiFi, vCard, Calendar, GPS, SMS, URL, Text) and fills in all fields.
+
 ### UX
 - **10 GPU-accelerated CSS animations** — Sidebar slide, QR appear, error shake, content-type transitions, toast notifications, color button pop, logo drop bounce, preview morph, popover entrance
 - **Content validation** — Real-time validation for email, GPS coordinates, phone numbers
 - **Capacity indicator** — Color-coded progress bar (green → yellow → red) with pulse animation at >90%
+- **Scan verification** — Background-thread QR scanability check on every render
 - **Drag & Drop** — Drop images onto preview or logo area
 - **Transparency checkerboard** — Visual feedback for transparent backgrounds
 - **i18n** — 9 languages: English, German, Spanish, French, Italian, Portuguese (BR), Japanese, Korean, Chinese (Simplified)
@@ -56,7 +61,16 @@ A modern QR code generator built with GTK4 and libadwaita, featuring a Material 
 - **Undo/Redo** — Full undo/redo support for style changes
 - **Session save/restore** — Templates with import/export
 - **Collapsible sidebar** — Animated toggle for more preview space
-- **Keyboard shortcuts** — Global shortcuts for common actions
+- **Keyboard shortcuts** — Global shortcuts for common actions (press `Ctrl+?` for overview)
+- **Persistent preferences** — GSettings-backed window size, sidebar width, and more
+
+### CLI Mode
+Headless QR code generation without GUI, ideal for scripting and batch processing:
+```bash
+qr_studio --cli --text "Hello World" --output qr.png
+qr_studio --cli --wifi-ssid "MyNetwork" --wifi-password "secret" --output wifi.svg
+```
+Supports all content types, dot/corner styles, gradients, frames, and output formats (PNG, SVG, PDF).
 
 ## Installation
 
@@ -69,11 +83,22 @@ chmod +x QR_Studio-*-x86_64.AppImage
 ./QR_Studio-*-x86_64.AppImage
 ```
 
+The AppImage includes a smart launcher that detects system GTK4 + libadwaita and uses them when available, falling back to bundled libraries otherwise. Set `QR_STUDIO_DEBUG=1` for diagnostics.
+
+### Linux (Flatpak)
+
+> Flatpak builds are available from [Releases](https://github.com/SlobCoder/qr_studio/releases). Flathub submission is planned.
+
 ### Windows
 
-Download the ZIP from [Releases](https://github.com/SlobCoder/qr_studio/releases), extract, and run `qr_studio.exe`.
+Download the **MSIX installer** or **portable ZIP** from [Releases](https://github.com/SlobCoder/qr_studio/releases).
 
-> All required DLLs, GTK schemas, and icon themes are bundled in the archive.
+**MSIX installer:**
+1. Install the included signing certificate (`QRStudioSigning.cer`) into "Trusted Root Certification Authorities"
+2. Double-click the `.msix` file to install
+
+**Portable ZIP:**
+Extract anywhere and run `qr_studio.exe`. All required DLLs, GTK schemas, and icon themes are bundled.
 
 ## Building from Source
 
@@ -102,6 +127,13 @@ cargo build --release
 ./target/release/qr_studio
 ```
 
+### Build CLI Only (No GUI Dependencies)
+
+```bash
+cargo build --release --no-default-features --features cli
+./target/release/qr_studio --cli --text "Hello" --output qr.png
+```
+
 ### Build AppImage
 
 ```bash
@@ -109,6 +141,13 @@ cargo build --release
 ```
 
 Requires: `cargo`, `mksquashfs`, `wget`.
+
+### Build Flatpak
+
+```bash
+cd flatpak
+flatpak-builder --install --user install-dir io.github.SlobCoder.qr_studio.yaml
+```
 
 ## Technology Stack
 
@@ -119,12 +158,14 @@ Requires: `cargo`, `mksquashfs`, `wget`.
 | Design Layer | Material 3 |
 | Map Widget | libshumate (OpenFreeMap vector tiles) |
 | QR Generation | qrcode crate |
+| QR Decoding | rqrr |
 | Vector Tracing | vtracer |
 | Image Processing | image crate |
 | PDF Export | printpdf |
-| SVG Rasterization | gdk-pixbuf + librsvg |
+| SVG Rasterization | gdk-pixbuf + librsvg (GUI) / resvg (CLI) |
 | Font Enumeration | Pango |
-| HTTP Client | reqwest (Photon API, Nominatim, TileJSON) |
+| HTTP Client | reqwest (Photon API, TileJSON) |
+| CLI Parsing | clap |
 | Parallelism | rayon |
 
 ## Architecture
@@ -140,6 +181,8 @@ src/
 ├── i18n.rs           # Internationalization (9 languages)
 ├── map_styles.rs     # OpenFreeMap vector tile styles, localization
 ├── country_codes.rs  # 153 country entries with flag emojis
+├── cli.rs            # Headless CLI mode (no GUI required)
+├── tests.rs          # Unit tests and SVG snapshot tests
 └── styles/           # Embedded map style JSONs (Positron, Bright, Dark, Fiord)
 ```
 
